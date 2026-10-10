@@ -1,0 +1,27 @@
+# Interface ROBO-SCÈNE hébergée sur Netlify.
+# Seul le dossier web/ est publié : ni le pont Python, ni les documents de
+# partenaire/sources, ni les données des acteurs ne quittent l'ordinateur de l'équipe.
+# La page se connecte au pont local (ws://127.0.0.1:8765/ws), qui doit autoriser
+# cette origine dans config.toml, [serveur] origines_autorisees.
+
+[build]
+  publish = "web"
+
+[[redirects]]
+  from = "/static/*"
+  to = "/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/partenaire"
+  to = "/partenaire.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    Permissions-Policy = "microphone=(self), camera=(self), geolocation=()"
+    X-Robots-Tag = "noindex"

@@ -1,0 +1,245 @@
+{
+ "titre": "Le Souffleur",
+ "auteur": "ROBO-SCÈNE (démonstration)",
+ "annee": null,
+ "source": {
+  "type": "texte"
+ },
+ "personnages": [
+  {
+   "id": "margot",
+   "nom": "MARGOT",
+   "genre": null,
+   "description": "comédienne."
+  },
+  {
+   "id": "le-souffleur",
+   "nom": "LE SOUFFLEUR",
+   "genre": null,
+   "description": "une voix venue de la fosse."
+  }
+ ],
+ "scenes": [
+  {
+   "id": "1",
+   "acte": "",
+   "titre": "SCÈNE 1"
+  }
+ ],
+ "elements": [
+  {
+   "type": "didascalie",
+   "scene": "1",
+   "texte": "Un plateau nu. Une servante allumée. MARGOT entre, un texte à la main.",
+   "id": "E0001"
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "MARGOT",
+   "perso": "margot",
+   "vers": false,
+   "texte": "Il y a quelqu'un ? Je sais qu'il y a quelqu'un.",
+   "didascalies": [],
+   "id": "E0002",
+   "mots": 13
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "LE SOUFFLEUR",
+   "perso": "le-souffleur",
+   "vers": false,
+   "texte": "Il y a toujours quelqu'un, quand une lumière reste allumée.",
+   "didascalies": [],
+   "id": "E0003",
+   "mots": 11
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "MARGOT",
+   "perso": "margot",
+   "vers": false,
+   "texte": "Vous m'avez fait peur ! Depuis combien de temps êtes-vous là ?",
+   "didascalies": [],
+   "id": "E0004",
+   "mots": 12
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "LE SOUFFLEUR",
+   "perso": "le-souffleur",
+   "vers": false,
+   "texte": "Depuis la première. Je ne sors jamais de ma boîte.",
+   "didascalies": [],
+   "id": "E0005",
+   "mots": 10
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "MARGOT",
+   "perso": "margot",
+   "vers": false,
+   "texte": "Une voix sans corps… C'est bien ma chance.",
+   "didascalies": [
+    "à part"
+   ],
+   "id": "E0006",
+   "mots": 9
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "MARGOT",
+   "perso": "margot",
+   "vers": false,
+   "texte": "Écoutez, j'ai une scène demain et je ne la sais pas. Pas un mot.",
+   "didascalies": [],
+   "id": "E0007",
+   "mots": 15
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "LE SOUFFLEUR",
+   "perso": "le-souffleur",
+   "vers": false,
+   "texte": "Alors commençons. Dites la première réplique.",
+   "didascalies": [],
+   "id": "E0008",
+   "mots": 6
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "MARGOT",
+   "perso": "margot",
+   "vers": false,
+   "texte": "« Je reviens de loin… » Et après ? Et après, rien ! Le trou, le noir, le vide.",
+   "didascalies": [],
+   "id": "E0009",
+   "mots": 15
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "LE SOUFFLEUR",
+   "perso": "le-souffleur",
+   "vers": false,
+   "texte": "Après, vous respirez. Le texte vient toujours après le souffle.",
+   "didascalies": [
+    "doucement"
+   ],
+   "id": "E0010",
+   "mots": 10
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "MARGOT",
+   "perso": "margot",
+   "vers": false,
+   "texte": "Facile à dire, pour vous ! Vous n'avez jamais eu peur de rien, vous, dans votre trou !",
+   "didascalies": [
+    "avec colère"
+   ],
+   "id": "E0011",
+   "mots": 17
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "LE SOUFFLEUR",
+   "perso": "le-souffleur",
+   "vers": false,
+   "texte": "J'ai eu peur de tout. C'est pour cela que je connais toutes les répliques.",
+   "didascalies": [],
+   "id": "E0012",
+   "mots": 16
+  },
+  {
+   "type": "didascalie",
+   "scene": "1",
+   "texte": "Un temps.",
+   "id": "E0013"
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "MARGOT",
+   "perso": "margot",
+   "vers": false,
+   "texte": "Pardon. Je suis injuste.",
+   "didascalies": [],
+   "id": "E0014",
+   "mots": 4
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "LE SOUFFLEUR",
+   "perso": "le-souffleur",
+   "vers": false,
+   "texte": "Vous êtes fatiguée. Ce n'est pas la même chose.",
+   "didascalies": [],
+   "id": "E0015",
+   "mots": 10
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "MARGOT",
+   "perso": "margot",
+   "vers": false,
+   "texte": "Hélas, oui… Si fatiguée que j'en oublierais mon propre nom.",
+   "didascalies": [],
+   "id": "E0016",
+   "mots": 11
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "LE SOUFFLEUR",
+   "perso": "le-souffleur",
+   "vers": false,
+   "texte": "Margot. Vous vous appelez Margot. Et vous revenez de loin.",
+   "didascalies": [],
+   "id": "E0017",
+   "mots": 10
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "MARGOT",
+   "perso": "margot",
+   "vers": false,
+   "texte": "Je reviens de loin… et je n'ai pas peur.",
+   "didascalies": [
+    "dans un souffle"
+   ],
+   "id": "E0018",
+   "mots": 10
+  },
+  {
+   "type": "replique",
+   "scene": "1",
+   "nom": "LE SOUFFLEUR",
+   "perso": "le-souffleur",
+   "vers": false,
+   "texte": "Voilà. Encore une fois, plus lentement. Je suis là.",
+   "didascalies": [],
+   "id": "E0019",
+   "mots": 9
+  },
+  {
+   "type": "didascalie",
+   "scene": "1",
+   "texte": "MARGOT s'avance vers la face. La servante s'éteint.",
+   "id": "E0020"
+  }
+ ],
+ "id": "demo-le-souffleur"
+}

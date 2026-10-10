@@ -1,0 +1,61 @@
+# ─────────────────────────────────────────────────────────────
+#  Console ROBO-SCÈNE — configuration
+#  Encodage UTF-8. Toutes les valeurs sont modifiables sans toucher au code.
+# ─────────────────────────────────────────────────────────────
+
+[serveur]
+hote = "127.0.0.1"        # 0.0.0.0 pour piloter depuis une tablette du même réseau (voir README, section sécurité)
+port = 8765
+# Pages hébergées autorisées à se connecter au pont (en plus des pages servies localement)
+origines_autorisees = ["https://robo-scene.netlify.app"]
+
+[robot]
+# transport : "sim" (robot simulé), "serie" (câble USB) ou "tcp" (Wi-Fi, ESP32)
+transport = "sim"
+port_serie = "/dev/tty.usbserial-0001"   # macOS ; sous Linux : /dev/ttyUSB0
+debit = 115200
+hote_tcp = "192.168.4.1"                  # adresse de l'ESP32 en mode point d'accès
+port_tcp = 3333
+nom = "ROBO-SCENE-01"
+
+[robot.articulations]
+# Une entrée par servomoteur, dans l'ordre des canaux du micrologiciel.
+noms     = ["Base", "Épaule", "Coude", "Tête"]
+min_deg  = [10, 20, 15, 30]
+max_deg  = [170, 160, 165, 150]
+repos    = [90, 90, 90, 90]
+
+[robot.propulsion]
+active = true            # false si le robot n'a pas de roues
+
+[securite]
+vitesse_max_deg_s = 90.0       # vitesse angulaire maximale imposée par le pont
+propulsion_max = 0.6           # plafond de la commande de roues (0–1)
+chien_de_garde_ms = 500        # arrêt automatique si le robot n'entend plus le pont
+interface_perdue_ms = 1500     # arrêt de la propulsion si l'interface se déconnecte
+batterie_min_v = 6.4           # alerte sous ce seuil (2S LiPo : 6,4 V)
+
+[ia]
+active = true
+modele = "claude-sonnet-5-5"   # chaîne de modèle API, configurable
+temperature = 0.2              # profil « commande » (voir README : profil 0,7 réservé à la génération dramaturgique)
+max_tokens = 600
+seuil_confiance = 0.75         # sous ce seuil, la proposition est bloquée
+execution_auto = false         # true : exécution sans validation au-dessus du seuil (déconseillé sur scène)
+
+[protocole]
+# Nomenclature ROBO-SCÈNE : [DATE]_[SYSTÈME]_[TYPE]_[NUMÉRO]
+systeme = "ESP32"
+type = "S04"                   # libellé de séance incarnée, modifiable
+dossier_corpus = "corpus"
+operatrice = ""                # à renseigner avant la séance
+
+[partenaire]
+# Partenaire de théâtre : formation, répétition, analyse, variations, coprésence
+modele = "claude-sonnet-5-5"       # utilisé seulement si ANTHROPIC_API_KEY est défini
+temperature_analyse = 0.3          # conseiller et analyse dramaturgique
+temperature_variation = 0.7        # propositions de variations émotionnelles
+incarnation = false                # true : le robot accompagne les répliques et exercices par ses gestes
+regime = "humain"                  # "humain" (émulation) ou "machinique" (qualités d'effort Laban)
+souffleur_delai_s = 4.0            # silence de l'acteur avant que le souffleur donne le début de la réplique
+fin_replique_silence_ms = 1200     # silence qui marque la fin d'une réplique de l'acteur

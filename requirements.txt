@@ -1,0 +1,4 @@
+aiohttp>=3.9
+pyserial>=3.5
+# Facultatif, pour le moteur IA Claude :
+anthropic>=0.40

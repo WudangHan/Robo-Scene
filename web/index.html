@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Console ROBO-SCÈNE</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="barre">
+  <div class="titre">
+    <span class="marque">ROBO-SCÈNE</span>
+    <span class="sous">Console de pilotage</span>
+  </div>
+  <nav class="nav-pages"><a href="/" aria-current="page">Console</a><a href="/partenaire">Partenaire</a></nav>
+  <div class="statuts">
+    <span class="pastille" id="st-lien" title="État du lien avec le robot">Lien —</span>
+    <span class="pastille neutre" id="st-transport">—</span>
+    <span class="pastille neutre" id="st-batt" title="Tension batterie">— V</span>
+    <span class="pastille neutre mono" id="st-seance" title="Identifiant de séance">—</span>
+  </div>
+  <div class="urgence">
+    <button id="btn-rearmer" class="rearmer" disabled>Réarmer</button>
+    <button id="btn-arret" class="arret" title="Arrêt d'urgence (touche Échap)">ARRÊT</button>
+  </div>
+</header>
+
+<div id="bandeau-arret" class="bandeau" hidden>
+  Arrêt d'urgence actif — aucune commande n'est transmise. Vérifier la scène, puis « Réarmer ».
+</div>
+
+<main class="grille">
+  <!-- ── Suivi ─────────────────────────────────────── -->
+  <section class="panneau suivi">
+    <h2>Suivi</h2>
+    <div class="vues">
+      <figure>
+        <canvas id="cv-robot" width="420" height="300" aria-label="Schéma des articulations"></canvas>
+        <figcaption>Articulations (vue latérale, base vue de dessus)</figcaption>
+      </figure>
+      <figure>
+        <canvas id="cv-plateau" width="420" height="300" aria-label="Plan du plateau"></canvas>
+        <figcaption>Plateau 4 × 3 m — position, cap, distance mesurée</figcaption>
+      </figure>
+    </div>
+    <div class="tuiles" id="tuiles"></div>
+    <canvas id="cv-courbes" width="860" height="170" aria-label="Courbes de télémétrie"></canvas>
+    <div class="legende" id="legende"></div>
+  </section>
+
+  <!-- ── Pilotage ──────────────────────────────────── -->
+  <section class="panneau pilotage">
+    <h2>Téléopération</h2>
+    <div id="curseurs"></div>
+    <div class="ligne">
+      <button id="btn-repos">Position de repos</button>
+      <button id="btn-capturer" title="Ajoute la pose actuelle comme image de séquence">Capturer la pose</button>
+    </div>
+    <div id="bloc-propulsion">
+      <h3>Propulsion <small>(manette ou flèches / ZQSD, relâcher = arrêt)</small></h3>
+      <div class="manette" id="manette"><div class="bouton-manette" id="bouton-manette"></div></div>
+      <div class="mono petit" id="val-propulsion">G 0.00 · D 0.00</div>
+    </div>
+  </section>
+
+  <!-- ── Séquences ─────────────────────────────────── -->
+  <section class="panneau sequences">
+    <h2>Séquences et chorégraphies</h2>
+    <div class="liste-seq" id="liste-seq"></div>
+    <div class="ligne">
+      <button id="btn-seq-stop">Arrêter la séquence</button>
+      <span class="petit" id="seq-en-cours"></span>
+    </div>
+    <h3>Éditeur</h3>
+    <div class="ligne">
+      <input id="seq-nom" placeholder="Nom de la séquence" maxlength="40">
+      <button id="btn-seq-enreg">Enregistrer</button>
+      <button id="btn-seq-tester">Jouer le brouillon</button>
+      <button id="btn-seq-vider" class="discret">Vider</button>
+    </div>
+    <div class="table-defile">
+      <table class="images" id="table-images">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="petit aide">Capturez des poses depuis la téléopération, ajustez durées et pauses, puis enregistrez. La couche de sécurité ralentit automatiquement les transitions trop rapides.</p>
+  </section>
+
+  <!-- ── IA supervisée ─────────────────────────────── -->
+  <section class="panneau ia">
+    <h2>Interaction IA <small id="ia-moteur"></small></h2>
+    <form id="form-ia" class="ligne">
+      <input id="ia-texte" placeholder="Ex. : « lève l'épaule lentement », « salut », « avance un peu »" maxlength="500" autocomplete="off">
+      <button type="submit">Proposer</button>
+    </form>
+    <div class="ligne petit">
+      <label for="ia-seuil">Seuil de confiance</label>
+      <input type="range" id="ia-seuil" min="0" max="1" step="0.05">
+      <span class="mono" id="ia-seuil-val">—</span>
+      <span id="ia-auto" class="pastille neutre"></span>
+    </div>
+    <div id="propositions"></div>
+  </section>
+
+  <!-- ── Journal ───────────────────────────────────── -->
+  <section class="panneau journal">
+    <h2>Journal de séance</h2>
+    <form id="form-note" class="ligne">
+      <input id="note-texte" placeholder="Note observationnelle (horodatée dans les métadonnées)" maxlength="500">
+      <button type="submit">Noter</button>
+      <button type="button" id="btn-cloturer" class="discret">Clôturer la séance</button>
+    </form>
+    <ol id="journal" class="flux"></ol>
+  </section>
+</main>
+
+<script src="/static/pont.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

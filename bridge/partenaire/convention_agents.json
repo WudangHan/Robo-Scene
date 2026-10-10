@@ -1,0 +1,14 @@
+{
+  "agent_evenementiel": {
+    "prompt_addition": "\n\nIMPORTANT: Ajoute obligatoirement ces champs à ta réponse JSON:\n{\n  \"agent_type\": \"evenementiel\",\n  \"agent_name\": \"Chef Événementiel\",\n  \"timestamp\": \"{{ $now }}\",\n  // ... le reste de tes données\n}"
+  },
+  "agent_commercial": {
+    "prompt_addition": "\n\nIMPORTANT: Ajoute obligatoirement ces champs à ta réponse JSON:\n{\n  \"agent_type\": \"commercial\",\n  \"agent_name\": \"Chef Commercial\",\n  \"timestamp\": \"{{ $now }}\",\n  // ... le reste de tes données\n}"
+  },
+  "agent_logistique": {
+    "prompt_addition": "\n\nIMPORTANT: Ajoute obligatoirement ces champs à ta réponse JSON:\n{\n  \"agent_type\": \"logistique\",\n  \"agent_name\": \"Chef Logistique\",\n  \"timestamp\": \"{{ $now }}\",\n  // ... le reste de tes données\n}"
+  },
+  "agent_communication": {
+    "prompt_addition": "\n\nIMPORTANT: Ajoute obligatoirement ces champs à ta réponse JSON:\n{\n  \"agent_type\": \"communication\",\n  \"agent_name\": \"Chef Communication\",\n  \"timestamp\": \"{{ $now }}\",\n  // ... le reste de tes données\n}"
+  }
+}

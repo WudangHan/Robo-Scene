@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Partenaire de théâtre</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/partenaire.css">
+</head>
+<body>
+<header class="barre">
+  <div class="titre">
+    <span class="marque">ROBO-SCÈNE</span>
+    <span class="sous">Partenaire de théâtre</span>
+  </div>
+  <nav class="nav-pages"><a href="/">Console</a><a href="/partenaire" aria-current="page">Partenaire</a></nav>
+  <div class="statuts">
+    <span class="pastille" id="st-lien">Lien —</span>
+    <span class="pastille neutre" id="st-ia" title="Moteur des agents">IA —</span>
+    <label class="pastille neutre bascule" title="Le robot accompagne répliques et exercices par ses gestes (toujours via la couche de sécurité)">
+      <input type="checkbox" id="incarnation"> Incarnation robotique
+    </label>
+    <label class="pastille neutre">Acteur
+      <select id="acteur-courant"><option value="">— aucun —</option></select>
+    </label>
+  </div>
+  <div class="urgence">
+    <button id="btn-rearmer" class="rearmer" disabled>Réarmer</button>
+    <button id="btn-arret" class="arret" title="Arrêt d'urgence (touche Échap)">ARRÊT</button>
+  </div>
+</header>
+<div id="bandeau-arret" class="bandeau" hidden>Arrêt d'urgence actif : le robot est figé, la voix et la répétition sont suspendues. Vérifier la scène, puis « Réarmer ».</div>
+
+<nav class="onglets" role="tablist">
+  <button role="tab" data-onglet="formation" aria-selected="true">Formation</button>
+  <button role="tab" data-onglet="repetition">Répétition</button>
+  <button role="tab" data-onglet="variations">Variations</button>
+  <button role="tab" data-onglet="analyse">Analyse de pièce</button>
+  <button role="tab" data-onglet="repertoire">Répertoire</button>
+  <button role="tab" data-onglet="conseiller">Conseiller</button>
+  <button role="tab" data-onglet="copresence" class="regie">Coprésence (régie)</button>
+  <button role="tab" data-onglet="acteurs">Acteurs et consentements</button>
+</nav>
+
+<main>
+<!-- ═════════════ FORMATION ═════════════ -->
+<section class="onglet" id="o-formation">
+  <div class="cols3">
+    <div class="panneau">
+      <h2>Livret d'exercices <small id="livret-source"></small></h2>
+      <div class="ligne">
+        <select id="f-annee"><option value="1">1re année — fondations</option><option value="2">2e année — intégration</option><option value="3">3e année — maîtrise</option></select>
+        <input id="f-cherche" placeholder="Chercher un exercice">
+      </div>
+      <div id="f-liste" class="liste-ex"></div>
+    </div>
+    <div class="panneau">
+      <h2>Fiche d'exercice</h2>
+      <div id="f-fiche" class="fiche vide">Choisissez un exercice dans la liste.</div>
+    </div>
+    <div class="panneau">
+      <h2>Séance du jour</h2>
+      <div class="ligne"><button id="f-planifier" class="primaire">Composer une séance type</button></div>
+      <ol id="f-plan" class="plan"></ol>
+      <h3>Calendrier de progression</h3>
+      <div id="f-calendrier" class="petit"></div>
+      <h3>Auto-évaluation hebdomadaire <small>(grille du livret, 1 à 5)</small></h3>
+      <form id="f-auto" class="grille-auto"></form>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ RÉPÉTITION ═════════════ -->
+<section class="onglet" id="o-repetition" hidden>
+  <div class="cols2">
+    <div class="panneau">
+      <h2>Préparer la répétition</h2>
+      <div class="form">
+        <label>Pièce <select id="r-piece"></select></label>
+        <label>Rôle(s) joué(s) par l'acteur <select id="r-roles" multiple size="4"></select></label>
+        <label>Scènes <select id="r-scenes" multiple size="5"></select></label>
+        <label>Mémorisation progressive
+          <input type="range" id="r-niveau" min="0" max="3" step="1" value="0">
+          <span class="petit" id="r-niveau-txt">texte entier</span></label>
+        <label>Souffleur après <input type="number" id="r-souffleur" min="1" max="20" step="0.5" value="4"> s de silence</label>
+        <label>Variations du partenaire
+          <select id="r-varmode">
+            <option value="lecture">lecture des indices du texte</option>
+            <option value="cycle">changer de variation à chaque passage</option>
+            <option value="aucune">lecture blanche (sans couleur)</option>
+          </select></label>
+        <label>Régime de rendu
+          <select id="r-regime"><option value="humain">émulation humaine (prosodie, posture)</option><option value="machinique">voie machinique (effort Laban, voix non humaine)</option></select></label>
+        <label>Voix machinique
+          <select id="r-voixmach"><option value="synthese">synthèse aplatie</option><option value="tonale">signal tonal (sans mots)</option></select></label>
+        <label>Style <select id="r-style"></select></label>
+        <label class="case"><input type="checkbox" id="r-consignes"> Consignes de jeu pour l'acteur (émotion et intensité)</label>
+        <label class="case"><input type="checkbox" id="r-didas" checked> Lire les didascalies</label>
+        <fieldset><legend>Mesures (selon les consentements de l'acteur)</legend>
+          <label class="case"><input type="checkbox" id="r-micro" checked> Détection vocale locale (latences, durées, pauses)</label>
+          <label class="case"><input type="checkbox" id="r-stt"> Transcription (fidélité au texte)</label>
+          <label class="case"><input type="checkbox" id="r-camera"> Caméra : descripteurs de mouvement (expérimental)</label>
+        </fieldset>
+      </div>
+      <div class="ligne"><button id="r-demarrer" class="primaire">Commencer</button></div>
+      <p class="petit" id="r-licence"></p>
+    </div>
+    <div class="panneau">
+      <h2>Plateau <small id="r-etat">en attente</small></h2>
+      <div class="prompteur">
+        <div id="r-precedent" class="replique-robot"></div>
+        <div id="r-courant" class="replique-acteur"></div>
+        <div id="r-consigne" class="consigne"></div>
+      </div>
+      <div class="ligne">
+        <button id="r-suivante" disabled title="Entrée ou flèche droite">Réplique dite ▸</button>
+        <button id="r-souffle" disabled title="Touche S">Souffler</button>
+        <button id="r-pause" disabled>Pause</button>
+        <button id="r-arreter" disabled class="danger">Terminer</button>
+      </div>
+      <div class="vumetre"><div id="r-niveau-micro"></div></div>
+      <div class="mono petit" id="r-mesure"></div>
+      <h3>Retour du passage</h3>
+      <div id="r-retour" class="petit">—</div>
+      <h3>Trajectoire <small>(passages successifs de ce rôle par cet acteur)</small></h3>
+      <canvas id="r-trajectoire" width="640" height="200"></canvas>
+      <div id="r-lecture" class="petit"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ VARIATIONS ═════════════ -->
+<section class="onglet" id="o-variations" hidden>
+  <div class="cols2">
+    <div class="panneau">
+      <h2>Réplique à l'étude</h2>
+      <div class="ligne"><select id="v-piece"></select><select id="v-replique"></select></div>
+      <textarea id="v-texte" rows="4" placeholder="…ou saisissez librement une réplique"></textarea>
+      <div class="ligne"><button id="v-proposer" class="primaire">Proposer des variations</button></div>
+      <div id="v-indices" class="petit"></div>
+      <div id="v-props" class="cartes"></div>
+    </div>
+    <div class="panneau">
+      <h2>Composer une variation</h2>
+      <div class="form">
+        <label>Émotion <select id="v-emotion"></select></label>
+        <label>Mélange avec <select id="v-melange"><option value="">—</option></select></label>
+        <label>Intensité <input type="range" id="v-intensite" min="1" max="10" value="5"><span class="mono" id="v-int-txt">5/10</span></label>
+        <label>Style <select id="v-style"></select></label>
+        <label>Régime <select id="v-regime"><option value="humain">émulation humaine</option><option value="machinique">voie machinique</option></select></label>
+      </div>
+      <fieldset id="v-effort"><legend>Qualités d'effort (voie machinique, sans étiquette émotionnelle)</legend>
+        <label class="case"><input type="checkbox" id="v-effort-libre"> Composer directement l'effort</label>
+        <div class="curseur-effort"><span>léger</span><input type="range" data-axe="poids" min="-1" max="1" step="0.1" value="0"><span>fort</span><b>Poids</b></div>
+        <div class="curseur-effort"><span>soutenu</span><input type="range" data-axe="temps" min="-1" max="1" step="0.1" value="0"><span>soudain</span><b>Temps</b></div>
+        <div class="curseur-effort"><span>indirect</span><input type="range" data-axe="espace" min="-1" max="1" step="0.1" value="0"><span>direct</span><b>Espace</b></div>
+        <div class="curseur-effort"><span>libre</span><input type="range" data-axe="flux" min="-1" max="1" step="0.1" value="0"><span>contenu</span><b>Flux</b></div>
+      </fieldset>
+      <div class="ligne">
+        <button id="v-ecouter">Écouter</button>
+        <button id="v-incarner" class="primaire">Écouter et incarner</button>
+      </div>
+      <div id="v-desc" class="mono petit"></div>
+      <canvas id="v-geste" width="640" height="160"></canvas>
+      <p class="petit aide">Les correspondances émotion → prosodie → effort sont des heuristiques de départ, modifiables (bridge/partenaire/variations.py). La voie machinique ne prête aucune émotion au robot : elle produit une qualité de mouvement.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ ANALYSE ═════════════ -->
+<section class="onglet" id="o-analyse" hidden>
+  <div class="panneau">
+    <div class="ligne"><select id="a-piece"></select><button id="a-analyser" class="primaire">Analyser</button><span class="petit" id="a-mode"></span></div>
+    <div id="a-vue" class="tuiles"></div>
+  </div>
+  <div class="cols2">
+    <div class="panneau"><h2>Distribution de la parole</h2><div id="a-persos"></div></div>
+    <div class="panneau"><h2>Réseau de coprésence</h2><canvas id="a-reseau" width="560" height="420"></canvas><p class="petit">Lien = scènes où deux personnages parlent ensemble (présence déduite de la parole).</p></div>
+  </div>
+  <div class="panneau"><h2>Configurations <small>(scènes × personnages)</small></h2><div class="table-defile" id="a-config"></div></div>
+  <div class="cols2">
+    <div class="panneau"><h2>Stichomythies et tirades</h2><div id="a-rythme" class="petit"></div></div>
+    <div class="panneau"><h2>Fiche de personnage</h2><div class="ligne"><select id="a-perso"></select><button id="a-fiche">Ouvrir</button></div><div id="a-fiche-out" class="petit"></div></div>
+  </div>
+  <div class="panneau"><h2>Lecture interprétative</h2><div id="a-interp" class="petit">—</div></div>
+</section>
+
+<!-- ═════════════ RÉPERTOIRE ═════════════ -->
+<section class="onglet" id="o-repertoire" hidden>
+  <div class="cols2">
+    <div class="panneau">
+      <h2>Recherche croisée — DraCor <small>(texte intégral, domaine public)</small></h2>
+      <form id="d-form" class="form">
+        <label>Corpus <select id="d-corpus"></select></label>
+        <label>Titre ou auteur <input id="d-texte"></label>
+        <label>Genre <select id="d-genre"><option value="">tous</option></select></label>
+        <div class="ligne">
+          <label>Hommes <input type="number" id="d-h" min="0" max="40"></label>
+          <label>Femmes <input type="number" id="d-f" min="0" max="40"></label>
+        </div>
+        <div class="ligne">
+          <label>Personnages min <input type="number" id="d-min" min="1" max="80"></label>
+          <label>max <input type="number" id="d-max" min="1" max="80"></label>
+        </div>
+        <div class="ligne">
+          <label>Année de <input type="number" id="d-a1" min="-500" max="2030"></label>
+          <label>à <input type="number" id="d-a2" min="-500" max="2030"></label>
+        </div>
+        <button class="primaire">Chercher</button>
+      </form>
+      <div id="d-res" class="table-defile"></div>
+    </div>
+    <div class="panneau">
+      <h2>Vos textes</h2>
+      <p class="petit">Collez une pièce dont vous détenez les droits d'usage (format « NOM. — réplique » ou « NOM : réplique », didascalies entre parenthèses), ou chargez un .txt ou un .docx.</p>
+      <div class="ligne"><input id="t-titre" placeholder="Titre"><input id="t-auteur" placeholder="Auteur"></div>
+      <textarea id="t-texte" rows="8" placeholder="MARGOT. — Il y a quelqu'un ?"></textarea>
+      <div class="ligne"><input type="file" id="t-fichier" accept=".txt,.docx"><button id="t-importer" class="primaire">Importer</button></div>
+      <h3>Bibliothèque</h3>
+      <div id="t-biblio"></div>
+      <h3>Autres répertoires <small>(catalogues ; textes protégés à obtenir auprès des ayants droit)</small></h3>
+      <div id="t-externes" class="externes"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ CONSEILLER ═════════════ -->
+<section class="onglet" id="o-conseiller" hidden>
+  <div class="panneau">
+    <h2>Conseiller du spectacle <small>— jeu, voix, corps, dramaturgie, mise en scène, scénographie, robotique, IA</small></h2>
+    <form id="c-form" class="ligne"><input id="c-question" placeholder="Ex. : Comment préparer une entrée en scène ? Quelles perturbations prévoit le cas A ?"><button class="primaire">Demander</button></form>
+    <div id="c-domaines" class="puces"></div>
+    <div id="c-reponse" class="reponse"></div>
+  </div>
+</section>
+
+<!-- ═════════════ COPRÉSENCE ═════════════ -->
+<section class="onglet" id="o-copresence" hidden>
+  <div class="cols2">
+    <div class="panneau">
+      <h2>Plan de perturbations pré-enregistré</h2>
+      <p class="petit">Éditez le plan, puis scellez-le avant la séance : seule son empreinte SHA-256 est inscrite au journal et affichée ici ; le contenu reste caché jusqu'au descellement.</p>
+      <textarea id="k-plan" rows="14" class="mono"></textarea>
+      <div class="ligne"><button id="k-type">Plan type (cas A, tableau 2.3)</button><button id="k-sceller" class="primaire">Sceller</button></div>
+      <div class="ligne"><input id="k-empreinte" class="mono" placeholder="empreinte du plan scellé"><button id="k-desceller">Desceller (après la séance)</button></div>
+      <pre id="k-descelle" class="petit mono"></pre>
+    </div>
+    <div class="panneau">
+      <h2>Partition de coprésence</h2>
+      <div class="ligne"><label>Durée <input type="number" id="k-duree" value="60" min="5" max="900"> s</label><label>Tempo <input type="number" id="k-tempo" value="60" min="20" max="180"> pulsations/min</label></div>
+      <div id="k-situations" class="cartes"></div>
+      <div class="ligne"><button id="k-stop" class="danger">Arrêter la situation</button></div>
+      <div id="k-etat" class="petit"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ ACTEURS ═════════════ -->
+<section class="onglet" id="o-acteurs" hidden>
+  <div class="cols2">
+    <div class="panneau">
+      <h2>Acteurs <small>(pseudonymes)</small></h2>
+      <form id="p-form" class="ligne"><input id="p-pseudo" placeholder="Pseudonyme" maxlength="40"><select id="p-annee"><option value="1">1re année</option><option value="2">2e année</option><option value="3">3e année</option></select><button class="primaire">Créer</button></form>
+      <div id="p-liste"></div>
+    </div>
+    <div class="panneau">
+      <h2>Consentements <small id="p-qui"></small></h2>
+      <div id="p-consent"></div>
+      <h3>Historique de formation</h3>
+      <div id="p-historique" class="petit"></div>
+      <div class="ligne"><button id="p-retirer" class="danger">Retirer et effacer toutes les données de cet acteur</button></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script src="/static/pont.js"></script>
+<script src="/static/partenaire.js"></script>
+</body>
+</html>

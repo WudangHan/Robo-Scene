@@ -1,0 +1,165 @@
+/* Console ROBO-SCÈNE — thème « régie de scène » : fond sombre, contraste élevé,
+   aucune ressource externe (fonctionne hors ligne en salle). */
+:root {
+  --fond: #0e1014;
+  --panneau: #171a21;
+  --bord: #2a2f3a;
+  --texte: #e7e9ee;
+  --doux: #9aa3b2;
+  --accent: #f2b544;      /* ambre « lumière de service » */
+  --ok: #4cc38a;
+  --avert: #e8a33d;
+  --alerte: #ff5d5d;
+  --info: #6fa8ff;
+  --arret: #d72631;
+  --rayon: 10px;
+  --police: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--fond); color: var(--texte); font: 14px/1.45 var(--police); }
+button, input { font: inherit; color: inherit; }
+h2 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 12px; font-weight: 650; }
+h2 small, h3 small { color: var(--doux); text-transform: none; letter-spacing: 0; font-weight: 400; }
+h3 { font-size: 13px; margin: 14px 0 8px; color: var(--doux); font-weight: 600; }
+.mono { font-family: var(--mono); }
+.petit { font-size: 12px; color: var(--doux); }
+.aide { margin: 8px 0 0; }
+
+/* ── Barre supérieure ─────────────────────────────── */
+.barre {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 10px 16px; background: #0b0d10ee; border-bottom: 1px solid var(--bord);
+  backdrop-filter: blur(6px);
+}
+.titre { display: flex; flex-direction: column; line-height: 1.1; }
+.marque { font-weight: 800; letter-spacing: .16em; color: var(--accent); }
+.sous { font-size: 12px; color: var(--doux); }
+.nav-pages { display: flex; gap: 4px; }
+.nav-pages a { color: var(--doux); text-decoration: none; padding: 6px 10px; border-radius: 8px; border: 1px solid transparent; }
+.nav-pages a[aria-current="page"] { color: var(--texte); border-color: var(--bord); background: #1f2430; }
+.statuts { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+.pastille { padding: 4px 10px; border-radius: 999px; font-size: 12px; border: 1px solid var(--bord); background: #1f2430; white-space: nowrap; }
+.pastille.ok { border-color: #2f7d58; color: var(--ok); }
+.pastille.avert { border-color: #8a6224; color: var(--avert); }
+.pastille.alerte { border-color: #8f2f2f; color: var(--alerte); }
+.pastille.neutre { color: var(--doux); }
+.urgence { display: flex; gap: 10px; align-items: center; }
+.arret {
+  background: var(--arret); color: #fff; border: 3px solid #ffdede; border-radius: 12px;
+  font-weight: 900; letter-spacing: .14em; font-size: 18px; padding: 12px 26px; cursor: pointer;
+  box-shadow: 0 0 0 4px #d7263133;
+}
+.arret:hover { filter: brightness(1.1); }
+.arret:active { transform: translateY(1px); }
+.rearmer { padding: 10px 14px; }
+.bandeau { background: var(--arret); color: #fff; text-align: center; padding: 8px 12px; font-weight: 650; }
+
+/* ── Grille ───────────────────────────────────────── */
+.grille {
+  display: grid; gap: 14px; padding: 14px 16px 24px;
+  grid-template-columns: 1.15fr 1fr 1fr;
+  grid-template-areas:
+    "suivi suivi pilotage"
+    "sequences ia journal";
+}
+.suivi { grid-area: suivi; } .pilotage { grid-area: pilotage; }
+.sequences { grid-area: sequences; } .ia { grid-area: ia; } .journal { grid-area: journal; }
+@media (max-width: 1150px) {
+  .grille { grid-template-columns: 1fr 1fr; grid-template-areas: "suivi suivi" "pilotage ia" "sequences journal"; }
+}
+@media (max-width: 760px) {
+  .grille { grid-template-columns: 1fr; grid-template-areas: "suivi" "pilotage" "ia" "sequences" "journal"; padding: 10px; }
+  .arret { padding: 10px 18px; font-size: 16px; }
+  .barre { gap: 8px; padding: 8px 10px; }
+  .sous, #st-transport, #st-seance { display: none; }
+  .urgence { margin-left: auto; }
+}
+.panneau { background: var(--panneau); border: 1px solid var(--bord); border-radius: var(--rayon); padding: 14px; min-width: 0; }
+
+/* ── Suivi ────────────────────────────────────────── */
+.vues { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 760px) { .vues { grid-template-columns: 1fr; } }
+figure { margin: 0; }
+canvas { width: 100%; height: auto; display: block; background: #0f1218; border: 1px solid var(--bord); border-radius: 8px; }
+figcaption { font-size: 11px; color: var(--doux); margin-top: 4px; }
+.tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin: 12px 0; }
+.tuile { background: #0f1218; border: 1px solid var(--bord); border-radius: 8px; padding: 8px 10px; }
+.tuile .etiq { font-size: 11px; color: var(--doux); }
+.tuile .val { font: 600 18px var(--mono); }
+.legende { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--doux); margin-top: 6px; }
+.legende i { display: inline-block; width: 10px; height: 3px; margin-right: 5px; vertical-align: middle; border-radius: 2px; }
+
+/* ── Pilotage ─────────────────────────────────────── */
+.curseur { display: grid; grid-template-columns: 70px 1fr 54px; align-items: center; gap: 10px; margin-bottom: 10px; }
+.curseur label { font-size: 13px; }
+.curseur output { font: 13px var(--mono); text-align: right; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.ligne { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+.ligne input:not([type=range]) { flex: 1; min-width: 140px; }
+button {
+  background: #232937; border: 1px solid #343c4d; border-radius: 8px; padding: 8px 12px; cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.discret { background: transparent; }
+button.primaire { background: #2d6a4f; border-color: #3f8f6b; }
+button.danger { background: #4a1f24; border-color: #7a2f36; }
+input:not([type=range]) { background: #0f1218; border: 1px solid #343c4d; border-radius: 8px; padding: 8px 10px; }
+input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.manette {
+  position: relative; width: 190px; height: 190px; margin: 6px auto; border-radius: 50%;
+  background: radial-gradient(circle, #1d2230 0 55%, #141821 56%); border: 1px solid var(--bord);
+  touch-action: none; user-select: none;
+}
+.manette::before, .manette::after { content: ""; position: absolute; background: #2a3040; }
+.manette::before { left: 50%; top: 10%; bottom: 10%; width: 1px; }
+.manette::after { top: 50%; left: 10%; right: 10%; height: 1px; }
+.bouton-manette {
+  position: absolute; width: 58px; height: 58px; left: 66px; top: 66px; border-radius: 50%; z-index: 1;
+  background: radial-gradient(circle at 35% 35%, #ffd27a, var(--accent)); box-shadow: 0 4px 14px #0008;
+}
+#val-propulsion { text-align: center; }
+
+/* ── Séquences ────────────────────────────────────── */
+.liste-seq { display: flex; flex-wrap: wrap; gap: 8px; }
+.liste-seq .seq { display: inline-flex; border: 1px solid #343c4d; border-radius: 8px; overflow: hidden; }
+.liste-seq .seq button { border: 0; border-radius: 0; }
+.liste-seq .seq.active { border-color: var(--ok); }
+.table-defile { overflow-x: auto; }
+table.images { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.images th, table.images td { border-bottom: 1px solid var(--bord); padding: 4px; text-align: center; }
+table.images th { color: var(--doux); font-weight: 500; }
+table.images td:last-child { white-space: nowrap; }
+table.images td:last-child button { padding: 4px 8px; margin-left: 2px; }
+table.images input { width: 54px; padding: 4px; text-align: right; font-family: var(--mono); }
+table.images td.vide { color: var(--doux); padding: 14px; }
+
+/* ── IA ───────────────────────────────────────────── */
+#ia-seuil { width: 140px; }
+.prop { border: 1px solid var(--bord); border-radius: 8px; padding: 10px; margin-top: 10px; background: #0f1218; }
+.prop.bloquee { border-color: #6b2a2a; }
+.prop.validee, .prop.executee_auto { border-color: #2f7d58; opacity: .8; }
+.prop.rejetee { opacity: .5; }
+.prop .entete { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--doux); }
+.prop .consigne { font-style: italic; margin: 4px 0; }
+.prop .action { font: 13px var(--mono); color: var(--info); word-break: break-word; }
+.jauge { position: relative; height: 8px; border-radius: 4px; background: #262c38; margin: 8px 0 4px; }
+.jauge .rempli { position: absolute; inset: 0 auto 0 0; border-radius: 4px; }
+.jauge .seuil { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--texte); }
+.prop .justif { font-size: 12px; margin: 4px 0; }
+
+/* ── Journal ──────────────────────────────────────── */
+.flux { list-style: none; padding: 0; margin: 8px 0 0; max-height: 420px; overflow-y: auto; font: 12px/1.5 var(--mono); }
+.flux li { padding: 3px 0; border-bottom: 1px dashed #232836; }
+.flux .ts { color: var(--doux); margin-right: 8px; }
+.flux .avert { color: var(--avert); }
+.flux .alerte { color: var(--alerte); }
+.flux .refus { color: #ff9b9b; }
+
+/* Interface hébergée : bandeau d'aide quand le pont local n'est pas joint */
+.bandeau-pont { background: #2a2414; border-bottom: 1px solid #8a6224; color: #f6e2b5; padding: 10px 16px; font-size: 13px; line-height: 1.5; }
+.bandeau-pont code { background: #0f1218; padding: 1px 6px; border-radius: 4px; }
+.bandeau-pont button { margin-left: 8px; padding: 4px 10px; }
+.bandeau-pont[hidden] { display: none; }

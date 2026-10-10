@@ -1,0 +1,1 @@
+"""Pont ROBO-SCÈNE."""
