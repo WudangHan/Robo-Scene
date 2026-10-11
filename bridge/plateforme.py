@@ -19,7 +19,7 @@ from .gouvernance import VerrouGouvernance
 from .securite import CommandeRefusee
 
 RACINE = Path(__file__).resolve().parent.parent
-PAGES = ("atelier", "scene", "spectateur", "recherche", "gouvernance", "regie", "surtitres", "tableau-public")
+PAGES = ("atelier", "scene", "spectateur", "recherche", "gouvernance", "regie", "surtitres")
 REFUS = (CommandeRefusee, VerrouGouvernance, ValueError, KeyError, FileNotFoundError, FileExistsError, PermissionError)
 
 
@@ -91,6 +91,10 @@ def monter(app: web.Application, ctl) -> None:
 
     for nom in PAGES:
         r.add_get(f"/{nom}", _page(f"{nom}.html"))
+
+    async def tableau_public(_req):     # page statique à chemins relatifs, identique sur le site public
+        raise web.HTTPFound("/static/tableau-public.html")
+    r.add_get("/tableau-public", tableau_public)
 
     # ── Vue d'ensemble ──────────────────────────────────────
     @_json

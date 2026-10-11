@@ -48,11 +48,13 @@ class Controleur:
         if not self.racine_corpus.is_absolute():
             self.racine_corpus = RACINE / self.racine_corpus
         self.gouv = Gouvernance(RACINE / "gouvernance", self.donnees)
+        ds = Path(cfg.get("flotte", {}).get("dossier_sequences") or (RACINE / "sequences"))
+        self.dossier_sequences = ds if ds.is_absolute() else RACINE / ds
         self.service = ServiceModeles(cfg.get("modeles", {}), self.donnees)
         # ── Flotte ──
         self.robots: dict[str, RobotConnecte] = {}
         d0 = depuis_config_console(cfg)
-        self.robots[d0.id] = RobotConnecte(d0, RACINE / "sequences", self.donnees)
+        self.robots[d0.id] = RobotConnecte(d0, self.dossier_sequences, self.donnees)
         fl = cfg.get("flotte", {})
         self.profils_disponibles = []
         dossier_profils = RACINE / fl.get("dossier_profils", "robots")
@@ -62,7 +64,7 @@ class Controleur:
                 if d.actif and d.id not in self.robots:
                     if cfg.get("_forcer_sim"):
                         d.simulation = True
-                    self.robots[d.id] = RobotConnecte(d, RACINE / "sequences" / d.id, self.donnees)
+                    self.robots[d.id] = RobotConnecte(d, self.dossier_sequences / d.id, self.donnees)
         self.actif_id = fl.get("actif") if fl.get("actif") in self.robots else d0.id
         # ── IA supervisée ──
         self.ia_cfg = dict(cfg["ia"])
@@ -338,7 +340,7 @@ class Controleur:
             await self.robots[rid].arreter()
         from dataclasses import replace
         d = replace(d, simulation=bool(simulation) or bool(self.cfg.get("_forcer_sim")))
-        r = RobotConnecte(d, RACINE / "sequences" / d.id, self.donnees)
+        r = RobotConnecte(d, self.dossier_sequences / d.id, self.donnees)
         if any(x.securite.arret_urgence for x in self.robots.values()):
             r.securite.declencher_arret("flotte à l'arrêt")
         self.robots[rid] = r

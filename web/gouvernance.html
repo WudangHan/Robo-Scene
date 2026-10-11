@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gouvernance — ROBO-SCÈNE</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/plateforme.css">
+</head>
+<body>
+<header class="barre">
+  <div class="titre"><span class="marque">ROBO-SCÈNE</span><span class="sous" data-i18n>Gouvernance</span></div>
+  <nav data-nav></nav>
+</header>
+<main class="page">
+  <section class="carte" aria-labelledby="h-v"><h2 id="h-v" data-i18n>Verrous</h2><div id="verrous"></div></section>
+  <section class="carte" aria-labelledby="h-inc">
+    <h2 id="h-inc" data-i18n>Incidents</h2>
+    <div id="incidents"></div>
+    <form id="f-inc">
+      <div class="champ"><label for="i-id">Fiche</label><select id="i-id"></select></div>
+      <div class="champ"><label for="i-g" data-i18n>Gravité</label><select id="i-g"><option>mineur</option><option>modere</option><option>grave</option></select></div>
+      <div class="champ"><label for="i-c" data-i18n>Cause</label><input id="i-c" maxlength="500"></div>
+      <div class="champ"><label for="i-m" data-i18n>Mesures</label><input id="i-m" maxlength="500"></div>
+      <div class="champ"><label for="i-p" data-i18n>Par (pseudonyme ou initiales)</label><input id="i-p" maxlength="20"></div>
+      <label class="ligne petit"><input type="checkbox" id="i-b"> Personne blessée</label>
+      <button type="submit" data-i18n>Clore l'incident</button>
+    </form>
+    <p id="msg-inc" class="message"></p>
+  </section>
+  <section class="carte" aria-labelledby="h-dec"><h2 id="h-dec" data-i18n>Décisions en attente (G-05)</h2><div id="decisions"></div><p id="msg-dec" class="message"></p></section>
+  <section class="carte" aria-labelledby="h-cons">
+    <h2 id="h-cons" data-i18n>Conservation (G-07)</h2><div id="conservation"></div>
+    <button id="inv">Inventaire des échéances passées</button>
+    <p class="petit">La destruction (irréversible) exige la saisie de « DÉTRUIRE » et un pseudonyme.</p>
+    <div class="ligne"><input id="conf" placeholder="DÉTRUIRE" aria-label="Confirmation"><input id="c-par" placeholder="Pseudonyme" aria-label="Pseudonyme"><button id="purger" class="danger">Détruire</button></div>
+    <p id="msg-cons" class="message"></p>
+  </section>
+  <section class="carte large" aria-labelledby="h-sys"><h2 id="h-sys" data-i18n>Systèmes d'IA (G-03)</h2><div id="systemes"></div><div id="modeles"></div></section>
+  <section class="carte large" aria-labelledby="h-fn"><h2 id="h-fn" data-i18n>Couverture des fonctions</h2><div id="fonctions"></div></section>
+</main>
+<script src="/static/i18n.js"></script>
+<script src="/static/plateforme.js"></script>
+<script>
+"use strict";
+async function actualiser() {
+  const g = await api("/api/gouvernance");
+  const av = g.avis_ethique || {};
+  const ecarts = Object.entries(g.efvp_ecarts || {});
+  $("#verrous").innerHTML = `<ul>
+    <li>Avis éthique : ${av.obtenu ? etiquette("obtenu", "ok") : etiquette("non obtenu — collecte verrouillée (G-02)", "alerte")}</li>
+    <li>EFVP : ${ecarts.length ? etiquette(`${ecarts.length} fonction(s) non couverte(s)`, "alerte") + " " + esc(ecarts.map(([k]) => k).join(", ")) : etiquette("à jour", "ok")}</li>
+    <li>Assurance responsabilité civile : ${g.assurance ? etiquette("souscrite", "ok") : etiquette("non souscrite", "avert")}</li>
+    <li>Prochaine revue de la politique d'IA : ${esc(g.revue.date || "à dater")} ${g.revue.due ? etiquette("due", "avert") : ""}</li></ul>`;
+  $("#incidents").innerHTML = tableau(g.incidents.slice().reverse(), [["id", "Fiche"], ["ouverture", "Ouverture", (v) => esc((v || "").slice(0, 16))],
+    ["motif", "Motif"], ["statut", t("État"), (v) => etiquette(v, v === "clos" ? "ok" : "alerte")], ["gravite", t("Gravité")]]);
+  $("#i-id").innerHTML = g.incidents_ouverts.map((i) => `<option>${esc(i.id)}</option>`).join("");
+  $("#f-inc").hidden = !g.incidents_ouverts.length;
+  $("#decisions").innerHTML = g.decisions_en_attente.length ? g.decisions_en_attente.map((d) => `<div class="carte"><p><b>${esc(d.id)}</b> — ${esc(d.objet)}<br>
+    <span class="petit">${esc(d.recommandation)}</span></p><div class="ligne"><input data-motif="${esc(d.id)}" placeholder="Motif" aria-label="Motif">
+    <input data-par="${esc(d.id)}" placeholder="Pseudonyme" aria-label="Pseudonyme">
+    <button data-acc="${esc(d.id)}">${t("Valider")}</button><button data-ref="${esc(d.id)}">${t("Rejeter")}</button></div></div>`).join("") : `<p class="petit">${t("Aucune donnée.")}</p>`;
+  $("#conservation").innerHTML = tableau(g.conservation, [["code", "Jeu"], ["libelle", "Libellé"], ["statut", t("État")], ["fichiers", "Fichiers"]]);
+  $("#systemes").innerHTML = tableau(Object.entries(g.systemes || {}).map(([k, v]) => ({ code: k, ...v })),
+    [["code", "Code"], ["nom", "Nom"], ["version_courante", "Version"], ["risque", "Risque"], ["statut", t("État")]]);
+  const p = await api("/api/plateforme");
+  $("#modeles").innerHTML = `<p class="petit">Modèles adoptés en début de séance (D13) : ${esc(JSON.stringify(p.modeles.resolus || {}))} · local : ${esc(p.modeles.local.modele)}${p.modeles.local.provisoire ? " (provisoire)" : ""}</p>`;
+  const f = p.fonctions;
+  $("#fonctions").innerHTML = `<p>${Object.entries(f.bilan).map(([k, v]) => etiquette(`${k} : ${v}`, k === "réalisé" ? "ok" : k === "conditionné" ? "alerte" : "avert")).join(" ")} · ${f.total} fonctions</p>`
+    + tableau(f.fonctions, [["id", "ID"], ["etat", t("État")], ["code", "Code"], ["reste", "Reste à faire"]]);
+}
+$("#f-inc").onsubmit = (ev) => { ev.preventDefault(); agir("#msg-inc", async () => { await api("/api/gouvernance/incident_clore",
+  { id: $("#i-id").value, gravite: $("#i-g").value, cause: $("#i-c").value, mesures: $("#i-m").value, par: $("#i-p").value, personnes_blessees: $("#i-b").checked }); actualiser(); }); };
+$("#decisions").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  const id = b.dataset.acc || b.dataset.ref;
+  agir("#msg-dec", async () => { await api("/api/gouvernance/decision_valider", { id, decision: b.dataset.acc ? "acceptee" : "refusee",
+    motif: $(`[data-motif="${CSS.escape(id)}"]`).value, par: $(`[data-par="${CSS.escape(id)}"]`).value }); actualiser(); });
+});
+$("#inv").onclick = () => agir("#msg-cons", async () => { const r = await api("/api/gouvernance/conservation_inventaire", {}); message("#msg-cons", `${r.a_detruire.length} jeu(x) à échéance.`); });
+$("#purger").onclick = () => agir("#msg-cons", async () => { await api("/api/gouvernance/conservation_purger", { confirmation: $("#conf").value, par: $("#c-par").value }); actualiser(); });
+actualiser();
+</script>
+</body>
+</html>

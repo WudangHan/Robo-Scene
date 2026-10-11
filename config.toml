@@ -42,6 +42,7 @@ temperature = 0.2              # profil « commande » (voir README : profil 0,7
 max_tokens = 600
 seuil_confiance = 0.75         # sous ce seuil, la proposition est bloquée
 execution_auto = false         # true : exécution sans validation au-dessus du seuil (déconseillé sur scène)
+regle = "bibliotheque_fermee"  # "angles_s04" : angles proposés par l'IA, permis SEULEMENT en séance de type S04
 
 [protocole]
 # Nomenclature ROBO-SCÈNE : [DATE]_[SYSTÈME]_[TYPE]_[NUMÉRO]
@@ -49,6 +50,8 @@ systeme = "ESP32"
 type = "S04"                   # libellé de séance incarnée, modifiable
 dossier_corpus = "corpus"
 operatrice = ""                # à renseigner avant la séance
+pseudonyme_operatrice = "OP01" # pseudonyme inscrit dans le journal de cocréation (jamais un nom)
+versionner_corpus = true       # chaque génération est déposée par un commit Git commenté (N-03)
 
 [partenaire]
 # Partenaire de théâtre : formation, répétition, analyse, variations, coprésence
@@ -59,3 +62,62 @@ incarnation = false                # true : le robot accompagne les répliques e
 regime = "humain"                  # "humain" (émulation) ou "machinique" (qualités d'effort Laban)
 souffleur_delai_s = 4.0            # silence de l'acteur avant que le souffleur donne le début de la réplique
 fin_replique_silence_ms = 1200     # silence qui marque la fin d'une réplique de l'acteur
+
+# ─────────────────────────────────────────────────────────────
+#  Plateforme intégrée (cahier des fonctions v1.0)
+# ─────────────────────────────────────────────────────────────
+[donnees]
+dossier = "donnees"                # données locales (hors dépôt) : traces, questionnaires, analyses, gouvernance
+
+[modeles]
+# Décision D13 : version la plus récente adoptée au DÉBUT de chaque séance, jamais en cours de séance, consignée.
+# Clés lues dans l'environnement : ANTHROPIC_API_KEY, OPENAI_API_KEY. Sans clé : voies déterministes.
+fournisseur_prefere = "anthropic"  # "openai" pour placer GPT en premier
+local = "gemma4:12b"               # SI-02 PROVISOIRE (essais seulement, jusqu'à l'évaluation à l'aveugle)
+local_provisoire = true
+url_local = "http://127.0.0.1:11434"
+plafond_jetons_seance = 200000
+[modeles.roles]                    # familles par rôle, dans l'ordre de préférence
+ecriture = ["claude-opus", "gpt-sol"]
+analyse  = ["claude-opus", "gpt-sol"]
+rapide   = ["claude-sonnet", "gpt-luna"]
+commande = ["claude-sonnet", "gpt-luna"]
+
+[flotte]
+dossier_profils = "robots"         # un fichier .toml par robot (AiNex, Reachy Mini, ROS 2, MQTT, OSC, HTTP, externe)
+# actif = "ainex-01"               # robot actif au démarrage (sinon le robot de la console)
+
+[atelier]
+# Mode « atelier » (personnes participantes) verrouillé tant que : avis éthique, EFVP à jour, SI-02 désigné.
+
+[scene]
+a_blanc = true                     # true : lumière et son simulés (aucun paquet sACN ni OSC vers QLab)
+univers_dmx = 1
+hote_qlab = "127.0.0.1"
+port_qlab = 53000
+hote_p3 = "127.0.0.1"
+port_osc_p3 = 9000
+p3_a_blanc = false                 # la provenance est envoyée à la séance P3 locale
+
+[spectateur]
+hote_public = "0.0.0.0"            # réseau de salle ; aucune adresse IP n'est journalisée
+port_p3 = 8080                     # rétroaction émotionnelle P3.2
+port_osc_p3 = 9000
+hote_osc = "127.0.0.1"
+port_questionnaires = 8081         # questionnaires I-7 et I-6 (serveur public distinct)
+questionnaires_au_demarrage = false
+seuil_diffusion = 5
+fenetre_s = 30
+delai_min_s = 10
+
+[pilotage]
+dossier_projet = ""                # ex. "/Users/…/L'IA au service de la création théâtrale" (Régie, inventaire mensuel)
+inventaire_mensuel = true
+
+[pedagogie]
+actif = false                      # O-10 : mode É.T.T., données rangées à part (donnees_ett/), jamais versées à la recherche
+dossier = "donnees_ett"
+
+[diffusion]
+c2pa_certificat = ""               # O-07 : certificat et clé de signature ; vides → manifeste compagnon non signé
+c2pa_cle = ""

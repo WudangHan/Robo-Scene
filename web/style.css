@@ -36,7 +36,7 @@ h3 { font-size: 13px; margin: 14px 0 8px; color: var(--doux); font-weight: 600; 
 .titre { display: flex; flex-direction: column; line-height: 1.1; }
 .marque { font-weight: 800; letter-spacing: .16em; color: var(--accent); }
 .sous { font-size: 12px; color: var(--doux); }
-.nav-pages { display: flex; gap: 4px; }
+.nav-pages { display: flex; gap: 4px; flex-wrap: wrap; }
 .nav-pages a { color: var(--doux); text-decoration: none; padding: 6px 10px; border-radius: 8px; border: 1px solid transparent; }
 .nav-pages a[aria-current="page"] { color: var(--texte); border-color: var(--bord); background: #1f2430; }
 .statuts { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
@@ -62,15 +62,16 @@ h3 { font-size: 13px; margin: 14px 0 8px; color: var(--doux); font-weight: 600; 
   grid-template-columns: 1.15fr 1fr 1fr;
   grid-template-areas:
     "suivi suivi pilotage"
-    "sequences ia journal";
+    "sequences ia journal"
+    "flotte flotte flotte";
 }
 .suivi { grid-area: suivi; } .pilotage { grid-area: pilotage; }
-.sequences { grid-area: sequences; } .ia { grid-area: ia; } .journal { grid-area: journal; }
+.sequences { grid-area: sequences; } .ia { grid-area: ia; } .journal { grid-area: journal; } .flotte { grid-area: flotte; }
 @media (max-width: 1150px) {
-  .grille { grid-template-columns: 1fr 1fr; grid-template-areas: "suivi suivi" "pilotage ia" "sequences journal"; }
+  .grille { grid-template-columns: 1fr 1fr; grid-template-areas: "suivi suivi" "pilotage ia" "sequences journal" "flotte flotte"; }
 }
 @media (max-width: 760px) {
-  .grille { grid-template-columns: 1fr; grid-template-areas: "suivi" "pilotage" "ia" "sequences" "journal"; padding: 10px; }
+  .grille { grid-template-columns: 1fr; grid-template-areas: "suivi" "pilotage" "ia" "sequences" "journal" "flotte"; padding: 10px; }
   .arret { padding: 10px 18px; font-size: 16px; }
   .barre { gap: 8px; padding: 8px 10px; }
   .sous, #st-transport, #st-seance { display: none; }
@@ -97,7 +98,8 @@ figcaption { font-size: 11px; color: var(--doux); margin-top: 4px; }
 .curseur output { font: 13px var(--mono); text-align: right; }
 input[type=range] { width: 100%; accent-color: var(--accent); }
 .ligne { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
-.ligne input:not([type=range]) { flex: 1; min-width: 140px; }
+.ligne input:not([type=range]):not([type=checkbox]) { flex: 1; min-width: 140px; }
+.ligne input[type=checkbox] { flex: 0 0 auto; width: 20px; height: 20px; }
 button {
   background: #232937; border: 1px solid #343c4d; border-radius: 8px; padding: 8px 12px; cursor: pointer;
 }

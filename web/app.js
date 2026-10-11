@@ -36,6 +36,7 @@ function connecter() {
       case "ia_proposition": propositions.set(m.id, m); rendrePropositions(); break;
       case "ia_statut": if (propositions.has(m.id)) { propositions.get(m.id).statut = m.statut; rendrePropositions(); } break;
     }
+    if (window.surMessagePlateforme) window.surMessagePlateforme(m);   // flotte, règles, surtitres, voix (console-plateforme.js)
   };
 }
 function envoyer(op, data = {}) {
@@ -45,7 +46,7 @@ const heure = () => new Date().toTimeString().slice(0, 8);
 
 /* ── Configuration reçue du pont ───────────────────── */
 function appliquerConfig(c) {
-  const premiere = !cfg;
+  const premiere = !cfg || cfg.robot_id !== c.robot_id;   // changement de robot actif : curseurs reconstruits
   cfg = c;
   $("#st-transport").textContent = `${c.robot} · ${c.transport}`;
   $("#st-seance").textContent = c.seance;

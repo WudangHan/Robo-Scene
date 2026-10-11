@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recherche — ROBO-SCÈNE</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/plateforme.css">
+</head>
+<body>
+<header class="barre">
+  <div class="titre"><span class="marque">ROBO-SCÈNE</span><span class="sous" data-i18n>Recherche</span></div>
+  <nav data-nav></nav>
+</header>
+<main class="page">
+  <section class="carte" aria-labelledby="h-an">
+    <h2 id="h-an" data-i18n>Analyse (Q-01 à Q-05)</h2>
+    <p class="note">Dossier daté et autosuffisant : tableaux, script R de l'analyse principale (lme4, pbkrtest, ordinal), paramètres et
+      manifeste d'empreintes (Q-04). Les données d'essai ne sont jamais lues.</p>
+    <div class="champ"><label for="exclues" data-i18n>Représentations exclues</label><input id="exclues" placeholder="X2-03, X2-07"></div>
+    <div class="champ"><label for="codeur" data-i18n>Codeur (Q-05)</label><input id="codeur" maxlength="20"></div>
+    <div class="champ"><label for="spr">Séances de scène par représentation (JSON)</label>
+      <input id="spr" placeholder='{"X2-01": ["20271015_ESP32_S04_001"]}'></div>
+    <label class="ligne petit"><input type="checkbox" id="sansrec"> Exclure les transformations reconstituées (N-07)</label>
+    <button id="lancer" data-i18n>Lancer l'analyse</button>
+    <p id="msg-an" class="message"></p>
+    <pre class="bloc" id="rapport" hidden></pre>
+  </section>
+
+  <section class="carte" aria-labelledby="h-ent">
+    <h2 id="h-ent" data-i18n>Codage des entretiens (local)</h2>
+    <p class="note">Livre de codes A.1. Les suggestions passent par le modèle LOCAL seulement (D03) ; elles sont refusées si le modèle local est
+      indisponible. Seuls les codages validés par une personne entrent dans l'analyse.</p>
+    <div class="champ"><label for="e-doc">Document</label><input id="e-doc" placeholder="ENT-01" maxlength="30"></div>
+    <div class="champ"><label for="e-ps" data-i18n>Pseudonyme</label><input id="e-ps" maxlength="20"></div>
+    <div class="champ"><label for="e-txt" data-i18n>Transcription pseudonymisée</label><textarea id="e-txt" rows="6"></textarea></div>
+    <button id="decouper" data-i18n>Découper</button>
+    <div id="segments"></div>
+    <p id="msg-ent" class="message"></p>
+  </section>
+
+  <section class="carte" aria-labelledby="h-veille">
+    <h2 id="h-veille" data-i18n>Veille bibliographique (O-08)</h2>
+    <form id="f-veille" class="ligne">
+      <label for="requete" class="sr" data-i18n>Requête</label>
+      <input id="requete" placeholder="robot theatre co-creation" maxlength="300">
+      <button type="submit" data-i18n>Chercher</button>
+    </form>
+    <div class="champ" style="max-width:260px"><label for="v-par" data-i18n>Par (pseudonyme ou initiales)</label><input id="v-par" maxlength="20"></div>
+    <p id="msg-veille" class="message"></p>
+    <div id="notices"></div>
+    <h3 data-i18n>Bibliographie MLA (notices vérifiées)</h3>
+    <pre class="bloc" id="biblio"></pre>
+  </section>
+
+  <section class="carte" aria-labelledby="h-tab">
+    <h2 id="h-tab" data-i18n>Tableau public (O-09)</h2>
+    <p class="note">Agrégats seulement, groupes de moins de cinq retirés ; la publication exige une validation nominative.</p>
+    <div class="boutons"><button id="t-prep" data-i18n>Préparer le brouillon</button></div>
+    <div class="champ" style="max-width:260px"><label for="t-par" data-i18n>Par (pseudonyme ou initiales)</label><input id="t-par" maxlength="20"></div>
+    <button id="t-pub" data-i18n>Publier</button>
+    <p id="msg-tab" class="message"></p>
+    <pre class="bloc" id="tab" hidden></pre>
+  </section>
+</main>
+<script src="/static/i18n.js"></script>
+<script src="/static/plateforme.js"></script>
+<script>
+"use strict";
+let codes = [];
+$("#lancer").onclick = () => agir("#msg-an", async () => {
+  let spr = {};
+  if ($("#spr").value.trim()) spr = JSON.parse($("#spr").value);
+  const r = await api("/api/analyse/lancer", {
+    exclues: $("#exclues").value.split(",").map((x) => x.trim()).filter(Boolean), codeur: $("#codeur").value || null,
+    seances_par_representation: spr, exclure_reconstituees: $("#sansrec").checked });
+  $("#rapport").hidden = false; $("#rapport").textContent = `${r.dossier}\n\n${r.rapport}`;
+});
+$("#decouper").onclick = () => agir("#msg-ent", async () => {
+  if (!codes.length) codes = (await api("/api/analyse/livre", {})).codes;
+  const r = await api("/api/analyse/segmenter", { texte: $("#e-txt").value, pseudonyme: $("#e-ps").value, document: $("#e-doc").value });
+  const options = codes.filter((c) => c.libelle).map((c) => `<option value="${esc(c.code)}">${esc(c.code)} — ${esc(c.libelle)}</option>`).join("");
+  $("#segments").innerHTML = r.segments.map((s, i) => `<div class="carte" data-seg='${esc(JSON.stringify(s))}'>
+    <p><span class="mono">${esc(s.document)} §${s.segment}</span> ${esc(s.texte)}</p>
+    <label class="sr" for="c${i}">Codes</label><select id="c${i}" multiple size="5">${options}</select>
+    <div class="boutons"><button data-sug>${t("Suggérer (modèle local)")}</button><button data-val>${t("Valider")}</button></div>
+    <p class="petit" data-info></p></div>`).join("");
+});
+$("#segments").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  const bloc = b.closest("[data-seg]"); const seg = JSON.parse(bloc.dataset.seg); const sel = bloc.querySelector("select");
+  if (b.hasAttribute("data-sug")) agir("#msg-ent", async () => {
+    const r = await api("/api/analyse/suggerer", { segment: seg });
+    [...sel.options].forEach((o) => (o.selected = r.codes.includes(o.value)));
+    bloc.querySelector("[data-info]").textContent = `Suggéré (${r.modele}) : ${r.justification}`;
+  });
+  if (b.hasAttribute("data-val")) agir("#msg-ent", async () => {
+    await api("/api/analyse/coder", { segment: seg, codes: [...sel.selectedOptions].map((o) => o.value), codeur: $("#codeur").value || $("#e-ps").value });
+    bloc.querySelector("[data-info]").textContent = "Codage validé.";
+  });
+});
+async function veille() {
+  const r = await api("/api/veille");
+  $("#notices").innerHTML = tableau(r.notices, [["titre", "Titre"], ["annee", "Année"], ["sources", "Sources", (v) => esc((v || []).join(", "))],
+    ["statut", t("État"), (v) => etiquette(v, v === "vérifiée" ? "ok" : v === "écartée" ? "alerte" : "avert")],
+    ["cle", "", (v, l) => l.statut === "à vérifier" ? `<button data-v="${esc(v)}">${t("Vérifiée")}</button> <button data-x="${esc(v)}">${t("Écartée")}</button>` : ""]]);
+  $("#biblio").textContent = r.bibliographie || "—";
+}
+$("#f-veille").onsubmit = (ev) => { ev.preventDefault(); agir("#msg-veille", async () => {
+  const r = await api("/api/veille/chercher", { requete: $("#requete").value });
+  message("#msg-veille", `${r.nouvelles} nouvelle(s) ; ${r.a_verifier} à vérifier` + (Object.keys(r.erreurs).length ? ` ; injoignable : ${Object.keys(r.erreurs).join(", ")}` : ""));
+  veille(); }); };
+$("#notices").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  const cle = b.dataset.v || b.dataset.x;
+  const note = b.dataset.v ? prompt(t("Note de vérification")) : "";
+  if (b.dataset.v && !note) return;
+  agir("#msg-veille", async () => { await api("/api/veille/verifier", { cle, statut: b.dataset.v ? "vérifiée" : "écartée", par: $("#v-par").value, note }); veille(); });
+});
+$("#t-prep").onclick = () => agir("#msg-tab", async () => { const r = await api("/api/diffusion/tableau_preparer", {}); $("#tab").hidden = false; $("#tab").textContent = JSON.stringify(r, null, 1); });
+$("#t-pub").onclick = () => agir("#msg-tab", () => api("/api/diffusion/tableau_publier", { par: $("#t-par").value }));
+veille();
+</script>
+</body>
+</html>

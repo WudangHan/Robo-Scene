@@ -17,6 +17,11 @@
   to = "/partenaire.html"
   status = 200
 
+[[redirects]]
+  from = "/tableau-public"
+  to = "/tableau-public.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

@@ -141,6 +141,13 @@ async def test_plateforme_bout_en_bout(cfg, monkeypatch):
         assert (await c.get("/atelier/api/etat")).status == 200
         assert (await c.get("/spectateur/api/etat")).status == 200
         assert (await c.get("/api/fonctions")).status == 200
+        for page in ("atelier", "scene", "spectateur", "recherche", "gouvernance", "regie", "surtitres"):
+            r = await c.get(f"/{page}")
+            html = await r.text()
+            assert r.status == 200 and "i18n.js" in html and "data-nav" in html, page
+        r = await c.get("/tableau-public", allow_redirects=False)
+        assert r.status == 302 and r.headers["Location"] == "/static/tableau-public.html"
+        assert '"/atelier/api/' in await (await c.get("/atelier/p1")).text()
 
 
 async def test_biometrie_op_mouvement(cfg):

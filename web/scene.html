@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scène — ROBO-SCÈNE</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/plateforme.css">
+</head>
+<body>
+<header class="barre">
+  <div class="titre"><span class="marque">ROBO-SCÈNE</span><span class="sous" data-i18n>Scène</span></div>
+  <nav data-nav></nav>
+  <div class="urgence"><button id="arret" class="arret" title="Arrêt logiciel de la conduite (touche Échap)" data-i18n>ARRÊT conduite</button></div>
+</header>
+<main class="page">
+  <section class="carte" aria-labelledby="h-conduite">
+    <h2 id="h-conduite"><span data-i18n>Conduite</span> <small id="titre-conduite"></small></h2>
+    <div class="boutons">
+      <button id="exemple" data-i18n>Charger l'exemple</button>
+      <button id="apercu" data-i18n>Aperçu</button>
+      <button id="simuler" data-i18n>Simuler (jumeau)</button>
+    </div>
+    <div class="champ"><label for="yaml" data-i18n>Texte YAML de la conduite</label>
+      <textarea id="yaml" rows="10" spellcheck="false" class="mono"></textarea></div>
+    <button id="charger" data-i18n>Charger le texte</button>
+    <p id="msg-conduite" class="message" aria-live="polite"></p>
+    <div id="erreurs"></div>
+  </section>
+
+  <section class="carte" aria-labelledby="h-go">
+    <h2 id="h-go">GO <small id="prochain"></small></h2>
+    <div class="boutons">
+      <button id="go" class="go" title="Touche Entrée">GO</button>
+      <button id="retour" data-i18n>Retour</button>
+      <button id="reprendre" data-i18n>Reprendre les gestes</button>
+    </div>
+    <p id="msg-go" class="message" aria-live="assertive"></p>
+    <div class="surtitre-scene" id="surtitre" aria-live="polite"><span class="petit" data-i18n>Surtitre en cours</span></div>
+    <p class="petit">Sorties « à blanc » par défaut ([scene] a_blanc) : aucun paquet de lumière ni de son n'est émis tant que la régie ne l'a pas décidé.</p>
+  </section>
+
+  <section class="carte large" aria-labelledby="h-reperes">
+    <h2 id="h-reperes" data-i18n>Repères</h2>
+    <div id="reperes"></div>
+  </section>
+
+  <section class="carte" aria-labelledby="h-echo">
+    <h2 id="h-echo" data-i18n>Écho (R-06)</h2>
+    <p class="petit">Le robot répond par un geste <b>choisi</b> dans sa bibliothèque fermée (D09, option A), jamais par imitation ; le choix est tracé comme opération de sélection.</p>
+    <div class="champ"><label for="stimulus" data-i18n>Ce que fait l'interprète</label><input id="stimulus" maxlength="300"></div>
+    <div class="champ"><label for="geste" data-i18n>Geste choisi</label><select id="geste"></select></div>
+    <button id="echo" data-i18n>Jouer l'écho</button>
+    <p id="msg-echo" class="message"></p>
+  </section>
+
+  <section class="carte" aria-labelledby="h-journal">
+    <h2 id="h-journal" data-i18n>Journal de la scène</h2>
+    <pre class="bloc" id="journal" aria-live="off"></pre>
+  </section>
+
+  <section class="carte large" aria-labelledby="h-resultat" id="bloc-resultat" hidden>
+    <h2 id="h-resultat"><span data-i18n>Aperçu</span></h2>
+    <div id="resultat"></div>
+  </section>
+</main>
+<script src="/static/i18n.js"></script>
+<script src="/static/plateforme.js"></script>
+<script>
+"use strict";
+let etat = null;
+function rendre(e) {
+  etat = e;
+  $("#titre-conduite").textContent = e.titre ? `— ${e.titre}` : "";
+  $("#prochain").textContent = e.prochain ? `→ ${e.prochain}` : "";
+  $("#erreurs").innerHTML = (e.erreurs || []).map((x) => `<div class="verrou">${esc(x)}</div>`).join("");
+  $("#reperes").innerHTML = tableau(e.reperes, [["numero", "#"], ["nom", "Nom"],
+    ["actions", "Actions", (a) => a.map((x) => `${esc(x.type)} : ${esc(typeof x.valeur === "object" ? JSON.stringify(x.valeur) : x.valeur)}${x.robot ? " @" + esc(x.robot) : ""}${x.delai ? ` (+${x.delai} s)` : ""}`).join("<br>")]]);
+  $$("#reperes tbody tr").forEach((tr, i) => { if (i === e.index) tr.style.background = "#1f2a1f"; });
+  $("#journal").textContent = (e.journal || []).join("\n");
+  $("#go").disabled = !e.chargee || (e.erreurs || []).length > 0;
+}
+async function actualiser() { try { rendre(await api("/api/scene")); } catch (e) { message("#msg-go", e.message, "erreur"); } }
+$("#exemple").onclick = () => agir("#msg-conduite", async () => rendre(await api("/api/scene/charger", {})));
+$("#charger").onclick = () => agir("#msg-conduite", async () => rendre(await api("/api/scene/charger", { texte: $("#yaml").value })));
+$("#go").onclick = () => agir("#msg-go", async () => rendre(await api("/api/scene/go", {})));
+$("#retour").onclick = () => agir("#msg-go", async () => rendre(await api("/api/scene/retour", {})));
+$("#reprendre").onclick = () => agir("#msg-go", async () => rendre(await api("/api/scene/reprendre", {})));
+$("#arret").onclick = () => agir("#msg-go", async () => rendre(await api("/api/scene/arret", {})));
+async function afficherResultat(chemin) {
+  const r = await api(chemin, {});
+  $("#bloc-resultat").hidden = false;
+  const lignes = r.gestes || r.actions || [];
+  $("#resultat").innerHTML = `<p>${r.jouable ? etiquette("jouable", "ok") : etiquette("problèmes", "alerte")} · durée minimale ${esc(r.duree_minimale_s)} s
+    ${r.motif_jumeau ? " · " + esc(r.motif_jumeau) : ""}</p>`
+    + (r.problemes || []).map((p) => `<div class="verrou">${esc(p)}</div>`).join("")
+    + tableau(lignes, [["repere", "Repère"], ["type", "Type"], ["valeur", "Valeur", (v) => esc(typeof v === "object" ? JSON.stringify(v) : v)],
+      ["robot", "Robot"], ["statut", "Statut"], ["etat", "État"], ["duree_s", "Durée (s)"], ["jumeau", "Jumeau"], ["conforme", "Conforme"]]);
+}
+$("#apercu").onclick = () => agir("#msg-conduite", () => afficherResultat("/api/scene/apercu"));
+$("#simuler").onclick = () => agir("#msg-conduite", () => afficherResultat("/api/scene/simuler"));
+$("#echo").onclick = () => agir("#msg-echo", () => api("/api/scene/echo", { stimulus: $("#stimulus").value, geste: $("#geste").value }));
+document.addEventListener("keydown", (ev) => {
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(ev.target.tagName)) return;
+  if (ev.key === "Enter" && !$("#go").disabled) { ev.preventDefault(); $("#go").click(); }
+  if (ev.key === "Escape") { ev.preventDefault(); $("#arret").click(); }
+});
+// Surtitres, audiodescription et voix diffusés par le pont (WebSocket de la console)
+(function ecouter() {
+  const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+  ws.onmessage = (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.type === "surtitre") {
+      $("#surtitre").innerHTML = `${esc(m.texte)}${m.en ? `<span class="en" lang="en">${esc(m.en)}</span>` : ""}<span class="prov">${esc(m.provenance)}</span>`;
+    } else if (m.type === "scene_journal") { actualiser(); }
+    else if (m.type === "sequences") {
+      $("#geste").innerHTML = (m.liste || []).map((n) => `<option>${esc(typeof n === "object" ? n.nom : n)}</option>`).join("");
+    }
+  };
+  ws.onclose = () => setTimeout(ecouter, 2000);
+})();
+actualiser();
+</script>
+</body>
+</html>

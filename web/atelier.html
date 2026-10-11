@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atelier — ROBO-SCÈNE</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/plateforme.css">
+</head>
+<body>
+<header class="barre">
+  <div class="titre"><span class="marque">ROBO-SCÈNE</span><span class="sous" data-i18n>Atelier</span></div>
+  <nav data-nav></nav>
+</header>
+<main class="page">
+  <section class="carte" aria-labelledby="h-o">
+    <h2 id="h-o">Séance d'atelier P1 <small id="seance"></small></h2>
+    <p class="note">Mode « essai » : sans personne participante. Mode « atelier » : exige l'avis éthique, une EFVP à jour, le consentement
+      « atelier_p1 » de chaque pseudonyme et un modèle local désigné (SI-02 non provisoire). Données sensibles → modèle local seulement (D03).</p>
+    <form id="f-o">
+      <div class="champ"><label for="ps">Pseudonymes (séparés par des virgules ; jamais de noms)</label><input id="ps" placeholder="P01, P02"></div>
+      <div class="champ"><label for="mode" data-i18n>Mode</label><select id="mode"><option value="essai" data-i18n>Essai</option><option value="atelier" data-i18n>Atelier</option></select></div>
+      <div class="champ"><label for="fam">Modèle distant (D13)</label><select id="fam"><option value="claude-opus">Claude Opus (SI-01)</option><option value="gpt-sol">GPT Sol (SI-08)</option></select></div>
+      <label class="ligne petit"><input type="checkbox" id="sim"> Générations simulées (sans appel aux modèles)</label>
+      <button type="submit" data-i18n>Ouvrir</button>
+    </form>
+    <p id="msg-o" class="message"></p>
+  </section>
+  <section class="carte" aria-labelledby="h-p">
+    <h2 id="h-p">Registre de consigne <small>(O-01)</small></h2>
+    <p class="petit">Le registre choisi est consigné dans la trace de chaque consigne (champ « precision »), pour comparer les registres à l'analyse.</p>
+    <div class="champ"><label for="prec">Registre</label>
+      <select id="prec"><option value="">(non déclaré)</option><option value="1">1 — ouverte</option><option value="2">2 — orientée</option>
+        <option value="3">3 — précise</option><option value="4">4 — prescriptive</option></select></div>
+    <div id="indic"></div>
+    <p id="msg-p" class="message"></p>
+  </section>
+  <section class="carte large" aria-labelledby="h-i">
+    <h2 id="h-i">Cinq opérations <small>(interface du prototype P1, traces miroir dans le journal unifié)</small></h2>
+    <iframe class="p1" id="p1" title="Atelier P1" src="about:blank"></iframe>
+  </section>
+</main>
+<script src="/static/i18n.js"></script>
+<script src="/static/plateforme.js"></script>
+<script>
+"use strict";
+const A = { "X-Atelier": "1" };
+function rendre(e) {
+  $("#seance").textContent = e.ouverte ? `— ${e.seance} (${e.mode})` : "";
+  if (e.ouverte && $("#p1").src === "about:blank") $("#p1").src = "/atelier/p1";
+  if (e.ouverte) {
+    const c = e.completude || {};
+    $("#indic").innerHTML = `<p class="petit">Complétude N-01 : ${c.conforme ? etiquette("conforme", "ok") : etiquette(`${(c.manques || []).length} manque(s)`, "avert")}
+      · distant ${esc(e.modeles.distant.modele)} ${e.modeles.distant.disponible ? "" : "(indisponible)"} · local ${esc(e.modeles.local.modele)}${e.modeles.local.provisoire ? " (provisoire)" : ""}</p>`;
+    $("#prec").value = e.precision_consigne ?? "";
+  }
+}
+$("#f-o").onsubmit = (ev) => { ev.preventDefault(); agir("#msg-o", async () => rendre(await api("/atelier/api/ouvrir",
+  { pseudonymes: $("#ps").value.split(","), mode: $("#mode").value, famille: $("#fam").value, simule: $("#sim").checked }, A))); };
+$("#prec").onchange = () => agir("#msg-p", async () => rendre(await api("/atelier/api/precision", { precision: $("#prec").value }, A)));
+api("/atelier/api/etat").then(rendre);
+setInterval(() => api("/atelier/api/etat").then(rendre), 8000);
+</script>
+</body>
+</html>

@@ -34,8 +34,12 @@ def monter(app: web.Application, ctl) -> GestionAteliers:
                 return web.json_response(g.ouvrir(pseudonymes=d.get("pseudonymes", []), mode=d.get("mode", "essai"),
                                                   famille=d.get("famille", "claude-opus"), simule=bool(d.get("simule"))))
             a = g.exiger()
+            if action == "precision":                         # O-01 : registre de consigne (1 à 4), consigné
+                a.precision_courante = None if d.get("precision") in (None, "") else max(1, min(4, int(d["precision"])))
+                return web.json_response(g.etat())
             if action == "consigne":
-                a.precision_courante = d.get("precision")      # O-01 : registre de consigne (1 à 4) consigné
+                if "precision" in d:
+                    a.precision_courante = d.get("precision")
                 await _thread(a.consigner, d.get("pseudonyme", ""), d.get("texte", ""), d.get("type", "libre"),
                               int(d.get("nb", 3)), d.get("extraits", []), bool(d.get("confidentielle")))
             elif action == "redemander":
@@ -71,6 +75,14 @@ def monter(app: web.Application, ctl) -> GestionAteliers:
         except (KeyError, ValueError) as exc:
             return erreur(ValueError(f"Requête invalide ({exc.__class__.__name__} : {exc})"))
 
+    async def page_p1(_):
+        """Interface du prototype P1, servie telle quelle, ses appels redirigés vers /atelier/api/."""
+        from .. import _modules as m
+        html = (m.CHEMINS["p1"] / "atelier_p1" / "static" / "atelier.html").read_text(encoding="utf-8")
+        html = html.replace('"/api/', '"/atelier/api/')
+        return web.Response(text=html, content_type="text/html", headers={"Cache-Control": "no-store"})
+
+    app.router.add_get("/atelier/p1", page_p1)
     app.router.add_get("/atelier/api/etat", etat)
     app.router.add_post("/atelier/api/{action}", post)
     return g

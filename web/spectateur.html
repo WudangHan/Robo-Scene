@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spectateur — ROBO-SCÈNE</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/plateforme.css">
+</head>
+<body>
+<header class="barre">
+  <div class="titre"><span class="marque">ROBO-SCÈNE</span><span class="sous" data-i18n>Spectateur</span></div>
+  <nav data-nav></nav>
+</header>
+<main class="page">
+  <section class="carte large" id="verrou" hidden></section>
+
+  <section class="carte" aria-labelledby="h-tirage">
+    <h2 id="h-tirage" data-i18n>Tirage des conditions X.2</h2>
+    <div id="tirage-etat"></div>
+    <form id="f-tirage">
+      <div class="champ"><label for="t-n" data-i18n>Représentations</label><input id="t-n" type="number" min="2" step="2" value="8" required></div>
+      <div class="champ"><label for="t-g" data-i18n>Graine</label><input id="t-g" type="number" required></div>
+      <label class="ligne"><input type="checkbox" id="t-ss"> <span data-i18n>Sans facteur support (D08)</span></label>
+      <div class="champ"><label for="t-par" data-i18n>Par (pseudonyme ou initiales)</label><input id="t-par" maxlength="20" required></div>
+      <button type="submit" data-i18n>Effectuer le tirage scellé</button>
+    </form>
+    <p class="note">Le tirage est fait une seule fois ; l'empreinte SHA-256 est publiée avec le préenregistrement AVANT la première représentation (A.2, § 2.2).</p>
+    <p id="msg-tirage" class="message"></p>
+  </section>
+
+  <section class="carte" aria-labelledby="h-p3">
+    <h2 id="h-p3" data-i18n>Séance P3 (rétroaction en salle)</h2>
+    <div id="p3-etat"></div>
+    <form id="f-p3">
+      <div class="champ"><label for="p3-id" data-i18n>Identifiant de représentation</label><input id="p3-id" value="ESSAI-1" maxlength="20"></div>
+      <div class="champ"><label for="p3-mode" data-i18n>Mode</label>
+        <select id="p3-mode"><option value="essai" data-i18n>Essai</option><option value="public" data-i18n>Public</option></select></div>
+      <label class="ligne"><input type="checkbox" id="p3-prov"> <span data-i18n>Provenance affichée (essai)</span></label>
+      <div class="boutons"><button type="submit" data-i18n>Ouvrir la séance</button><button type="button" id="p3-fermer" data-i18n>Fermer la séance</button></div>
+    </form>
+    <p id="msg-p3" class="message"></p>
+  </section>
+
+  <section class="carte" aria-labelledby="h-q">
+    <h2 id="h-q" data-i18n>Questionnaires</h2>
+    <div id="q-etat"></div>
+    <form id="f-q">
+      <div class="champ"><label for="q-ins" data-i18n>Instrument</label><select id="q-ins"></select></div>
+      <div class="champ"><label for="q-id" data-i18n>Identifiant de représentation</label><input id="q-id" value="ESSAI-1" maxlength="20"></div>
+      <div class="champ"><label for="q-mode" data-i18n>Mode</label>
+        <select id="q-mode"><option value="essai" data-i18n>Essai</option><option value="public" data-i18n>Public</option></select></div>
+      <div class="boutons"><button type="submit" data-i18n>Ouvrir la passation</button><button type="button" id="q-fermer" data-i18n>Fermer la passation</button></div>
+    </form>
+    <h3 data-i18n>Serveur public des questionnaires</h3>
+    <div class="boutons"><button id="pub-on" data-i18n>Démarrer</button><button id="pub-off" data-i18n>Arrêter</button></div>
+    <p id="pub-etat" class="petit"></p>
+    <p id="msg-q" class="message"></p>
+  </section>
+
+  <section class="carte" aria-labelledby="h-avis">
+    <h2 id="h-avis" data-i18n>Avis au public (S-06)</h2>
+    <div id="avis"></div>
+  </section>
+</main>
+<script src="/static/i18n.js"></script>
+<script src="/static/plateforme.js"></script>
+<script>
+"use strict";
+const R = { "X-Regie": "1" };
+function rendre(e) {
+  $("#verrou").hidden = !e.verrou_public;
+  $("#verrou").innerHTML = e.verrou_public ? `<div class="verrou"><b>${t("Verrou de gouvernance")}</b> — mode public : ${esc(e.verrou_public)}</div>` : "";
+  const ti = e.tirage || {};
+  $("#tirage-etat").innerHTML = ti.existe
+    ? `<p>${ti.fichier_intact && ti.rejouable ? etiquette("scellé, intact", "ok") : etiquette("ALTÉRÉ", "alerte")}
+       ${esc(ti.representations)} représentations · graine ${esc(ti.graine)} · par ${esc(ti.par)}<br>
+       <span class="mono petit">SHA-256 ${esc(ti.sha256)}</span></p>` : `<p class="petit">Aucun tirage.</p>`;
+  $("#f-tirage").hidden = !!ti.existe;
+  const p = e.p3;
+  $("#p3-etat").innerHTML = p
+    ? `<p>${etiquette(p.essai ? "essai" : "public", p.essai ? "avert" : "ok")} ${esc(p.id_representation)} · code salle <b class="mono">${esc(p.code)}</b>
+       · port ${esc(p.port)} · provenance affichée : ${p.condition_provenance_affichee ? "oui" : "non"}<br>
+       ${esc(p.reponses)} réponse(s), ${esc(p.appareils)} appareil(s) · étiquette en cours : ${esc(p.provenance)} (repère ${esc(p.repere)})</p>
+       <p class="petit">Régie P3 : <span class="mono">/regie?cle=${esc(p.cle_regie)}</span> sur le port ${esc(p.port)} (ne pas diffuser).</p>` : "";
+  $("#q-ins").innerHTML = Object.entries(e.instruments).map(([k, v]) => `<option value="${esc(k)}">${esc(k)} — ${esc(v.titre)}</option>`).join("");
+  const q = e.passation;
+  $("#q-etat").innerHTML = (q ? `<p>${etiquette(q.essai ? "essai" : "public", q.essai ? "avert" : "ok")} ${esc(q.instrument)} · ${esc(q.id_representation)} · ${esc(q.reponses)} réponse(s)</p>` : "")
+    + Object.entries(e.instruments).map(([k, v]) => v.manques_fr.length
+      ? `<p class="petit">${esc(k)} : ${v.manques_fr.length} élément(s) à saisir avant le mode public (${esc(v.manques_fr.slice(0, 6).join(", "))}${v.manques_fr.length > 6 ? "…" : ""}).</p>` : "").join("");
+  $("#pub-etat").textContent = e.serveur_questionnaires ? `En service : port ${e.serveur_questionnaires.port} (${e.serveur_questionnaires.hote})` : "Arrêté.";
+}
+async function actualiser() { rendre(await api("/spectateur/api/etat")); }
+async function avis() {
+  const a = await api(`/spectateur/api/avis?langue=${window.I18N.langue}`);
+  $("#avis").innerHTML = `<h3>${esc(a.titre)}</h3><ul>${a.points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>`;
+}
+const post = (action, corps) => api(`/spectateur/api/${action}`, corps, R);
+$("#f-tirage").onsubmit = (ev) => { ev.preventDefault(); agir("#msg-tirage", async () => rendre(await post("tirage",
+  { representations: +$("#t-n").value, graine: +$("#t-g").value, sans_support: $("#t-ss").checked, par: $("#t-par").value }))); };
+$("#f-p3").onsubmit = (ev) => { ev.preventDefault(); agir("#msg-p3", async () => rendre(await post("p3_ouvrir",
+  { id_representation: $("#p3-id").value, mode: $("#p3-mode").value, provenance_affichee: $("#p3-prov").checked }))); };
+$("#p3-fermer").onclick = () => agir("#msg-p3", async () => rendre(await post("p3_fermer", {})));
+$("#f-q").onsubmit = (ev) => { ev.preventDefault(); agir("#msg-q", async () => rendre(await post("passation_ouvrir",
+  { instrument: $("#q-ins").value, id_representation: $("#q-id").value, mode: $("#q-mode").value }))); };
+$("#q-fermer").onclick = () => agir("#msg-q", async () => rendre(await post("passation_fermer", {})));
+$("#pub-on").onclick = () => agir("#msg-q", async () => rendre(await api("/api/questionnaires/demarrer", {})));
+$("#pub-off").onclick = () => agir("#msg-q", async () => rendre(await api("/api/questionnaires/arreter", {})));
+document.addEventListener("langue", avis);
+actualiser(); avis(); setInterval(actualiser, 5000);
+</script>
+</body>
+</html>

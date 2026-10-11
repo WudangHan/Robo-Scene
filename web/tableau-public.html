@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Indicateurs agrégés — L'IA au service de la création théâtrale</title>
+<meta name="description" content="Indicateurs agrégés et anonymes du projet de recherche L'IA au service de la création théâtrale (recherche indépendante et autofinancée de Sylvain Gagné, Ph. D.).">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="plateforme.css">
+</head>
+<body>
+<header class="barre">
+  <div class="titre"><span class="marque">L'IA AU SERVICE DE LA CRÉATION THÉÂTRALE</span><span class="sous">Recherche indépendante — Sylvain Gagné, Ph. D.</span></div>
+  <nav data-nav></nav>
+</header>
+<main class="page" id="contenu">
+  <section class="carte large"><p class="petit">Chargement…</p></section>
+</main>
+<script src="i18n.js"></script>
+<script>
+"use strict";
+/* O-09 : la page lit donnees-publiques/tableau-public.json, publié après validation humaine. Elle ne contient
+   que des agrégats ; tout groupe de moins de cinq réponses a été retiré avant publication. */
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pc = (x) => (x === null || x === undefined ? "—" : `${Math.round(x * 100)} %`);
+fetch("donnees-publiques/tableau-public.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : Promise.reject(r.status)).then((t) => {
+  const c = t.cocreation;
+  const reps = t.representations.map((r) => `<tr><td>${esc(r.cond_provenance)}</td><td>${esc(r.cond_support)}</td><td>${esc(r.reponses)}</td>
+    <td>${pc(r.percue_MC_part_systeme)}</td><td>${pc(r.operatoire_scene_part_systeme)}</td></tr>`).join("");
+  const p3 = Object.entries(t.retroaction_p3 || {}).map(([cond, tab]) => Object.entries(tab).map(([prov, v]) =>
+    `<tr><td>${esc(cond)}</td><td>${esc(prov)}</td><td>${esc(v.n)}</td><td>${esc(Object.entries(v.emotions).map(([e, n]) => `${e} ${n}`).join(" · "))}</td></tr>`).join("")).join("");
+  document.getElementById("contenu").innerHTML = `
+  <section class="carte large"><h2>${esc(t.titre)}</h2>
+    <p>${esc(t.lecture)}</p>
+    <p class="petit">Seuil d'anonymat : ${esc(t.seuil_anonymat)} · groupes retirés : ${esc(t.groupes_retires)} · validé par ${esc((t.valide || {}).par)} le ${esc(((t.valide || {}).date || "").slice(0, 10))}</p></section>
+  <section class="carte"><h2>Cocréation (traces des cinq opérations)</h2>${c ? `<ul>
+    <li>Propositions générées : ${esc(c.propositions)}</li><li>Part retenue : ${pc(c.taux_retention)}</li>
+    <li>Écart moyen de transformation : ${esc(c.ecart_moyen ?? "—")}</li><li>Conservation moyenne : ${pc(c.conservation_moyenne)}</li></ul>` : "<p>Sous le seuil.</p>"}</section>
+  <section class="carte"><h2>Hypothèses (préenregistrées)</h2><ul>${Object.entries(t.hypotheses).map(([h, v]) =>
+    `<li>${esc(h)} : ${v.calculable === false ? "non encore testable" : v.soutenue ? "soutenue" : "non soutenue"}</li>`).join("")}</ul></section>
+  <section class="carte large"><h2>Représentations</h2><div class="defile"><table class="donnees"><thead><tr><th scope="col">Provenance</th><th scope="col">Support</th>
+    <th scope="col">Réponses</th><th scope="col">Part du texte attribuée au système (public)</th><th scope="col">Part étiquetée « système » (scène)</th></tr></thead><tbody>${reps || "<tr><td colspan=5>—</td></tr>"}</tbody></table></div></section>
+  <section class="carte large"><h2>Rétroaction en salle (agrégats P3)</h2><div class="defile"><table class="donnees"><thead><tr><th scope="col">Condition</th><th scope="col">Étiquette</th>
+    <th scope="col">n</th><th scope="col">Émotions déclarées</th></tr></thead><tbody>${p3 || "<tr><td colspan=4>—</td></tr>"}</tbody></table></div></section>`;
+}).catch(() => {
+  document.getElementById("contenu").innerHTML = `<section class="carte large"><p>Aucun tableau publié pour l'instant.</p></section>`;
+});
+</script>
+</body>
+</html>

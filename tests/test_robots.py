@@ -368,7 +368,9 @@ def cfg(tmp_path):
     c["robot"]["transport"] = "sim"
     c["protocole"]["dossier_corpus"] = str(tmp_path / "corpus")
     c["donnees"] = {"dossier": str(tmp_path / "donnees")}
-    c["flotte"] = {"dossier_profils": "robots"}
+    import shutil
+    shutil.copytree(RACINE / "sequences", tmp_path / "sequences", ignore=shutil.ignore_patterns("externe-*", "_essais.jsonl"))
+    c["flotte"] = {"dossier_profils": "robots", "dossier_sequences": str(tmp_path / "sequences")}
     return c
 
 

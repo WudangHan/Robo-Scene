@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Console ROBO-SCÈNE</title>
 <link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/plateforme.css">
 </head>
 <body>
 <header class="barre">
@@ -12,7 +13,7 @@
     <span class="marque">ROBO-SCÈNE</span>
     <span class="sous">Console de pilotage</span>
   </div>
-  <nav class="nav-pages"><a href="/" aria-current="page">Console</a><a href="/partenaire">Partenaire</a></nav>
+  <nav data-nav class="nav-pages"><a href="/" aria-current="page">Console</a><a href="/partenaire">Partenaire</a></nav>
   <div class="statuts">
     <span class="pastille" id="st-lien" title="État du lien avec le robot">Lien —</span>
     <span class="pastille neutre" id="st-transport">—</span>
@@ -103,6 +104,31 @@
     <div id="propositions"></div>
   </section>
 
+  <!-- ── Flotte, règles et traçabilité (plateforme) ─── -->
+  <section class="panneau flotte" aria-labelledby="h-flotte">
+    <h2 id="h-flotte" data-i18n>Flotte et règles</h2>
+    <div class="champ"><label for="pf-robot" data-i18n>Robot actif</label><select id="pf-robot"></select></div>
+    <div class="ligne"><label for="pf-profil" class="sr" data-i18n>Activer un profil</label><select id="pf-profil"></select>
+      <button type="button" id="pf-activer" data-i18n>Activer (simulation)</button></div>
+    <div id="pf-flotte" class="petit"></div>
+    <h3 data-i18n>Observateur de sécurité</h3>
+    <div class="ligne"><input id="pf-obs" maxlength="12" placeholder="Initiales de l'observateur" data-i18n-ph aria-label="Initiales de l'observateur">
+      <button type="button" id="pf-obs-on" data-i18n>Présent</button><button type="button" id="pf-obs-off" class="discret" data-i18n>Absent</button></div>
+    <div id="pf-obs-etat" class="petit"></div>
+    <h3 data-i18n>Règle de l'IA</h3>
+    <select id="pf-regle" aria-label="Règle de l'IA"><option value="bibliotheque_fermee" data-i18n>Bibliothèque fermée</option>
+      <option value="angles_s04" data-i18n>Angles proposés (S04 seulement)</option></select>
+    <h3 data-i18n>Transformation « de tête »</h3>
+    <form id="pf-tete" class="ligne"><input id="pf-tete-txt" maxlength="500" placeholder="Décrire la transformation" data-i18n-ph aria-label="Décrire la transformation">
+      <button type="submit" data-i18n>Consigner</button></form>
+    <h3 data-i18n>Opération « autre »</h3>
+    <form id="pf-autre" class="ligne"><input id="pf-autre-cat" maxlength="60" placeholder="Catégorie" data-i18n-ph aria-label="Catégorie" style="max-width:140px">
+      <input id="pf-autre-txt" maxlength="500" aria-label="Description"><button type="submit" data-i18n>Consigner</button></form>
+    <h3 data-i18n>Surtitre en cours</h3>
+    <div class="surtitre-scene" id="pf-surtitre" aria-live="polite"></div>
+    <label class="ligne petit"><input type="checkbox" id="pf-voix"> <span data-i18n>Voix de synthèse (divulguée)</span></label>
+  </section>
+
   <!-- ── Journal ───────────────────────────────────── -->
   <section class="panneau journal">
     <h2>Journal de séance</h2>
@@ -115,7 +141,9 @@
   </section>
 </main>
 
+<script src="/static/i18n.js"></script>
 <script src="/static/pont.js"></script>
 <script src="/static/app.js"></script>
+<script src="/static/console-plateforme.js"></script>
 </body>
 </html>

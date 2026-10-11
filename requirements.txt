@@ -1,4 +1,18 @@
+# Pont et plateforme ROBO-SCÈNE (Python 3.12 ou plus récent)
 aiohttp>=3.9
 pyserial>=3.5
-# Facultatif, pour le moteur IA Claude :
-anthropic>=0.40
+pyyaml>=6.0
+jsonschema>=4.20           # schéma d'événement v1 (N-02)
+rdflib>=7.0                # export PROV-O (N-06)
+python-osc>=1.8            # QLab, P3, pilote OSC
+sacn>=1.9                  # lumière sACN / E1.31 (pont scénique P2.3)
+paho-mqtt>=2.0             # pilote MQTT
+numpy>=1.26
+scipy>=1.11                # analyse Q-03 (tests au niveau des représentations, Spearman)
+statsmodels>=0.14          # modèle mixte de contrôle (la référence reste le script R)
+pandas>=2.1
+openpyxl>=3.1              # grille de biais P1, inventaires
+python-docx>=1.1           # lecture de pièces .docx, inventaire mensuel
+pypdf>=4.0                 # base de connaissances du partenaire
+pillow>=10.0               # planches du jumeau numérique
+# Facultatifs : jumeau MuJoCo complet (pip install "reachy-mini[mujoco]"), c2patool (signature C2PA)

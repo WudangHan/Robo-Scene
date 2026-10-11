@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Régie — ROBO-SCÈNE</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/plateforme.css">
+</head>
+<body>
+<header class="barre">
+  <div class="titre"><span class="marque">ROBO-SCÈNE</span><span class="sous" data-i18n>Régie</span></div>
+  <nav data-nav></nav>
+</header>
+<main class="page">
+  <section class="carte large" aria-labelledby="h-t">
+    <h2 id="h-t"><span data-i18n>Tâches</span> <small id="chemin"></small></h2>
+    <div id="indispo"></div>
+    <div id="taches"></div>
+    <div class="ligne">
+      <label class="sr" for="par" data-i18n>Par (pseudonyme ou initiales)</label>
+      <input id="par" placeholder="Initiales" maxlength="12" style="max-width:140px">
+    </div>
+    <p id="msg-t" class="message"></p>
+  </section>
+  <section class="carte" aria-labelledby="h-q">
+    <h2 id="h-q" data-i18n>Régisseur IA (lecture seule)</h2>
+    <p class="note">Système SI-07 : il répond à partir du seul registre, cite les identifiants et n'en invente aucun (les identifiants inconnus sont retirés).</p>
+    <form id="f-q"><div class="champ"><label for="q" data-i18n>Question</label><textarea id="q" rows="3" maxlength="1000"></textarea></div>
+      <button type="submit" data-i18n>Demander</button></form>
+    <div id="reponse"></div>
+    <p id="msg-q" class="message"></p>
+  </section>
+  <section class="carte" aria-labelledby="h-r">
+    <h2 id="h-r" data-i18n>Revue trimestrielle (P-04)</h2>
+    <div class="boutons"><button id="revue" data-i18n>Produire la revue</button><button id="inv" data-i18n>Inventaire mensuel (P-02)</button></div>
+    <p id="msg-r" class="message"></p>
+    <pre class="bloc" id="revue-txt" hidden></pre>
+  </section>
+  <section class="carte large" aria-labelledby="h-d"><h2 id="h-d" data-i18n>Dépôts du jour (P-03)</h2><div id="depots"></div></section>
+</main>
+<script src="/static/i18n.js"></script>
+<script src="/static/plateforme.js"></script>
+<script>
+"use strict";
+const STATUTS = ["à faire", "en cours", "fait", "bloqué", "annulé"];
+async function actualiser() {
+  const r = await api("/api/regie");
+  $("#indispo").innerHTML = r.disponible ? "" : `<div class="verrou">${esc(r.motif)}</div>`;
+  $("#chemin").textContent = r.chemin ? `— ${r.chemin}` : "";
+  $("#taches").innerHTML = tableau(r.taches || [], [["id", "ID"], ["titre", "Titre"],
+    ["statut", t("État"), (v, l) => `<select data-statut="${esc(l.id)}" aria-label="${esc(l.id)}">${STATUTS.map((s) => `<option${s === v ? " selected" : ""}>${s}</option>`).join("")}</select>`],
+    ["livrable", "Livrable"], ["note", "Note"]]);
+  $("#depots").innerHTML = (r.depots || []).slice(0, 2).map((d) => `<pre class="bloc">${esc(d.contenu)}</pre>`).join("") || `<p class="petit">${t("Aucune donnée.")}</p>`;
+}
+$("#taches").addEventListener("change", (ev) => {
+  const s = ev.target.closest("[data-statut]"); if (!s) return;
+  agir("#msg-t", async () => { await api("/api/regie/tache", { id: s.dataset.statut, statut: s.value, par: $("#par").value }); actualiser(); });
+});
+$("#f-q").onsubmit = (ev) => { ev.preventDefault(); agir("#msg-q", async () => {
+  const r = await api("/api/regie/demander", { question: $("#q").value });
+  $("#reponse").innerHTML = `<p>${esc(r.reponse)}</p>` + (r.extraits ? `<pre class="bloc">${esc(r.extraits.join("\n"))}</pre>` : "")
+    + `<p class="petit">${esc(r.mode)}${r.identifiants_retires && r.identifiants_retires.length ? " · identifiants retirés : " + esc(r.identifiants_retires.join(", ")) : ""}</p>`;
+}); };
+$("#revue").onclick = () => agir("#msg-r", async () => { const r = await api("/api/regie/revue_trimestrielle", {}); $("#revue-txt").hidden = false; $("#revue-txt").textContent = r.contenu; actualiser(); });
+$("#inv").onclick = () => agir("#msg-r", async () => { const r = await api("/api/regie/inventaire", {}); message("#msg-r", `Inventaire : code ${r.code}`); });
+actualiser();
+</script>
+</body>
+</html>

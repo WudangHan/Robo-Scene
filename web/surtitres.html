@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surtitres — ROBO-SCÈNE</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/plateforme.css">
+</head>
+<body>
+<header class="barre">
+  <div class="titre"><span class="marque">ROBO-SCÈNE</span><span class="sous" data-i18n>Surtitres</span></div>
+  <nav data-nav></nav>
+</header>
+<main class="page">
+  <section class="carte large" aria-labelledby="h-st">
+    <h2 id="h-st">Surtitrage et audiodescription <small>(O-06)</small> <span id="compte" class="petit"></span></h2>
+    <p class="note">Rien n'est diffusé en salle ni exporté sans validation humaine ; chaque version porte son étiquette de provenance
+      (« systeme » inchangée, « mixte » corrigée, « humaine » saisie). L'audiodescription décrit ce qui se voit, sans prêter d'émotion.</p>
+    <div class="boutons">
+      <button id="importer" data-i18n>Importer depuis la conduite</button>
+      <label class="ligne petit"><span data-i18n>Langue</span>
+        <select id="langue" style="width:auto"><option value="en">EN</option><option value="fr">FR</option></select></label>
+      <label class="ligne petit"><input type="checkbox" id="conf"> <span data-i18n>Contenu confidentiel (modèle local)</span></label>
+      <button id="proposer-st" data-i18n>Proposer (IA)</button>
+      <button id="proposer-ad">Audiodescription (IA)</button>
+      <button id="vtt" data-i18n>Exporter WebVTT</button>
+    </div>
+    <div class="champ" style="max-width:320px"><label for="par" data-i18n>Par (pseudonyme ou initiales)</label><input id="par" maxlength="20"></div>
+    <p id="msg" class="message"></p>
+    <div id="liste"></div>
+    <pre class="bloc" id="sortie" hidden></pre>
+  </section>
+</main>
+<script src="/static/i18n.js"></script>
+<script src="/static/plateforme.js"></script>
+<script>
+"use strict";
+let elements = [];
+const L = () => $("#langue").value;
+function rendre(e) {
+  elements = e.elements || [];
+  $("#compte").textContent = `— ${e.compte.valide} validé(s), ${e.compte.a_valider} à valider, ${e.compte.rejete} rejeté(s)`;
+  $("#liste").innerHTML = tableau(elements, [
+    ["id", "#", (v) => `<label class="ligne"><input type="checkbox" data-sel value="${esc(v)}"> <span class="mono">${esc(v)}</span></label>`],
+    ["type", "Type"], ["source", t("Source"), (s) => esc(s.fr)],
+    ["versions", t("Proposition"), (v, l) => {
+      const x = v[L()];
+      if (!x) return "—";
+      const lab = x.statut === "valide" ? etiquette(`${x.etiquette} · ${x.par}`, "ok") : x.statut === "rejete" ? etiquette("rejeté", "alerte") : etiquette("à valider", "avert");
+      const zone = `<textarea data-txt="${esc(l.id)}" rows="2" aria-label="Version ${esc(l.id)}">${esc(x.texte ?? x.proposition ?? "")}</textarea>`;
+      const btn = x.statut === "a_valider"
+        ? `<div class="boutons"><button data-ok="${esc(l.id)}">${t("Valider")}</button><button data-ko="${esc(l.id)}">${t("Rejeter")}</button></div>` : "";
+      return `${lab}${zone}${btn}`;
+    }],
+    ["id", t("Saisir"), (v) => `<button data-saisir="${esc(v)}">${t("Saisir")}</button>`],
+  ]);
+}
+async function actualiser() { rendre(await api("/api/surtitres")); }
+const choisis = (type) => $$("[data-sel]:checked").map((x) => x.value).filter((id) => (elements.find((e) => e.id === id) || {}).type === type);
+$("#importer").onclick = () => agir("#msg", async () => rendre(await api("/api/surtitres/importer", {})));
+$("#proposer-st").onclick = () => agir("#msg", async () => rendre(await api("/api/surtitres/proposer",
+  { ids: choisis("surtitre"), langue: L(), confidentielle: $("#conf").checked, par: $("#par").value })));
+$("#proposer-ad").onclick = () => agir("#msg", async () => rendre(await api("/api/surtitres/proposer",
+  { ids: choisis("audiodescription"), langue: L(), confidentielle: $("#conf").checked, par: $("#par").value })));
+$("#vtt").onclick = () => agir("#msg", async () => { const r = await api("/api/surtitres/webvtt", { langue: L() }); $("#sortie").hidden = false; $("#sortie").textContent = r.contenu; });
+$("#liste").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  const id = b.dataset.ok || b.dataset.ko || b.dataset.saisir;
+  const txt = $(`[data-txt="${CSS.escape(id)}"]`);
+  if (b.dataset.ok) agir("#msg", async () => { await api("/api/surtitres/valider", { id, langue: L(), decision: "valide", par: $("#par").value, texte: txt.value }); actualiser(); });
+  if (b.dataset.ko) agir("#msg", async () => { await api("/api/surtitres/valider", { id, langue: L(), decision: "rejete", par: $("#par").value }); actualiser(); });
+  if (b.dataset.saisir) {
+    const v = txt ? txt.value : prompt(t("Saisir"));
+    if (v) agir("#msg", async () => { await api("/api/surtitres/saisir", { id, langue: L(), texte: v, par: $("#par").value }); actualiser(); });
+  }
+});
+$("#langue").onchange = actualiser;
+actualiser();
+</script>
+</body>
+</html>

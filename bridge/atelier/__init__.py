@@ -196,7 +196,7 @@ class GestionAteliers:
                                         for g in c.generations]} for c in a.cycles.values()],
             "texte_final": a.segments, "indicateurs": a.indicateurs(),
             "completude": a.journal.completude(), "erreurs_trace": a.erreurs_trace[-5:],
-            "journal_unifie": str(a.journal.fichier),
+            "journal_unifie": str(a.journal.fichier), "precision_consigne": getattr(a, "precision_courante", None),
         }
 
 
