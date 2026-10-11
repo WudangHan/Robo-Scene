@@ -1,0 +1,6 @@
+reachy-mini[mujoco]
+pyyaml
+pillow
+pytest
+python-osc
+sacn

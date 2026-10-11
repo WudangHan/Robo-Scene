@@ -1,0 +1,70 @@
+# Conduite d'exemple — pont scénique (repère P2.3)
+# Projet « L'IA au service de la création théâtrale » — S. Gagné, Ph. D.
+#
+# Chaque repère est déclenché par un GO de la régie (touche Entrée).
+# Actions possibles :
+#   lumiere : niveaux DMX (0–255) par canal, avec temps de transfert (s)   -> sACN / E1.31
+#   son     : départ d'une cue QLab (numéro de cue)                        -> OSC, port 53000
+#   osc     : message OSC libre (adresse + arguments)                      -> console, P3, etc.
+#   geste   : NOM d'un geste de la bibliothèque fermée (gestes_scene)      -> Reachy Mini
+#   provenance : étiquette affichée par l'interface spectateur (P3, H4)    -> OSC vers P3
+# « delai » : secondes après le GO avant l'action (facultatif).
+# Le GO vaut confirmation humaine pour un geste SEULEMENT si son statut autorise la cible.
+
+titre: "Scène d'essai — L'éveil (démonstration du pont)"
+version: "1.0"
+date: "2026-10-05"
+
+# Plan de feu minimal (adresses DMX de l'univers 1) — à adapter au lieu
+projecteurs:
+  face_cour:    {canal: 1}
+  face_jardin:  {canal: 2}
+  contre:       {canal: 3}
+  douche_robot: {canal: 4}
+  salle:        {canal: 10}
+
+reperes:
+  - numero: "0"
+    nom: "Préparation : salle allumée, robot au neutre"
+    actions:
+      - {lumiere: {salle: 255, face_cour: 0, face_jardin: 0, contre: 0, douche_robot: 0}, transfert: 0}
+      - {geste: neutre}
+
+  - numero: "1"
+    nom: "Noir salle, entrée de la musique"
+    actions:
+      - {lumiere: {salle: 0}, transfert: 5}
+      - {son: "1"}
+
+  - numero: "2"
+    nom: "Douche sur le robot, éveil"
+    actions:
+      - {lumiere: {douche_robot: 200, contre: 90}, transfert: 3}
+      - {geste: ecouter, delai: 3}
+
+  - numero: "3"
+    nom: "Première réplique (proposée par le système, réécrite par l'artiste)"
+    actions:
+      - {lumiere: {face_cour: 180, face_jardin: 180}, transfert: 2}
+      - {provenance: mixte}
+      - {geste: acquiescer, delai: 1.5}
+
+  - numero: "4"
+    nom: "Surprise"
+    actions:
+      - {son: "4"}
+      - {geste: etonnement}
+      - {lumiere: {contre: 255}, transfert: 0.3}
+
+  - numero: "5"
+    nom: "Salut"
+    actions:
+      - {provenance: humaine}
+      - {lumiere: {face_cour: 255, face_jardin: 255, douche_robot: 255}, transfert: 2}
+      - {geste: salut, delai: 1}
+
+  - numero: "6"
+    nom: "Fin : salle"
+    actions:
+      - {lumiere: {salle: 255, face_cour: 0, face_jardin: 0, contre: 0, douche_robot: 0}, transfert: 4}
+      - {osc: {adresse: "/p3/fin", arguments: []}}

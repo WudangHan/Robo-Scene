@@ -1,0 +1,131 @@
+# Bibliothèque fermée de gestes — Reachy Mini (repère P2.2)
+# Projet « L'IA au service de la création théâtrale » — S. Gagné, Ph. D.
+#
+# Règle de la bibliothèque fermée (plan de prévention P2.1, section 6.4) :
+#   aucun module d'IA ne transmet de commande motrice ; il ne peut que proposer
+#   le NOM d'un geste ci-dessous, que l'opérateur humain déclenche.
+#
+# Unités : tête x, y, z en mm ; roll, pitch, yaw en degrés (repère de la tête du SDK) ;
+#          body_yaw en degrés ; antennes en degrés [droite, gauche] ; duree en secondes
+#          (temps pour ATTEINDRE l'image clé depuis la précédente).
+# Statuts (progression imposée par P2.1, section 6.5) :
+#   brouillon -> valide_sim -> valide_robot_lent -> valide
+#   Seul un humain change un statut, après lecture du rapport du jumeau numérique.
+# Côtés de scène (convention supposée, robot face au public) :
+#   « cour » = droite vue de la salle = gauche du robot = yaw positif ;
+#   « jardin » = gauche vue de la salle = droite du robot = yaw négatif.
+# Antennes : 0° = dressées à la verticale (observé dans le jumeau) ; les angles les inclinent.
+# Qualités d'effort (Laban) : annotation dramaturgique indicative, non une mesure.
+
+version: "1.0"
+date: "2026-10-05"
+gestes:
+
+  neutre:
+    description: {fr: "Position neutre, regard vers la salle", en: "Neutral pose, facing the audience"}
+    intention: "Retour au point zéro entre deux répliques"
+    laban: {poids: leger, temps: soutenu, espace: direct, flux: libre}
+    statut: brouillon
+    images_cles:
+      - {duree: 1.2, tete: {}, antennes: [0, 0]}
+
+  acquiescer:
+    description: {fr: "Hocher la tête deux fois (oui)", en: "Nod twice (yes)"}
+    intention: "Accord, encouragement adressé à l'interprète"
+    laban: {poids: leger, temps: soudain, espace: direct, flux: libre}
+    statut: brouillon
+    images_cles:
+      - {duree: 0.4, tete: {pitch: 12}, antennes: [10, 10]}
+      - {duree: 0.35, tete: {pitch: -4}}
+      - {duree: 0.35, tete: {pitch: 12}}
+      - {duree: 0.5, tete: {}, antennes: [0, 0]}
+
+  refuser:
+    description: {fr: "Secouer la tête (non)", en: "Shake head (no)"}
+    intention: "Désaccord, refus d'une proposition"
+    laban: {poids: fort, temps: soudain, espace: direct, flux: contenu}
+    statut: brouillon
+    images_cles:
+      - {duree: 0.4, tete: {yaw: 20}}
+      - {duree: 0.65, tete: {yaw: -20}}
+      - {duree: 0.6, tete: {yaw: 15}}
+      - {duree: 0.5, tete: {}}
+
+  ecouter:
+    description: {fr: "Incliner la tête, antennes dressées", en: "Tilt head, antennas upright"}
+    intention: "Écoute attentive d'une réplique"
+    laban: {poids: leger, temps: soutenu, espace: indirect, flux: libre}
+    statut: brouillon
+    images_cles:
+      - {duree: 1.0, tete: {roll: 18, pitch: 5, z: 5}, antennes: [0, 0]}
+      - {duree: 1.5, tete: {roll: 20, pitch: 6, z: 6}}
+
+  regarder_cour:
+    description: {fr: "Tourner le regard côté cour", en: "Look toward stage right (audience's right)"}
+    intention: "Désigner un partenaire ou un lieu côté cour"
+    laban: {poids: leger, temps: soutenu, espace: direct, flux: libre}
+    statut: brouillon
+    images_cles:
+      - {duree: 1.0, tete: {yaw: 40}, body_yaw: 20}
+      - {duree: 1.0, tete: {yaw: 40}, body_yaw: 20}
+
+  regarder_jardin:
+    description: {fr: "Tourner le regard côté jardin", en: "Look toward stage left (audience's left)"}
+    intention: "Désigner un partenaire ou un lieu côté jardin"
+    laban: {poids: leger, temps: soutenu, espace: direct, flux: libre}
+    statut: brouillon
+    images_cles:
+      - {duree: 1.0, tete: {yaw: -40}, body_yaw: -20}
+      - {duree: 1.0, tete: {yaw: -40}, body_yaw: -20}
+
+  etonnement:
+    description: {fr: "Recul de la tête, antennes basculées vers l'arrière d'un coup", en: "Head pulls back, antennas snap backwards"}
+    intention: "Surprise devant une réplique inattendue"
+    laban: {poids: leger, temps: soudain, espace: direct, flux: libre}
+    statut: brouillon
+    images_cles:
+      - {duree: 0.4, tete: {x: -8, z: 12, pitch: -12}, antennes: [-45, -45]}
+      - {duree: 1.2, tete: {x: -8, z: 12, pitch: -12}}
+      - {duree: 0.8, tete: {}, antennes: [0, 0]}
+
+  tristesse:
+    description: {fr: "Tête basse, antennes tombantes", en: "Head down, drooping antennas"}
+    intention: "Abattement, fin de scène"
+    laban: {poids: fort, temps: soutenu, espace: indirect, flux: contenu}
+    statut: brouillon
+    images_cles:
+      - {duree: 2.0, tete: {z: -10, pitch: 25}, antennes: [60, 60]}
+      - {duree: 1.5, tete: {z: -10, pitch: 25, roll: -6}}
+
+  joie:
+    description: {fr: "Antennes battantes, tête légère", en: "Flapping antennas, light head"}
+    intention: "Réjouissance partagée avec le public"
+    laban: {poids: leger, temps: soudain, espace: indirect, flux: libre}
+    statut: brouillon
+    images_cles:
+      - {duree: 0.3, tete: {z: 8, pitch: -8}, antennes: [-40, 20]}
+      - {duree: 0.35, antennes: [20, -40]}
+      - {duree: 0.35, antennes: [-40, 20]}
+      - {duree: 0.35, antennes: [20, -40]}
+      - {duree: 0.6, tete: {}, antennes: [0, 0]}
+
+  hesitation:
+    description: {fr: "Petits mouvements indécis de la tête", en: "Small indecisive head movements"}
+    intention: "Doute, temps de réflexion avant une réplique"
+    laban: {poids: leger, temps: soutenu, espace: indirect, flux: contenu}
+    statut: brouillon
+    images_cles:
+      - {duree: 0.8, tete: {yaw: 10, roll: -8}}
+      - {duree: 0.9, tete: {yaw: -8, roll: 6}}
+      - {duree: 0.8, tete: {yaw: 4, pitch: 6}}
+      - {duree: 0.7, tete: {}}
+
+  salut:
+    description: {fr: "Révérence au public", en: "Bow to the audience"}
+    intention: "Salut final (amplitude réduite le 5 oct. 2026 : contact corps/moteur détecté par le jumeau à z −15 mm, tangage 32°)"
+    laban: {poids: fort, temps: soutenu, espace: direct, flux: contenu}
+    statut: brouillon
+    images_cles:
+      - {duree: 1.5, tete: {z: -8, pitch: 26}, antennes: [30, 30]}
+      - {duree: 1.0, tete: {z: -8, pitch: 26}}
+      - {duree: 1.5, tete: {}, antennes: [0, 0]}

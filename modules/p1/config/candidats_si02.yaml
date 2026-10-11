@@ -1,0 +1,34 @@
+# Candidats au rôle de SI-02 (fiche SI-02, G.5 v1.1). Renseigner « etiquette_ollama » après téléchargement
+# d'une quantification GGUF (Q4_K_M par défaut) : ollama pull hf.co/<dépôt GGUF>:Q4_K_M
+# Ne jamais utiliser une étiquette « -cloud » : le contrôle verifier_local() la refuse.
+# Les dépôts GGUF sont listés sous « Quantizations » sur la page Hugging Face de chaque modèle ; choisir de
+# préférence celui du développeur, sinon un dépôt communautaire dont la provenance est consignée ici.
+candidats:
+  - code: A
+    modele: Apertus-8B-Instruct-2509
+    depot_hf: swiss-ai/Apertus-8B-Instruct-2509
+    licence: Apache-2.0
+    donnees_entrainement_publiques: true      # « open weights + open data + full training details »
+    etiquette_ollama: ""
+    depot_gguf: ""
+  - code: B
+    modele: EuroLLM-9B-Instruct
+    depot_hf: utter-project/EuroLLM-9B-Instruct
+    licence: Apache-2.0
+    donnees_entrainement_publiques: partiel   # sources décrites ; corpus complet non redistribué selon la fiche consultée
+    etiquette_ollama: ""
+    depot_gguf: ""
+  - code: C
+    modele: Lucie-7B-Instruct-v1.1
+    depot_hf: OpenLLM-France/Lucie-7B-Instruct-v1.1
+    licence: Apache-2.0
+    donnees_entrainement_publiques: true      # Lucie Training Dataset redistribué
+    etiquette_ollama: ""
+    depot_gguf: ""
+  - code: T
+    modele: Mistral-Small-3.2-24B-Instruct-2506   # témoin : qualité attendue élevée, données non documentées
+    depot_hf: mistralai/Mistral-Small-3.2-24B-Instruct-2506
+    licence: Apache-2.0
+    donnees_entrainement_publiques: false
+    etiquette_ollama: ""
+    depot_gguf: ""

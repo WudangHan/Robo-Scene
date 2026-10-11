@@ -1,0 +1,6 @@
+# EXEMPLE FICTIF — ne jamais inscrire de vrais noms dans le dossier du projet.
+# La liste réelle (prénoms et noms des personnes participantes, un par ligne) est tenue dans le volume
+# chiffré prévu par le plan de gestion des données (G.6) et passée au serveur par --liste-blocage.
+# Accents, majuscules et ponctuation sont ignorés lors de la comparaison.
+Prénom Fictif
+Nom Fictif

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Régie — interface spectateur P3.2</title>
+<style>
+:root{--bg:#0f0e0c;--surface:#1a1815;--surface-2:#24211c;--ink:#ece6d8;--muted:#b4ab98;--accent:#d9b25c;--accent-ink:#141210;--line:#857b68;--focus:#ffd66b;--warn:#ffb4a6;--r:12px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:16px}
+h1{font-size:1.3rem;margin:0}
+h2{font-size:1rem;margin:0 0 8px;color:var(--accent)}
+.muted{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.code{font-size:3.2rem;font-weight:800;letter-spacing:.25em;text-align:center;font-variant-numeric:tabular-nums}
+.kpis{display:flex;gap:18px;flex-wrap:wrap}
+.kpi b{display:block;font-size:1.8rem;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;min-height:48px;padding:8px 14px;border-radius:10px;border:2px solid var(--line);background:var(--surface-2);cursor:pointer}
+button[aria-pressed="true"]{border-color:var(--accent);background:#3a3122;color:var(--accent)}
+button.danger{border-color:var(--warn);color:var(--warn)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.92rem}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:right}
+th:first-child,td:first-child{text-align:left}
+svg text{fill:var(--muted);font-size:10px}
+.alert{color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Régie — interface spectateur <span class="muted">(P3.2, SI-06)</span></h1>
+    <span id="titre" class="muted"></span>
+  </header>
+  <p id="msg" role="status" aria-live="polite" class="alert"></p>
+  <div class="grid">
+    <section class="card" aria-labelledby="h-code">
+      <h2 id="h-code">Code à afficher en salle</h2>
+      <div class="code" id="code">····</div>
+      <div class="kpis">
+        <div class="kpi"><b id="nApp">0</b><span class="muted">appareils</span></div>
+        <div class="kpi"><b id="nRep">0</b><span class="muted">réponses</span></div>
+        <div class="kpi"><b id="rep">-</b><span class="muted">repère</span></div>
+      </div>
+      <p class="muted" id="cond"></p>
+    </section>
+    <section class="card" aria-labelledby="h-prov">
+      <h2 id="h-prov">Provenance de la réplique en cours (H4)</h2>
+      <p class="muted">Normalement envoyée par le pont scénique (OSC /p3/provenance) ; réglage manuel possible.</p>
+      <div class="row" id="provBtns">
+        <button data-p="humaine">Humaine</button>
+        <button data-p="systeme">Système</button>
+        <button data-p="mixte">Mixte</button>
+        <button data-p="aucune">Aucune</button>
+      </div>
+      <h2 style="margin-top:16px">Fin de séance</h2>
+      <p class="muted">Enregistre l'agrégat anonyme, efface les jetons et ferme la saisie.</p>
+      <button class="danger" id="finBtn">Terminer la séance…</button>
+    </section>
+    <section class="card" aria-labelledby="h-circ">
+      <h2 id="h-circ">Cercle des émotions (cumul)</h2>
+      <svg id="circ" viewBox="-165 -130 330 260" width="100%" role="img" aria-labelledby="circT"><title id="circT">Répartition cumulée des réponses sur le cercle des émotions</title></svg>
+    </section>
+    <section class="card" aria-labelledby="h-tab">
+      <h2 id="h-tab">Réponses par émotion</h2>
+      <table id="tab"></table>
+    </section>
+  </div>
+</div>
+<script>
+(function(){
+  const EMO=[["ravi","Ravi·e",1,0],["enth","Enthousiaste",.7,.7],["saisi","Saisi·e",0,1],["inq","Inquiet·ète",-.7,.7],["contr","Contrarié·e",-1,0],["abat","Abattu·e",-.7,-.7],["engo","Engourdi·e",0,-1],["apai","Apaisé·e",.7,-.7]];
+  const PROV=["humaine","systeme","mixte","aucune"];
+  const cle=new URLSearchParams(location.search).get("cle")||"";
+  const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+  const H={"Content-Type":"application/json","X-Cle-Regie":cle};
+  let finArme=false, etat=null;
+  async function get(){ const r=await fetch("/api/regie/etat",{headers:H,cache:"no-store"}); if(!r.ok) throw r.status; return r.json(); }
+  async function post(c,b){ const r=await fetch(c,{method:"POST",headers:H,body:JSON.stringify(b||{})}); return r.json(); }
+  function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+  function dessiner(e){
+    $("#titre").textContent=e.titre; $("#code").textContent=e.code;
+    $("#nApp").textContent=e.appareils; $("#nRep").textContent=e.reponses; $("#rep").textContent=e.repere;
+    $("#cond").textContent="Condition « provenance affichée au public » : "+(e.condition_provenance_affichee?"oui":"non")+(e.close?" — séance close":"");
+    $$("#provBtns button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.p===e.provenance)));
+    const max=Math.max(1,...Object.values(e.par_emotion));
+    let h='<circle r="100" fill="none" stroke="currentColor" stroke-opacity=".25"/><line x1="-110" y1="0" x2="110" y2="0" stroke="currentColor" stroke-opacity=".15"/><line x1="0" y1="-110" x2="0" y2="110" stroke="currentColor" stroke-opacity=".15"/>';
+    let lab_="";
+    EMO.forEach(([k,lab,v,a])=>{ const n=Math.hypot(v,a)||1,x=v/n*100,y=-a/n*100,c=e.par_emotion[k],r=c?4+14*c/max:3;
+      h+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r.toFixed(1)+'" fill="#d9b25c" fill-opacity="'+(c?.85:.25)+'"/>';
+      lab_+='<text x="'+(x*1.3).toFixed(1)+'" y="'+(y*1.2+3).toFixed(1)+'" text-anchor="middle">'+esc(lab)+' ('+c+')</text>'; });
+    h+=lab_;
+    const svg=$("#circ"); [...svg.querySelectorAll("g")].forEach(n=>n.remove());
+    const g=document.createElementNS("http://www.w3.org/2000/svg","g"); g.innerHTML=h; g.style.color="var(--muted)"; svg.appendChild(g);
+    const cols=PROV.filter(p=>e.par_provenance[p]);
+    let t="<caption class='muted' style='text-align:left'>Cumul, fenêtre courante et répartition par étiquette de provenance</caption><tr><th scope='col'>Émotion</th><th scope='col'>Cumul</th><th scope='col'>Fenêtre</th>"+cols.map(p=>"<th scope='col'>"+p+"</th>").join("")+"</tr>";
+    EMO.forEach(([k,lab])=>{ t+="<tr><th scope='row'>"+esc(lab)+"</th><td>"+e.par_emotion[k]+"</td><td>"+e.fenetre_courante[k]+"</td>"+cols.map(p=>"<td>"+e.par_provenance[p][k]+"</td>").join("")+"</tr>"; });
+    $("#tab").innerHTML=t;
+  }
+  async function boucle(){
+    try{ etat=await get(); dessiner(etat); $("#msg").textContent=""; }
+    catch(s){ $("#msg").textContent = s===403 ? "Clé de régie absente ou incorrecte : ouvrez l'adresse affichée par le serveur." : "Serveur injoignable."; }
+    setTimeout(boucle,2000);
+  }
+  $$("#provBtns button").forEach(b=>b.addEventListener("click",async()=>{ await post("/api/regie/provenance",{etiquette:b.dataset.p}); try{ dessiner(await get()); }catch(_){} }));
+  $("#finBtn").addEventListener("click",async e=>{
+    if(!finArme){ finArme=true; e.currentTarget.textContent="Confirmer : terminer la séance"; setTimeout(()=>{finArme=false; $("#finBtn").textContent="Terminer la séance…";},6000); return; }
+    const r=await post("/api/regie/fin"); $("#msg").textContent="Séance close. Agrégat : "+(r.export||"non enregistré (aucun dossier d'export)");
+  });
+  boucle();
+})();
+</script>
+</body>
+</html>

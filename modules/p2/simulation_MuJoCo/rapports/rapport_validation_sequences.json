@@ -1,0 +1,115 @@
+{
+ "date": "2026-10-06T04:08:30.510727+00:00",
+ "outil": "jumeau.py v1.1 — modèle MuJoCo et cinématique du SDK Reachy Mini",
+ "seuils": {
+  "echecs_ik": 0,
+  "ecart_articulaire_max_rad": 0.15,
+  "ecart_vertical_max_mm": 5,
+  "contacts_max": 0
+ },
+ "resultats": [
+  {
+   "geste": "eveil",
+   "duree_s": 14.7,
+   "facteur_vitesse": 0.5,
+   "echecs_ik": 0,
+   "ecart_articulaire_max_rad": 0.0845,
+   "ecart_vertical_max_mm": 1.29,
+   "contacts_max": 0,
+   "vitesse": "lente",
+   "violations_limites": [],
+   "conforme": true
+  },
+  {
+   "geste": "eveil",
+   "duree_s": 7.36,
+   "facteur_vitesse": 1.0,
+   "echecs_ik": 0,
+   "ecart_articulaire_max_rad": 0.1187,
+   "ecart_vertical_max_mm": 1.84,
+   "contacts_max": 0,
+   "vitesse": "pleine",
+   "violations_limites": [],
+   "conforme": true
+  },
+  {
+   "geste": "cour_jardin",
+   "duree_s": 17.8,
+   "facteur_vitesse": 0.5,
+   "echecs_ik": 0,
+   "ecart_articulaire_max_rad": 0.0496,
+   "ecart_vertical_max_mm": 0.23,
+   "contacts_max": 0,
+   "vitesse": "lente",
+   "violations_limites": [],
+   "conforme": true
+  },
+  {
+   "geste": "cour_jardin",
+   "duree_s": 8.9,
+   "facteur_vitesse": 1.0,
+   "echecs_ik": 0,
+   "ecart_articulaire_max_rad": 0.0607,
+   "ecart_vertical_max_mm": 0.32,
+   "contacts_max": 0,
+   "vitesse": "pleine",
+   "violations_limites": [],
+   "conforme": true
+  },
+  {
+   "geste": "surprise_joie",
+   "duree_s": 8.7,
+   "facteur_vitesse": 0.5,
+   "echecs_ik": 0,
+   "ecart_articulaire_max_rad": 0.0834,
+   "ecart_vertical_max_mm": 2.04,
+   "contacts_max": 0,
+   "vitesse": "lente",
+   "violations_limites": [],
+   "conforme": true
+  },
+  {
+   "geste": "surprise_joie",
+   "duree_s": 4.38,
+   "facteur_vitesse": 1.0,
+   "echecs_ik": 0,
+   "ecart_articulaire_max_rad": 0.1244,
+   "ecart_vertical_max_mm": 3.03,
+   "contacts_max": 0,
+   "vitesse": "pleine",
+   "violations_limites": [],
+   "conforme": true
+  },
+  {
+   "geste": "fin_de_scene",
+   "duree_s": 19.4,
+   "facteur_vitesse": 0.5,
+   "echecs_ik": 0,
+   "ecart_articulaire_max_rad": 0.0538,
+   "ecart_vertical_max_mm": 0.97,
+   "contacts_max": 0,
+   "vitesse": "lente",
+   "violations_limites": [],
+   "conforme": true
+  },
+  {
+   "geste": "fin_de_scene",
+   "duree_s": 9.7,
+   "facteur_vitesse": 1.0,
+   "echecs_ik": 0,
+   "ecart_articulaire_max_rad": 0.0657,
+   "ecart_vertical_max_mm": 1.11,
+   "contacts_max": 0,
+   "vitesse": "pleine",
+   "violations_limites": [],
+   "conforme": true
+  }
+ ],
+ "statut_propose": {
+  "eveil": "valide_sim",
+  "cour_jardin": "valide_sim",
+  "surprise_joie": "valide_sim",
+  "fin_de_scene": "valide_sim"
+ },
+ "rappel": "Le statut proposé n'est appliqué qu'après revue humaine (plan P2.1, §6.5)."
+}

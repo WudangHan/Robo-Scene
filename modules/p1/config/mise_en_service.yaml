@@ -1,0 +1,13 @@
+# Critères de mise en service du système SI-04 (fiche d'impact P1.1, section 7).
+# Le mode « atelier » (présence d'artistes) est refusé tant qu'un critère n'est pas à true
+# et que l'approbation (nom, date) n'est pas remplie. Chaque passage à true est consigné au
+# journal des décisions de l'application « Régie IA-Théâtre ».
+criteres:
+  avis_ethique_favorable_et_consentements_approuves: false      # G.3, jalon J02
+  ententes_de_creation_signees: false                           # risque R10
+  exigences_EF01_EF07_ENF01_ENF02_ENF06_verifiees: false        # rapport de vérification P1.3
+  fournisseur_SI01_verifie_et_SI02_documente: false             # objectif A.10 ; FICHE_MODELES.md
+  grille_de_relecture_des_biais_essayee_sur_50_propositions: false
+  assurance_responsabilite_civile_souscrite: false              # G.11
+approuve_par: ""
+date: ""

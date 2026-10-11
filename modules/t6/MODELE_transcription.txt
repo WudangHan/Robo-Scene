@@ -1,0 +1,13 @@
+# EN-TÊTE (obligatoire) — gabarit T.6 v1.0
+Code de l'entretien : E-<pseudonyme>-<n°>          (ex. E-A07-01)
+Instrument : I-1 | I-2 | I-3 | I-4
+Date : AAAA-MM-JJ          Durée : hh:mm          Langue : fr | en | fr/en
+Pseudonymes présents : CH (chercheur), <pseudonyme>
+Transcription : SI-03 (whisper.cpp, modèle <nom>, version <n°>) le AAAA-MM-JJ ; vérification humaine intégrale le AAAA-MM-JJ
+Pseudonymisation : pseudonymiser.py v1.0 le AAAA-MM-JJ ; alertes examinées : <nombre> ; rapport dans le volume chiffré
+Convention : transcription naturalisée modérée (protocole T.6, § 4)
+# FIN DE L'EN-TÊTE
+
+[00:00:05] CH : <tour de parole du chercheur>
+[00:00:12] A07 : <tour de parole> [rires] … [pause 4 s] … [inaudible 00:00:31] …
+[00:01:40] A07 : <citation d'un tiers> « … » [chevauchement]

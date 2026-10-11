@@ -1,0 +1,48 @@
+# Séquences gestuelles — repère P2.4 (version 1.0, 6 octobre 2026)
+# Projet « L'IA au service de la création théâtrale » — S. Gagné, Ph. D.
+#
+# Une séquence n'ordonne que des gestes de bibliotheque_gestes.yaml ; elle ne crée aucun mouvement.
+# Éléments : {geste: nom, liaison: auto|directe|neutre, etirement: ≥ 1}  ou  {pause: secondes}
+# Statut effectif = le plus bas entre le statut déclaré ici et ceux des gestes employés.
+# Seul un humain modifie un statut, après lecture du rapport du jumeau (rapport_validation_sequences.json).
+
+version: "1.0"
+date: "2026-10-06"
+sequences:
+
+  eveil:
+    description: {fr: "Éveil : le robot s'anime, écoute, puis acquiesce", en: "Awakening: the robot comes alive, listens, then nods"}
+    intention: "Ouverture de scène (repère 2 de la conduite d'exemple)"
+    statut: brouillon
+    elements:
+      - {geste: neutre}
+      - {pause: 0.8}
+      - {geste: ecouter, etirement: 1.5}
+      - {geste: acquiescer}
+
+  cour_jardin:
+    description: {fr: "Regarder côté cour, puis côté jardin, puis hésiter", en: "Look stage right, then stage left, then hesitate"}
+    intention: "Le robot cherche à qui donner la parole"
+    statut: brouillon
+    elements:
+      - {geste: regarder_cour}
+      - {pause: 1.0}
+      - {geste: regarder_jardin}
+      - {geste: hesitation}
+
+  surprise_joie:
+    description: {fr: "Surprise, puis joie", en: "Surprise, then joy"}
+    intention: "Réaction à une réplique inattendue et heureuse"
+    statut: brouillon
+    elements:
+      - {geste: etonnement}
+      - {geste: joie, liaison: directe}
+
+  fin_de_scene:
+    description: {fr: "Abattement, silence, puis salut", en: "Dejection, silence, then bow"}
+    intention: "Fin de scène et salut au public"
+    statut: brouillon
+    elements:
+      - {geste: tristesse, etirement: 1.2}
+      - {pause: 1.5}
+      - {geste: salut}

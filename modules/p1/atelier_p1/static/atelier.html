@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atelier dramaturgique — P1.3 (SI-04)</title>
+<style>
+:root{--bg:#f7f5ef;--surface:#fff;--ink:#16171b;--muted:#5c5e66;--line:#d8d6cf;--gold:#8a6819;--gold-soft:#f1e7cc;--focus:#1f5fbf;--warn:#9b2c1f;--ok:#2f6b3a;--r:10px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:#16171b;color:#f1ead8;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between}
+header h1{font-size:1.15rem;margin:0}
+header .meta{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:.9rem}
+.badge{display:inline-block;border:1px solid #d9b25c;color:#d9b25c;border-radius:999px;padding:2px 10px;font-size:.8rem;font-weight:600}
+.badge.essai{border-color:#e9a23b;color:#e9a23b}
+main{display:grid;grid-template-columns:minmax(280px,1fr) minmax(360px,1.5fr) minmax(280px,1fr);gap:16px;padding:16px 20px;align-items:start}
+@media (max-width:1100px){main{grid-template-columns:1fr}}
+section.col{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+h2{font-size:1rem;margin:0 0 10px;color:var(--gold);text-transform:uppercase;letter-spacing:.06em}
+h3{font-size:.95rem;margin:0}
+label{display:block;font-weight:600;margin:10px 0 4px}
+select,textarea,input[type=text],input[type=number]{font:inherit;width:100%;padding:8px 10px;border:1px solid #9a988f;border-radius:8px;background:#fff;color:var(--ink)}
+textarea{min-height:90px;resize:vertical}
+button{font:inherit;min-height:44px;padding:8px 14px;border-radius:8px;border:1px solid #9a988f;background:#fff;color:var(--ink);cursor:pointer}
+button.primary{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600}
+button.gold{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600}
+button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted);font-size:.9rem}
+.check{display:flex;gap:8px;align-items:center;font-weight:400;margin:8px 0}
+.check input{width:20px;height:20px;flex:none;margin-top:2px}
+.check{align-items:flex-start}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:10px 0}
+legend{font-weight:600;padding:0 4px}
+.cycle{border:1px solid var(--line);border-radius:var(--r);padding:12px;margin:0 0 14px}
+.route{font-size:.85rem;padding:6px 10px;border-radius:6px;margin:8px 0;background:#eef3fb}
+.route.local{background:#fbf2e3}
+.prop{border-top:1px dashed var(--line);padding:10px 0}
+.prop .txt{white-space:pre-wrap;margin:4px 0 8px}
+.prop.retenue{background:#f6fbf6}
+.prop.rejetee .txt{color:var(--muted);text-decoration:line-through}
+.tag{font-size:.75rem;font-weight:700;border-radius:4px;padding:1px 6px;margin-left:6px}
+.tag.humaine{background:#e4eefc;color:#1d3f75}.tag.systeme{background:#fde8e4;color:#7a2416}.tag.mixte{background:var(--gold-soft);color:#5a4210}
+.seg{border-left:4px solid var(--line);padding:6px 10px;margin:8px 0;white-space:pre-wrap}
+.seg.humaine{border-color:#4a78c2}.seg.systeme{border-color:#c2563f}.seg.mixte{border-color:var(--gold)}
+#msg{margin:0 20px;padding:0}
+#msg:not(:empty){padding:10px 14px;border-radius:8px;background:#fde8e4;color:var(--warn);margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:.85rem}
+th,td{border-bottom:1px solid var(--line);padding:4px 6px;text-align:right}
+th:first-child,td:first-child{text-align:left}
+.ecart{font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <h1>Atelier dramaturgique <span style="font-weight:400;opacity:.8">— prototype 1, alpha (SI-04)</span></h1>
+  <div class="meta">
+    <span id="seance"></span>
+    <span id="modeBadge" class="badge"></span>
+    <label class="check" style="margin:0;color:#f1ead8"><input type="checkbox" id="horsLigne"> Mode hors ligne (modèle local seulement)</label>
+    <span id="jetons" class="muted" style="color:#cfc7b4"></span>
+  </div>
+</header>
+<p id="msg" role="alert"></p>
+<main>
+  <section class="col" aria-labelledby="h-consigne">
+    <h2 id="h-consigne">1. Consigne</h2>
+    <label for="pseudo">Artiste (pseudonyme)</label>
+    <select id="pseudo"></select>
+    <label for="type">Type de consigne</label>
+    <select id="type"></select>
+    <label for="texte">Consigne</label>
+    <textarea id="texte" placeholder="Ex. : Réplique d'ouverture — une régisseuse découvre que le décor a disparu."></textarea>
+    <label for="nb">Nombre de propositions (1 à 5)</label>
+    <input type="number" id="nb" min="1" max="5" value="3">
+    <fieldset id="corpusSet"><legend>Extraits du corpus sous licence (facultatif)</legend><div id="corpus" class="muted">Aucun extrait chargé.</div></fieldset>
+    <label class="check"><input type="checkbox" id="confid"> Consigne confidentielle (traitée par le modèle local seulement)</label>
+    <div class="row"><button class="primary" id="envoyer">Demander des propositions</button></div>
+    <p class="muted">Ne saisissez aucun nom, courriel ou numéro de téléphone de personne réelle : le routeur détourne ces consignes vers le modèle local, mais la règle demeure.</p>
+    <h2 style="margin-top:22px">Modèles</h2>
+    <div id="modeles" class="muted"></div>
+  </section>
+
+  <section class="col" aria-labelledby="h-props">
+    <h2 id="h-props">2–4. Propositions, sélection, transformation</h2>
+    <div id="cycles" aria-live="polite"><p class="muted">Aucune consigne pour l'instant.</p></div>
+  </section>
+
+  <section class="col" aria-labelledby="h-final">
+    <h2 id="h-final">5. Texte final et attribution</h2>
+    <div id="final"><p class="muted">Les propositions retenues et attribuées, ainsi que les passages écrits directement, apparaissent ici.</p></div>
+    <label for="segTexte">Écrire directement (passage humain)</label>
+    <textarea id="segTexte"></textarea>
+    <div class="row" style="margin-top:6px"><button id="segAjout">Ajouter au texte final</button></div>
+    <h2 style="margin-top:22px">Indicateurs (I-5)</h2>
+    <div id="indic"></div>
+    <div class="row" style="margin-top:14px"><button class="gold" id="exporter">Exporter le journal (JSON et CSV)</button></div>
+    <p id="exportMsg" class="muted" role="status"></p>
+  </section>
+</main>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const LAB={humaine:"humaine",systeme:"système",mixte:"mixte"};
+  let E=null;
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  async function api(chemin, corps){
+    const r=await fetch(chemin,{method:"POST",headers:{"Content-Type":"application/json","X-Atelier":"1"},body:JSON.stringify(corps||{})});
+    const j=await r.json().catch(()=>({erreur:"Réponse illisible."}));
+    $("#msg").textContent=j.erreur||"";
+    if(j.seance) rendre(j);
+    return j;
+  }
+  function rendre(e){
+    E=e;
+    $("#seance").textContent="Séance "+e.seance;
+    const b=$("#modeBadge"); b.textContent=e.mode==="essai"?(e.simule?"ESSAI — générateur simulé":"ESSAI — aucune personne participante"):"ATELIER — mise en service validée"; b.className="badge"+(e.mode==="essai"?" essai":"");
+    $("#horsLigne").checked=e.hors_ligne;
+    $("#jetons").textContent="Jetons : distant "+e.jetons["SI-01"]+" / "+e.plafond_jetons+" · local "+e.jetons["SI-02"];
+    const ps=$("#pseudo"), cur=ps.value; ps.innerHTML=e.pseudonymes.map(p=>"<option>"+esc(p)+"</option>").join(""); if(cur) ps.value=cur;
+    const ty=$("#type"), ct=ty.value; ty.innerHTML=Object.entries(e.types).map(([k,v])=>'<option value="'+k+'">'+esc(k)+" — "+esc(v)+"</option>").join(""); ty.value=ct||"libre";
+    const coch=new Set([...document.querySelectorAll("#corpus input:checked")].map(i=>i.value));
+    $("#corpus").innerHTML=e.corpus.length?e.corpus.map(c=>'<label class="check"><input type="checkbox" value="'+esc(c.code)+'"'+(coch.has(c.code)?" checked":"")+'><span>'+esc(c.code)+" — "+esc(c.auteur)+", <i>"+esc(c.titre)+"</i> "+(c.passage?"("+esc(c.passage)+") ":"")+"· cat. "+esc(c.categorie)+(c.local_seulement?" · local seulement":"")+"</span></label>").join(""):"Aucun extrait chargé.";
+    $("#modeles").innerHTML=["distant","local"].map(k=>{const m=e.modeles[k]; return "<div>"+esc(m.code)+" ("+k+") : "+esc(m.modele)+" — "+(m.disponible?"disponible":"<b>indisponible</b>")+"</div>";}).join("");
+    // cycles, du plus récent au plus ancien
+    const cy=$("#cycles");
+    if(!e.cycles.length){ cy.innerHTML='<p class="muted">Aucune consigne pour l\'instant.</p>'; }
+    else cy.innerHTML=e.cycles.slice().reverse().map(c=>{
+      const g=c.generations.length, G=c.generations[g-1];
+      let h='<article class="cycle" aria-label="Cycle '+esc(c.id)+'"><h3>'+esc(c.id)+" · "+esc(c.pseudonyme)+" · "+esc(c.type)+'</h3><p class="muted">'+esc(c.consigne)+(c.extraits.length?" — extraits : "+esc(c.extraits.join(", ")):"")+"</p>";
+      if(!G){ return h+"</article>"; }
+      h+='<div class="route'+(G.cible==="local"?" local":"")+'">Génération '+g+" : "+esc(G.systeme)+" ("+esc(G.modele)+"), "+(G.systeme==="SIMULE"?"générateur simulé — routage prévu : "+(G.cible==="local"?"local":"distant"):(G.cible==="local"?"modèle local":"modèle distant"))+(G.motifs.length?" — motifs : "+esc(G.motifs.join(" ; ")):"")+"</div>";
+      G.propositions.forEach((p,i)=>{
+        const id=c.id+"-"+g+"-"+(i+1), cls=p.decision||"";
+        h+='<div class="prop '+cls+'"><div class="txt" id="t'+id+'">'+(i+1)+". "+esc(p.texte)+(p.etiquette?'<span class="tag '+p.etiquette+'">'+LAB[p.etiquette]+"</span>":"")+"</div>";
+        if(!p.decision){
+          h+='<div class="row"><input type="text" placeholder="Motif (facultatif)" id="m'+id+'" aria-label="Motif pour la proposition '+(i+1)+'" style="flex:1;min-width:140px"><button data-act="retenue" data-c="'+c.id+'" data-g="'+g+'" data-p="'+(i+1)+'">Retenir</button><button data-act="rejetee" data-c="'+c.id+'" data-g="'+g+'" data-p="'+(i+1)+'">Rejeter</button></div>';
+        } else if(p.decision==="retenue" && !p.etiquette){
+          const sugg=p.ecart===0?"systeme":"mixte";
+          h+='<label for="v'+id+'">Transformation (éditeur)</label><textarea id="v'+id+'">'+esc(p.version)+'</textarea>'+
+             '<div class="row"><button data-act="transformer" data-c="'+c.id+'" data-g="'+g+'" data-p="'+(i+1)+'">Enregistrer la transformation</button><span class="muted ecart">Écart : '+(p.ecart??0).toFixed(3)+'</span></div>'+
+             '<div class="row" style="margin-top:6px"><label for="e'+id+'" style="margin:0">Étiquette</label><select id="e'+id+'" style="width:auto">'+["systeme","mixte","humaine"].map(x=>'<option value="'+x+'"'+(x===sugg?" selected":"")+">"+LAB[x]+(x===sugg?" (suggérée)":"")+"</option>").join("")+'</select><input type="text" id="k'+id+'" placeholder="Crédit (défaut : pseudonyme)" aria-label="Crédit" style="width:auto;flex:1"><button class="gold" data-act="attribuer" data-c="'+c.id+'" data-g="'+g+'" data-p="'+(i+1)+'">Verser au texte final</button></div>';
+        } else {
+          h+='<div class="muted">'+(p.decision==="retenue"?"Retenue":p.decision==="rejetee"?"Rejetée":"Redemandée")+(p.motif?" — « "+esc(p.motif)+" »":"")+(p.ecart!=null&&p.decision==="retenue"?" · écart "+p.ecart.toFixed(3):"")+"</div>";
+        }
+        h+="</div>";
+      });
+      h+='<div class="row" style="margin-top:8px"><input type="text" id="r'+c.id+'" placeholder="Motif de la nouvelle demande (facultatif)" aria-label="Motif de la nouvelle demande" style="flex:1"><button data-act="redemander" data-c="'+c.id+'">Redemander</button></div>';
+      return h+"</article>";
+    }).join("");
+    // texte final
+    $("#final").innerHTML=e.texte_final.length?e.texte_final.map((s,i)=>'<div class="seg '+s.etiquette+'"><div>'+esc(s.texte)+'</div><div class="row muted" style="margin-top:4px">'+esc(s.origine)+" · crédit "+esc(s.credit)+(s.ecart!=null?" · écart "+s.ecart.toFixed(3):"")+' · <label for="s'+i+'" style="margin:0;font-weight:400">étiquette</label><select id="s'+i+'" data-seg="'+i+'" style="width:auto">'+["humaine","systeme","mixte"].map(x=>'<option value="'+x+'"'+(x===s.etiquette?" selected":"")+">"+LAB[x]+"</option>").join("")+"</select></div></div>").join(""):'<p class="muted">Rien encore.</p>';
+    $("#indic").innerHTML='<table><caption class="muted" style="text-align:left">Par pseudonyme</caption><tr><th scope="col">Artiste</th><th scope="col">Générées</th><th scope="col">Retenues</th><th scope="col">Conservation</th><th scope="col">Écart moy.</th></tr>'+Object.entries(e.indicateurs).map(([k,v])=>"<tr><th scope='row'>"+esc(k)+"</th><td>"+v.propositions_generees+"</td><td>"+v.propositions_retenues+"</td><td>"+(v.taux_conservation??"–")+"</td><td>"+(v.ecart_moyen_retenues??"–")+"</td></tr>").join("")+"</table>";
+  }
+  document.addEventListener("click",async ev=>{
+    const b=ev.target.closest("button[data-act]"); if(!b) return;
+    const c=b.dataset.c,g=+b.dataset.g,p=+b.dataset.p,id=c+"-"+g+"-"+p, act=b.dataset.act;
+    b.disabled=true;
+    try{
+      if(act==="retenue"||act==="rejetee") await api("/api/decision",{cycle:c,gen:g,prop:p,decision:act,motif:($("#m"+CSS.escape(id))||{}).value||""});
+      else if(act==="transformer") await api("/api/transformer",{cycle:c,gen:g,prop:p,texte:$("#v"+CSS.escape(id)).value});
+      else if(act==="attribuer"){
+        const t=$("#v"+CSS.escape(id)); if(t) await api("/api/transformer",{cycle:c,gen:g,prop:p,texte:t.value});
+        await api("/api/attribuer",{cycle:c,gen:g,prop:p,etiquette:$("#e"+CSS.escape(id)).value,credit:$("#k"+CSS.escape(id)).value});
+      }
+      else if(act==="redemander") await api("/api/redemander",{cycle:c,motif:$("#r"+CSS.escape(c)).value});
+    } finally { b.disabled=false; }
+  });
+  document.addEventListener("change",ev=>{ const s=ev.target.closest("select[data-seg]"); if(s) api("/api/reetiqueter",{index:+s.dataset.seg,etiquette:s.value}); });
+  $("#envoyer").addEventListener("click",async ev=>{
+    const b=ev.currentTarget; b.disabled=true; b.textContent="Génération en cours…";
+    try{
+      const j=await api("/api/consigne",{pseudonyme:$("#pseudo").value,type:$("#type").value,texte:$("#texte").value,nb:+$("#nb").value,
+        extraits:[...document.querySelectorAll("#corpus input:checked")].map(i=>i.value),confidentielle:$("#confid").checked});
+      if(!j.erreur){ $("#texte").value=""; $("#confid").checked=false; }
+    } finally { b.disabled=false; b.textContent="Demander des propositions"; }
+  });
+  $("#horsLigne").addEventListener("change",ev=>api("/api/hors_ligne",{actif:ev.target.checked}));
+  $("#segAjout").addEventListener("click",async()=>{ const j=await api("/api/segment",{pseudonyme:$("#pseudo").value,texte:$("#segTexte").value}); if(!j.erreur) $("#segTexte").value=""; });
+  $("#exporter").addEventListener("click",async()=>{ const j=await api("/api/exporter",{}); if(j.export) $("#exportMsg").textContent="Exporté : "+j.export.json+" ; "+j.export.csv; });
+  fetch("/api/etat").then(r=>r.json()).then(rendre);
+})();
+</script>
+</body>
+</html>
