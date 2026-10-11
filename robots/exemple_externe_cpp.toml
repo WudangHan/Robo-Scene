@@ -1,0 +1,26 @@
+# Exemple : pilote écrit en cpp, lancé comme programme externe (langage unifié sur stdin/stdout).
+# Gabarit dans sdk/cpp/ ; remplacer le robot simulé de l'exemple par les appels au matériel.
+
+[robot]
+id = "externe-cpp"
+nom = "Pilote cpp (exemple)"
+pilote = "externe"
+langage = "cpp"
+actif = false
+
+[connexion]
+commande = ["sdk/cpp/build/exemple_simule"]
+
+[propulsion]
+active = true
+
+[[articulations]]
+nom = "base"
+min = 10.0
+max = 170.0
+repos = 90.0
+[[articulations]]
+nom = "tete"
+min = 30.0
+max = 150.0
+repos = 90.0

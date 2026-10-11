@@ -1,0 +1,250 @@
+# Hiwonder AiNex — humanoïde de 24 degrés de liberté à servos de bus (page produit Hiwonder, consultée le
+# 11 octobre 2026). Décision D08 (scénario C) ; fiche fournisseur F-07 ; plan de prévention P2.1 v1.2.
+#
+# ⚠ Profil PROVISOIRE, en simulation par défaut : l'affectation des numéros de servos aux articulations, leurs
+#   bornes et le sens de montage ne sont pas documentés de façon vérifiable ; ils seront relevés à réception
+#   du robot, servo par servo, robot suspendu, avant toute promotion d'un geste au-delà de « valide_sim ».
+#   Les bornes provisoires (±20° autour du centre) et la vitesse (45°/s) sont volontairement prudentes.
+#
+# Deux modes de liaison :
+#   1. pilote = "hiwonder_bus" : le pont parle directement au bus (carte USB-bus, protocole LewanSoul/LX) ;
+#   2. pilote embarqué : sdk/python/ainex_embarque.py tourne sur le Raspberry Pi du robot et expose le
+#      langage unifié en TCP ; on choisit alors pilote = "ligne_json" et [connexion] mode = "tcp".
+
+[robot]
+id = "ainex-01"
+nom = "AiNex"
+pilote = "hiwonder_bus"
+langage = "python"
+simulation = true
+actif = true
+capacites = ["batterie"]
+notes = "Bipède : l'arrêt fige les servos à leur position (jamais de coupure du couple, qui ferait tomber le robot)."
+
+[connexion]
+port_serie = "/dev/tty.usbserial-AINEX"
+debit = 115200
+ordre_octets_lecture = "petit"
+periode_lecture_s = 0.15
+
+[securite]
+vitesse_max_deg_s = 45.0
+chien_de_garde_ms = 500
+batterie_min_v = 10.5
+rayon_exclusion_m = 1.2       # plan de prévention P2.1 v1.2
+
+[[articulations]]
+nom = "servo_01"
+id = 1
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_02"
+id = 2
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_03"
+id = 3
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_04"
+id = 4
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_05"
+id = 5
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_06"
+id = 6
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_07"
+id = 7
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_08"
+id = 8
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_09"
+id = 9
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_10"
+id = 10
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_11"
+id = 11
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_12"
+id = 12
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_13"
+id = 13
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_14"
+id = 14
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_15"
+id = 15
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_16"
+id = 16
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_17"
+id = 17
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_18"
+id = 18
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_19"
+id = 19
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_20"
+id = 20
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_21"
+id = 21
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_22"
+id = 22
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_23"
+id = 23
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1
+
+[[articulations]]
+nom = "servo_24"
+id = 24
+min = -20.0
+max = 20.0
+repos = 0.0
+zero = 500
+sens = 1

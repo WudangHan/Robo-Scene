@@ -1,0 +1,15 @@
+{
+  "nom": "test",
+  "images": [
+    {
+      "deg": [
+        90,
+        90
+      ],
+      "ms": 100
+    }
+  ],
+  "statut": "brouillon",
+  "validations": [],
+  "version_anterieure_invalidee": "2026-10-11T20:32:51+00:00"
+}

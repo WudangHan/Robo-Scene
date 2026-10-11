@@ -1,0 +1,71 @@
+# Reachy Mini (Pollen Robotics et Hugging Face) — robot de prototypage du projet (décision D04).
+# Axes : pose de tête (mm, degrés), rotation du corps, antennes. Bornes : limites de la trousse (tangage et
+# roulis ±40°, corps ±160°) et limites propres au projet du prototype P2.2 (translations ±20 mm, z de −20 à
+# 25 mm, antennes ±90°). Lacet de tête borné à ±65° (écart maximal tête/corps de la trousse, corps au repos).
+# Gestes : bibliothèque fermée du prototype P2 (bibliotheque_gestes.yaml et sequences.yaml).
+
+[robot]
+id = "reachy-mini"
+nom = "Reachy Mini"
+pilote = "reachy_mini"
+langage = "python"
+simulation = true
+actif = true
+bibliotheque = "p2"
+capacites = ["voix", "camera", "microphones"]
+
+[connexion]
+# mode_connexion = "localhost_only"   # ou "network" ; par défaut, détection automatique de la trousse
+
+[securite]
+vitesse_max_deg_s = 60.0
+# Aucune zone d'exclusion : robot de table ; zone d'interaction = la table de travail (plan P2.1, § 6.1)
+
+[[articulations]]
+nom = "x"
+unite = "mm"
+min = -20.0
+max = 20.0
+repos = 0.0
+[[articulations]]
+nom = "y"
+unite = "mm"
+min = -20.0
+max = 20.0
+repos = 0.0
+[[articulations]]
+nom = "z"
+unite = "mm"
+min = -20.0
+max = 25.0
+repos = 0.0
+[[articulations]]
+nom = "roll"
+min = -40.0
+max = 40.0
+repos = 0.0
+[[articulations]]
+nom = "pitch"
+min = -40.0
+max = 40.0
+repos = 0.0
+[[articulations]]
+nom = "yaw"
+min = -65.0
+max = 65.0
+repos = 0.0
+[[articulations]]
+nom = "body_yaw"
+min = -160.0
+max = 160.0
+repos = 0.0
+[[articulations]]
+nom = "antenne_droite"
+min = -90.0
+max = 90.0
+repos = 0.0
+[[articulations]]
+nom = "antenne_gauche"
+min = -90.0
+max = 90.0
+repos = 0.0

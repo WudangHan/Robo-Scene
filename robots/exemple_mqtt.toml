@@ -1,0 +1,26 @@
+# Exemple : microcontrôleur Wi-Fi (ESP32, Pico W) relié à un courtier MQTT (Mosquitto).
+# Le robot s'abonne à robo-scene/mqtt-exemple/cmd et publie robo-scene/mqtt-exemple/tel (JSON unifié).
+
+[robot]
+id = "mqtt-exemple"
+nom = "Robot MQTT (exemple)"
+pilote = "mqtt"
+langage = "arduino"
+actif = false
+
+[connexion]
+hote = "127.0.0.1"
+port = 1883
+prefixe = "robo-scene"
+
+[propulsion]
+active = true
+
+[securite]
+propulsion_max = 0.5
+
+[[articulations]]
+nom = "tete"
+min = 30.0
+max = 150.0
+repos = 90.0

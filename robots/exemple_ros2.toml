@@ -1,0 +1,38 @@
+# Exemple : bras ou humanoïde sous ROS 2 (ou ROS 1), joint par rosbridge (ws://hôte:9090).
+# Sur le robot : ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+# Le contrôleur du robot doit accepter trajectory_msgs/msg/JointTrajectory sur le sujet indiqué et publier
+# sensor_msgs/msg/JointState ; un nœud de sécurité doit s'abonner au sujet d'arrêt (std_msgs/msg/Bool).
+
+[robot]
+id = "ros2-exemple"
+nom = "Robot ROS 2 (exemple)"
+pilote = "rosbridge"
+langage = "ros2"
+actif = false
+
+[connexion]
+url = "ws://192.168.1.50:9090"
+ros = 2
+sujet_trajectoire = "/arm_controller/joint_trajectory"
+sujet_etat = "/joint_states"
+sujet_vitesse = "/cmd_vel"
+sujet_arret = "/robo_scene/arret_urgence"
+
+[propulsion]
+active = false
+
+[securite]
+vitesse_max_deg_s = 30.0
+
+[[articulations]]
+nom = "epaule"
+id = "shoulder_joint"
+min = -60.0
+max = 60.0
+repos = 0.0
+[[articulations]]
+nom = "coude"
+id = "elbow_joint"
+min = -90.0
+max = 0.0
+repos = -30.0

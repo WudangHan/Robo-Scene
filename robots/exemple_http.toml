@@ -1,0 +1,25 @@
+# Exemple : robot à interface REST (gabarits de requêtes ; voir bridge/robots/pilotes/http_rest.py).
+
+[robot]
+id = "http-exemple"
+nom = "Robot REST (exemple)"
+pilote = "http"
+langage = "rest"
+actif = false
+
+[connexion]
+url = "http://robot.local:8000"
+servos = {methode = "POST", chemin = "/api/joints", corps = '{"positions": {deg}, "duration_ms": {ms}}'}
+estop = {methode = "POST", chemin = "/api/stop", corps = '{}'}
+telemetrie = {chemin = "/api/state", deg = "/joints", vbat = "/battery", periode_s = 0.2}
+
+[[articulations]]
+nom = "a1"
+min = -90.0
+max = 90.0
+repos = 0.0
+[[articulations]]
+nom = "a2"
+min = -90.0
+max = 90.0
+repos = 0.0

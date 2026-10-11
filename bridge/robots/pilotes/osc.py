@@ -34,10 +34,11 @@ class PiloteOSC(Pilote):
         def tel(_adr, *args):
             if len(args) < 3:
                 return
+            # OSC transporte des flottants simple précision : valeurs arrondies (convention : −1 = absent)
             self.pousser({"t": "tel", "ms": self.ms(), "estop": bool(args[0]),
-                          "vbat": float(args[1]) if args[1] is not None and float(args[1]) >= 0 else None,
-                          "dist": float(args[2]) if float(args[2]) >= 0 else None,
-                          "deg": [float(x) for x in args[3:]], "drive": [0, 0]})
+                          "vbat": round(float(args[1]), 2) if float(args[1]) >= 0 else None,
+                          "dist": round(float(args[2]), 1) if float(args[2]) >= 0 else None,
+                          "deg": [round(float(x), 2) for x in args[3:]], "drive": [0, 0]})
 
         def info(_adr, *args):
             self.pousser(self.info(nom_robot=args[0] if args else self.desc.nom))

@@ -1,0 +1,19 @@
+# Exemple : dispositif piloté en OSC (Max, Pure Data, TouchDesigner, Isadora, microcontrôleur OSC).
+
+[robot]
+id = "osc-exemple"
+nom = "Dispositif OSC (exemple)"
+pilote = "osc"
+langage = "max"
+actif = false
+
+[connexion]
+hote = "127.0.0.1"
+port = 9100
+port_local = 9101
+
+[[articulations]]
+nom = "bras"
+min = 0.0
+max = 180.0
+repos = 90.0
