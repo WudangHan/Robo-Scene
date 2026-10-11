@@ -157,6 +157,11 @@ class Scene:
         if any(r.securite.arret_urgence for r in self.ctl.robots.values()):
             raise CommandeRefusee("Arrêt d'urgence actif : réarmer avant le GO")
         r = self.moteur.go()
+        st = getattr(self.ctl, "surtitrage", None)
+        if r and st:
+            ad = {l: st.valide(r.numero, l, "audiodescription") for l in ("fr", "en")}
+            if any(ad.values()):
+                self._appeler(self.ctl.diffuser({"type": "audiodescription", "repere": r.numero, **ad}))
         return {"repere": r.numero if r else None, **self.etat()}
 
     def retour(self) -> dict[str, Any]:
@@ -186,8 +191,10 @@ class Scene:
     async def _replique(self, valeur: Any, repere: str) -> None:
         d = valeur if isinstance(valeur, dict) else {"texte": str(valeur)}
         etiquette = self.provenance or "aucune"
+        st = getattr(self.ctl, "surtitrage", None)
+        en = d.get("en") or (st.valide(repere, "en") if st else None)      # O-06 : seulement une version validée
         await self.ctl.diffuser({"type": "surtitre", "repere": repere, "texte": d.get("texte", ""),
-                                 "en": d.get("en"), "provenance": etiquette})
+                                 "en": en, "provenance": etiquette})
         try:
             self.ctl.trace.emettre("SCENE", "attribution", ("personne", self.ctl.pseudo_operatrice),
                                    {"etiquette": etiquette if etiquette in ("humaine", "systeme", "mixte") else "humaine",
@@ -238,6 +245,50 @@ class Scene:
         return {"titre": self.conduite.titre, "actions": lignes, "problemes": problemes,
                 "duree_minimale_s": round(total, 1), "jouable": not problemes,
                 "note": "Durées hors temps de jeu entre les GO ; vitesse réduite comptée pour les gestes non « valide »."}
+
+
+def simuler(scene: "Scene", jumeau_fabrique=None) -> dict[str, Any]:
+    """O-05 — GO simulés de toute la conduite, sans aucune sortie réelle (ni lumière, ni son, ni robot).
+
+    Les repères sont parcourus dans l'ordre ; pour chaque geste destiné à un robot dont la bibliothèque vient du
+    prototype P2 (Reachy Mini), le geste est joué dans le jumeau MuJoCo (modules/p2/simulation_MuJoCo) à la
+    vitesse qu'imposerait son statut, avec les seuils d'acceptation du jumeau (aucun échec de cinématique inverse,
+    suivi < 0,15 rad, écart vertical < 5 mm, aucun contact). Pour les autres robots, ou si le SDK du Reachy Mini
+    n'est pas installé, le contrôle reste statique (apercu) et le rapport le dit.
+    """
+    ap = scene.apercu()
+    jum, motif = None, None
+    try:
+        if jumeau_fabrique is not None:
+            jum = jumeau_fabrique()
+        else:
+            import sys
+            sys.path.insert(0, str(_modules.CHEMINS["p2"] / "simulation_MuJoCo"))
+            from jumeau import Jumeau
+            jum = Jumeau(images=False)
+    except Exception as exc:  # noqa: BLE001 — SDK ou MuJoCo absent
+        motif = f"jumeau indisponible ({type(exc).__name__}: {str(exc)[:120]})"
+    resultats = []
+    for l in ap["actions"]:
+        if l["type"] != "geste" or l.get("etat") != "jouable":
+            continue
+        rob = scene.ctl.robots.get(l["robot"])
+        biblio = getattr(rob, "biblio", None)
+        g = getattr(biblio, "gestes", {}).get(l["valeur"]) if biblio is not None else None
+        if g is None or jum is None:
+            resultats.append({**l, "jumeau": "non", "motif": motif or "bibliothèque sans modèle MuJoCo (contrôle statique)"})
+            continue
+        _ok, facteur, _m = exigence(g.statut, True)
+        r, _vues = jum.jouer(g, facteur_vitesse=facteur or 1.0, images_max=1)
+        r["conforme"] = (r["echecs_ik"] == 0 and r["ecart_articulaire_max_rad"] < 0.15
+                         and r["ecart_vertical_max_mm"] < 5 and r["contacts_max"] == 0)
+        resultats.append({**l, "jumeau": "oui", **r})
+    problemes = list(ap["problemes"]) + [f"Repère {r['repere']} : « {r['valeur']} » non conforme dans le jumeau"
+                                         for r in resultats if r.get("jumeau") == "oui" and not r["conforme"]]
+    return {"titre": ap["titre"], "go_simules": len({a["repere"] for a in ap["actions"]}), "gestes": resultats,
+            "problemes": problemes, "jouable": not problemes, "jumeau": jum is not None, "motif_jumeau": motif,
+            "duree_minimale_s": ap["duree_minimale_s"],
+            "note": "Aucune sortie réelle n'est émise pendant la simulation."}
 
 
 def _charger_texte(texte: str) -> Conduite:

@@ -11,3 +11,4 @@ donnees/
 sequences/_essais.jsonl
 modules/p2/simulation_MuJoCo/rapports/*.png
 sdk/cpp/build/
+donnees_ett/

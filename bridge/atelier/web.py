@@ -35,6 +35,7 @@ def monter(app: web.Application, ctl) -> GestionAteliers:
                                                   famille=d.get("famille", "claude-opus"), simule=bool(d.get("simule"))))
             a = g.exiger()
             if action == "consigne":
+                a.precision_courante = d.get("precision")      # O-01 : registre de consigne (1 à 4) consigné
                 await _thread(a.consigner, d.get("pseudonyme", ""), d.get("texte", ""), d.get("type", "libre"),
                               int(d.get("nb", 3)), d.get("extraits", []), bool(d.get("confidentielle")))
             elif action == "redemander":

@@ -56,6 +56,8 @@ class Seance:
 
     def evenement(self, categorie: str, **donnees: Any) -> None:
         ligne = {"ts": _horodatage(), "cat": categorie, **donnees}
+        if self._f.closed:          # séance close : une tâche annulée à l'arrêt ne doit pas lever d'erreur
+            return
         self._f.write(json.dumps(ligne, ensure_ascii=False) + "\n")
         self._f.flush()
 

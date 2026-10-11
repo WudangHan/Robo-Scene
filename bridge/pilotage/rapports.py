@@ -61,8 +61,7 @@ def revue_trimestrielle(ctl, aujourd_hui: date | None = None) -> Path:
           or ["- Toutes les fonctions sont couvertes."]),
         "", "## 6. Conservation et destruction (G-07)", "",
         *[f"- {c['code']} {c['libelle']} : {c['statut']} ({c['fichiers']} fichier(s))"
-          for c in conservation.etat(ctl.donnees.parent if ctl.donnees.name == "donnees" else ctl.donnees,
-                                     Path(g.regles) / "conservation.yaml")],
+          for c in conservation.etat(getattr(ctl, "racine", _modules.RACINE), Path(g.regles) / "conservation.yaml")],
         "", "## 7. Verrous de gouvernance", "",
         f"- Avis éthique : {'obtenu' if g.avis_ethique else 'NON obtenu — collecte auprès de personnes verrouillée'}.",
         f"- Assurance responsabilité civile : {'souscrite' if g.etat.get('assurance_responsabilite_civile') else 'non souscrite'}.",

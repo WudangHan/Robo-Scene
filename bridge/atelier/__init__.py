@@ -86,7 +86,8 @@ class AtelierTrace(Atelier):
         if evenement == "consigne":
             self._miroir("consigne", ("personne", d["pseudonyme"]),
                          {"texte": d["consigne"], "type": d["type"], "extraits": d["extraits"],
-                          "confidentielle": d["confidentielle"]}, cyc)
+                          "confidentielle": d["confidentielle"],
+                          "precision": getattr(self, "precision_courante", None)}, cyc)   # O-01
         elif evenement == "generation":
             trace = (self.distant_unifie.derniere if self.distant_unifie and d["systeme"] == self.distant_unifie.code
                      else None) or {"parametres_demandes": dict(self.parametres_local) if d["systeme"] == "SI-02" else {},

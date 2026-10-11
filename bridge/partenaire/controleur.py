@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from aiohttp import web
 
-from . import copresence, dramaturgie, livret as livret_mod, texte as texte_mod, variations
+from . import consigne_graduee, copresence, dramaturgie, livret as livret_mod, texte as texte_mod, variations
 from .agents import Agents, envelopper
 from .analyse_jeu import descripteurs_mouvement, mesure_replique, synthese_passage, trajectoire
 from .connaissances import DOMAINES, Index
@@ -45,7 +45,9 @@ class Partenaire:
         self.livret = livret_mod.Livret.charger()
         self.biblio = texte_mod.Bibliotheque()
         self.repertoire = texte_mod.RepertoireDraCor()
-        self.stockage = Stockage()
+        self.pedagogie_cfg = dict((getattr(ctl, "cfg", {}) or {}).get("pedagogie", {}))
+        self.mode = "pedagogie" if self.pedagogie_cfg.get("actif") else "recherche"
+        self.stockage = self._stockage()
         self.agents = Agents(self.cfg, self.index, getattr(ctl, "service", None))
         self.incarnation = bool(self.cfg["incarnation"])
         self.repetition: dict[str, Any] | None = None
@@ -57,8 +59,39 @@ class Partenaire:
         L = self.ctl.limites
         return self.ctl.noms, L.repos, L.min_deg, L.max_deg
 
+    def _dossier_ett(self) -> Path:
+        from .stockage import RACINE as RACINE_STOCKAGE
+        d = Path(self.pedagogie_cfg.get("dossier") or (RACINE_STOCKAGE / "donnees_ett"))
+        return d if d.is_absolute() else RACINE_STOCKAGE / d
+
+    def _stockage(self) -> Stockage:
+        """O-10 : en mode pédagogique (É.T.T.), profils et passages sont rangés à part des données de recherche."""
+        return Stockage(self._dossier_ett() / "acteurs") if self.mode == "pedagogie" else Stockage()
+
     def _journal(self, action: str, **d: Any) -> None:
+        if self.mode == "pedagogie":
+            import json as _json
+            f = self._dossier_ett() / "journal_pedagogique.jsonl"
+            f.parent.mkdir(parents=True, exist_ok=True)
+            with f.open("a", encoding="utf-8") as o:
+                o.write(_json.dumps({"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "action": action, **d},
+                                    ensure_ascii=False, default=str) + "\n")
+            return
         self.ctl.seance.evenement("partenaire", action=action, **d)
+
+    def _recherche(self, acteur: str | None) -> bool:
+        """Aucune donnée ne passe à la recherche en mode pédagogique, même avec un consentement « recherche »."""
+        return self.mode == "recherche" and self.stockage.a_consenti(acteur, "recherche")
+
+    async def op_mode(self, m):
+        mode = m.get("mode")
+        if mode not in ("recherche", "pedagogie"):
+            raise ValueError("Mode : recherche ou pedagogie")
+        if self.repetition:
+            raise ValueError("Terminer la répétition en cours avant de changer de mode")
+        self.mode = mode
+        self.stockage = self._stockage()
+        return {"mode": self.mode, "acteurs": self.stockage.lister()}
 
     async def _incarner(self, nom: str, images: list[dict[str, Any]], origine: str) -> bool:
         if not self.incarnation or not images:
@@ -105,7 +138,7 @@ class Partenaire:
                 "grille": self.livret.d.get("grille_auto_evaluation", []),
                 "domaines": list(DOMAINES),
                 "corpus_dracor": ["fre", "shake", "eng", "ger", "ita", "span", "greek", "rom", "rus"],
-                "repertoires_externes": texte_mod.REPERTOIRES_EXTERNES}
+                "repertoires_externes": texte_mod.REPERTOIRES_EXTERNES, "mode": self.mode}
 
     async def op_incarnation(self, m):
         self.incarnation = bool(m.get("actif"))
@@ -231,6 +264,22 @@ class Partenaire:
         self.biblio.supprimer(m["id"])
         return {"pieces": self.biblio.lister()}
 
+    async def op_exporter_tei(self, m):
+        """O-03 : export TEI (aller-retour vérifié par l'importeur) dans donnees/tei/."""
+        from ..pilotage.depots import consigner
+        from .tei_export import exporter
+        p = self.biblio.lire(m["id"])
+        xml = exporter(p, licence=m.get("licence"))
+        d = self.ctl.donnees / "tei"
+        d.mkdir(parents=True, exist_ok=True)
+        f = d / f"{p['id']}.xml"
+        f.write_text(xml, encoding="utf-8")
+        consigner(self.ctl.donnees, [f], f"Export TEI de « {p['titre']} » (O-03)")
+        retour = texte_mod.lire_tei(xml.encode("utf-8"))
+        return {"fichier": str(f), "octets": len(xml.encode("utf-8")),
+                "aller_retour": {"repliques": sum(1 for e in retour["elements"] if e["type"] == "replique"),
+                                 "scenes": len(retour["scenes"]), "personnages": len(retour["personnages"])}}
+
     async def op_analyser(self, m):
         p = self.biblio.lire(m["id"])
         self._indexer_piece(p)
@@ -241,7 +290,15 @@ class Partenaire:
 
     # ── Variations émotionnelles ────────────────────────────
     async def op_variations(self, m):
-        return await self.agents.variations(self.biblio.lire(m["piece"]), m["replique"])
+        r = await self.agents.variations(self.biblio.lire(m["piece"]), m["replique"])
+        # O-01/O-02 : chaque proposition est aussi rendue aux quatre registres de consigne
+        donnees = r.get("donnees", r)
+        for v in donnees.get("propositions", []):
+            v["consignes_graduees"] = {n: consigne_graduee.graduer(v, variations.decrire(v), n)["texte"]
+                                       for n in consigne_graduee.NIVEAUX}
+        from ..analyse.juges import statut_regimes
+        donnees["validation_regimes"] = statut_regimes(self.ctl.donnees)   # O-02 : statut avant usage analytique
+        return r
 
     def _variation_depuis(self, d: dict[str, Any]) -> dict[str, Any]:
         return variations.variation(d.get("emotion", "neutre"), int(d.get("intensite", 5)), d.get("melange"),
@@ -276,6 +333,7 @@ class Partenaire:
         passes = len(self.stockage.passages(acteur, p["id"], "+".join(sorted(roles)))) if acteur else 0
         fixe = self._variation_depuis(m["variation"]) if mode_var == "fixe" and m.get("variation") else None
         style = m.get("style", "réalisme psychologique")
+        precision = consigne_graduee.niveau(m.get("precision_consigne", 4))   # O-01 : registre consigné
         items = []
         for e in p["elements"]:
             if e["scene"] not in scenes:
@@ -292,7 +350,8 @@ class Partenaire:
                 it["mots"] = len(mots(e["texte"]))
                 if m.get("consignes"):
                     pr = variations.propositions(e["texte"], e.get("didascalies"))["propositions"]
-                    it["consigne"] = pr[passes % len(pr)]["etiquette"]
+                    vc = pr[passes % len(pr)]
+                    it["consigne"] = consigne_graduee.graduer(vc, variations.decrire(vc), precision)["texte"]
             else:
                 it["texte"] = e["texte"]
                 if mode_var == "aucune":
@@ -315,10 +374,10 @@ class Partenaire:
                            "acteur": acteur, "niveau": niveau, "regime": regime, "variation_mode": mode_var,
                            "style": style, "passage": passes + 1, "mesures": [], "mouvement": [],
                            "textes": {e["id"]: e["texte"] for e in p["elements"]}, "debut": time.time(),
-                           "perturbation": m.get("perturbation")}
+                           "perturbation": m.get("perturbation"), "precision_consigne": precision}
         self._journal("repetition", etape="debut", id=rid, piece=p["id"], roles=sorted(roles), niveau=niveau,
-                      regime=regime, variation_mode=mode_var, passage=passes + 1,
-                      acteur=acteur if self.stockage.a_consenti(acteur, "recherche") else None)
+                      regime=regime, variation_mode=mode_var, passage=passes + 1, precision_consigne=precision,
+                      acteur=acteur if self._recherche(acteur) else None)
         return envelopper("repetiteur", {"repetition": rid, "titre": p["titre"], "passage": passes + 1,
                                          "items": items, "souffleur_delai_s": float(m.get("souffleur_delai_s",
                                                                                           self.cfg["souffleur_delai_s"])),
@@ -347,8 +406,13 @@ class Partenaire:
         return {"mesure": mesure}
 
     async def op_mouvement(self, m):
+        """O-04 : descripteurs de mouvement seulement (G-06) ; les points de pose reçus ne sont ni conservés ni
+        journalisés, et tout résultat qui ressemblerait à des données brutes est refusé par le garde-fou."""
+        from ..gouvernance.biometrie import nettoyer, verifier_config
+        verifier_config(self.cfg)
         r = self.repetition
-        d = descripteurs_mouvement(m.get("images", []))
+        d = nettoyer(descripteurs_mouvement(m.get("images", [])))
+        m.pop("images", None)
         if r and self.stockage.a_consenti(r["acteur"], "camera") and "erreur" not in d:
             r["mouvement"].append({"replique": m.get("replique"), **d})
         return {"descripteurs": d}
@@ -360,7 +424,8 @@ class Partenaire:
         self.ctl._arreter_sequence()
         passage = {"repetition": r["id"], "piece": r["piece"], "roles": r["roles"], "niveau": r["niveau"],
                    "regime": r["regime"], "variation_mode": r["variation_mode"], "style": r["style"],
-                   "perturbation": r.get("perturbation"), "duree_s": round(time.time() - r["debut"], 1),
+                   "perturbation": r.get("perturbation"), "precision_consigne": r.get("precision_consigne"),
+                   "duree_s": round(time.time() - r["debut"], 1),
                    "mesures": r["mesures"], "mouvement": r["mouvement"],
                    "synthese": synthese_passage(r["mesures"]), "interrompu": bool(m.get("interrompu"))}
         conserve, traj = False, None
@@ -371,7 +436,7 @@ class Partenaire:
             except PermissionError:
                 pass
         self._journal("repetition", etape="fin", id=r["id"], synthese=passage["synthese"], conserve=conserve,
-                      mesures=r["mesures"] if self.stockage.a_consenti(r["acteur"], "recherche") else None)
+                      mesures=r["mesures"] if self._recherche(r["acteur"]) else None)
         return {"passage": {k: passage[k] for k in ("synthese", "duree_s", "interrompu")},
                 "conserve": conserve, "trajectoire": traj, "retour": self.agents.retour_jeu(passage, traj)}
 

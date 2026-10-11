@@ -78,7 +78,6 @@ def monter(app: web.Application, ctl) -> GestionSpectateur:
     app.router.add_get("/spectateur/api/etat", etat)
     app.router.add_get("/spectateur/api/avis", avis)
     app.router.add_post("/spectateur/api/{action}", post)
-    app["spectateur"] = g
     return g
 
 
