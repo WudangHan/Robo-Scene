@@ -1,6 +1,62 @@
 # Robo-Scène
 
-*Partenaire de jeu pour acteurs* — console de pilotage et partenaire de théâtre du projet ROBO-SCÈNE 2026.
+*Plateforme intégrée du projet de recherche « L'IA au service de la création théâtrale »* (Sylvain Gagné, Ph. D., chercheur indépendant non affilié et autofinancé) :
+console de pilotage multi-robots, partenaire de théâtre, atelier dramaturgique instrumenté, pont scénique, interface
+spectateur, analyse et gouvernance, réunis autour d'un seul journal des cinq opérations de la cocréation instrumentée
+(consigne, génération, sélection, transformation, attribution).
+
+## Plateforme intégrée
+
+La plateforme réalise les 58 fonctions du *Cahier des fonctions et plan d'action* v1.0 (11 oct. 2026) : les fonctions
+« doit » (N, A, R, S, Q, G, P) et les extensions « pourrait » (O-01 à O-12). La table `bridge/pilotage/fonctions.py`,
+affichée dans la page Gouvernance et vérifiée par les tests, rattache chaque fonction à son code, à son test et à ce
+qui reste à faire.
+
+| Page | Fonctions | Rôle |
+|---|---|---|
+| `/` Console | R-01 à R-04, R-07, R-08, N-07, N-08, O-12 | Pilotage de la flotte (robot actif, profils), observateur de sécurité, règle de l'IA, arrêt global, saisie « de tête », surtitres et voix divulguée |
+| `/partenaire` | O-01 à O-04, O-10 | Formation, répétiteur (consigne graduée), variations (deux régimes), analyse de pièce, DraCor et export TEI, mode pédagogique É.T.T. |
+| `/atelier` | A-01 à A-08, O-01 | Atelier P1 : cinq opérations, routeur D03 sans repli, modèles D13, registre de consigne, verrous de mise en service |
+| `/scene` | R-05, R-06, O-05, O-06, O-11, O-12 | Conduite du pont scénique sous GO unique, multi-robots, aperçu et GO simulés dans le jumeau, écho tracé, surtitres |
+| `/spectateur` | S-01 à S-06 | Tirage scellé X.2, séance P3 (condition de provenance), questionnaires I-7 et I-6 sur serveur public distinct, avis S-06 |
+| `/surtitres` | O-06 | Surtitrage et audiodescription proposés, validés par une personne, étiquetés, exportés en WebVTT |
+| `/recherche` | Q-01 à Q-05, O-02, O-08, O-09 | Analyse reproductible (dossier daté, script R, manifeste), codage local des entretiens, veille, tableau public |
+| `/gouvernance` | G-01 à G-07, R-08 | Verrous (avis éthique, EFVP), incidents, décisions humaines (Loi 25, art. 12.1), conservation, registre des systèmes |
+| `/regie` | P-01 à P-04 | Registre du projet, régisseur IA en lecture seule, revue trimestrielle ISO/IEC 42001, inventaire mensuel, dépôts |
+| `/tableau-public` | O-09 | Indicateurs agrégés publiés après validation (seuil de cinq) |
+
+Toutes les pages sont bilingues (français par défaut, anglais), sans ressource externe, et utilisables au clavier.
+
+### Principes appliqués par le code
+
+- **Bibliothèque fermée** : l'IA ne propose qu'un nom de geste ; le mode « angles proposés » reste verrouillé hors séance S04.
+- **D03** : un contenu sensible ou confidentiel ne part que vers le modèle local ; si celui-ci est indisponible, la génération est refusée, sans repli distant.
+- **D13** : à l'ouverture de chaque séance, la version la plus récente de chaque famille (Claude Opus 5.5 et Sonnet 5.5 ; GPT 6.1 Sol et 6 Luna) est adoptée et consignée ; jamais en cours de séance.
+- **G-02 et G-04** : toute collecte auprès de personnes (atelier, questionnaires publics, séance P3 publique) est refusée tant que l'avis éthique n'est pas consigné dans `gouvernance/etat.yaml` et que l'EFVP ne couvre pas la version de la fonction ; le mode « essai » reste ouvert, ses données rangées à part.
+- **Validation humaine avant diffusion** : surtitres, tableau public, décisions concernant des personnes, notices bibliographiques.
+- **Anonymat des publics** : aucune adresse IP, aucun témoin, seuil de cinq ; les moins de 18 ans ne sont jamais enregistrés.
+
+### N'importe quel robot
+
+Chaque robot est décrit par un profil TOML (`robots/`) : articulations et limites, pilote, zone d'exclusion, bibliothèque.
+Pilotes fournis : ligne JSON (série, TCP, UDP, WebSocket, simulation), bus de servos Hiwonder (AiNex), rosbridge (ROS 1
+et 2), MQTT, OSC, HTTP REST, Reachy Mini et processus externe. Trousses pour écrire un pilote dans le langage du robot :
+Python, JavaScript (Node), C++ et Arduino (`sdk/`), toutes conformes au langage de commande unifié v2 (`PROTOCOLE.md`).
+Un même geste nommé se joue sur chaque robot validé ; un brouillon est refusé sur robot réel, et les statuts
+intermédiaires jouent à demi-vitesse.
+
+### Lancer la plateforme
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+export ANTHROPIC_API_KEY=…   OPENAI_API_KEY=…    # facultatif ; jamais dans config.toml
+python -m bridge.serveur --sim                       # tous les robots en simulation
+```
+
+Ouvrir <http://127.0.0.1:8765>. Réglages : `config.toml` (sections `[modeles]`, `[flotte]`, `[scene]`, `[spectateur]`,
+`[pilotage]`, `[pedagogie]`, `[diffusion]`). Analyse hors interface : `python -m bridge.analyse --exclure X2-03`.
+Le script R de l'analyse principale (lme4, pbkrtest, ordinal) est copié dans chaque dossier d'analyse.
 
 ## Console ROBO-SCÈNE
 
@@ -17,7 +73,7 @@ Le pont est le seul à parler au robot : chaque commande, qu'elle vienne d'un cu
 
 ## Démarrage rapide (sans robot)
 
-Prérequis : Python 3.11 ou plus récent.
+Prérequis : Python 3.12 ou plus récent (3.11 pour la seule console).
 
 ```bash
 cd robo-scene-console
@@ -135,38 +191,48 @@ La base de connaissances indexe les fichiers de `partenaire/sources/`. Pour en a
 ## Tests
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt -r requirements-dev.txt
 python -m pytest -q
 ```
 
-Vingt-neuf tests, tous exécutés sur le robot simulé et sans appel réseau, à l'exception de l'import DraCor, qui n'est pas testé automatiquement :
-- **console (7)** : couche de sécurité ; scénario complet (bornage, arrêt et réarmement, homme mort, IA validée et bloquée, notes, métadonnées) ; confiance abaissée devant un obstacle ; numérotation des séances ; moteur Claude simulé ;
-- **partenaire (22)** : index et livret ; lecteurs de texte brut et de TEI ; analyse dramaturgique ; variations bornées et déterministes ; lisibilité de la voie machinique ; mesures et descripteurs ; consentements et retrait ; plan scellé et falsification détectée ; garde-fous des agents contre les références et citations inventées ; répétition complète par le pont ; refus des gestes après un arrêt d'urgence.
+149 tests réussis et 1 ignoré (classeur de la grille de biais absent du dépôt), tous sans appel réseau ni matériel :
+prototypes P1, P2, P3, T.6 et X.2 (60) ; console (7) ; partenaire (22) ; robots et pilotes (16) ; modèles D13 (6) ;
+traçabilité (6) ; spectateur (10) ; analyse (11) ; extensions (8) ; plateforme (3). L'intégration continue
+(`.github/workflows/tests.yml`) les exécute à chaque dépôt.
 
 ## Arborescence
 
 ```
-robo-scene-console/
-├── config.toml              réglages (robot, sécurité, IA, protocole)
-├── lancer.command           lancement par double-clic (macOS)
-├── PROTOCOLE.md             contrat JSON pont ↔ robot
-├── bridge/                  serveur-pont Python
-│   ├── serveur.py           application, contrôleur, boucles de surveillance
-│   ├── securite.py          bornage, vitesse, arrêt d'urgence
-│   ├── transports.py        simulé, série, TCP
-│   ├── ia.py                agent supervisé (Claude ou règles)
-│   ├── journal.py           séance et métadonnées ROBO-SCÈNE
-│   └── partenaire/          partenaire de théâtre (connaissances, livret, textes, dramaturgie,
-│                            variations, analyse du jeu, coprésence, agents, consentements)
-├── web/                     interface (HTML, CSS, JS sans dépendance externe)
+robo-scene/
+├── config.toml              réglages (serveur, robots, sécurité, IA, modèles, scène, spectateur, pilotage…)
+├── PROTOCOLE.md             langage de commande unifié v2 (pont ↔ robot)
+├── bridge/                  serveur-pont et plateforme
+│   ├── serveur.py           contrôleur, flotte, sécurité, IA supervisée, WebSocket
+│   ├── plateforme.py        montage des pages et des routes de la plateforme
+│   ├── trace/               journal unifié des cinq opérations, écart, PROV-O, saisies N-07 et N-08
+│   ├── modeles/             service des modèles (D13, D03), clients Anthropic, OpenAI, Ollama
+│   ├── robots/              descriptions, pilotes, bibliothèques fermées, flotte
+│   ├── atelier/             atelier P1 relié au journal unifié
+│   ├── scene/               pont scénique P2.3 multi-robots, aperçu et simulation
+│   ├── spectateur/          séance P3, tirage X.2, questionnaires, avis S-06
+│   ├── analyse/             Q-01 à Q-05, juges O-02, script R A.2
+│   ├── accessibilite/       surtitres et audiodescription (O-06)
+│   ├── veille/              veille bibliographique (O-08)
+│   ├── diffusion/           C2PA (O-07), tableau public (O-09)
+│   ├── gouvernance/         verrous, incidents, décisions, conservation, retrait, biométrie
+│   ├── pilotage/            régie, dépôts, rapports, table de couverture
+│   └── partenaire/          partenaire de théâtre
+├── modules/                 prototypes P1, P2, P3, T.6, X.2 et outils de la Régie (importés tels quels)
+├── gouvernance/             état, registre des systèmes, EFVP, conservation (YAML)
+├── questionnaires/          instruments I-7 et I-6 (YAML)
+├── analyse/                 livre de codes A.1
+├── robots/                  profils de robots (TOML)
+├── sdk/                     trousses de pilote : Python, JavaScript, C++, Arduino
+├── web/                     interfaces (HTML, CSS, JS sans dépendance externe)
 ├── firmware/esp32_robot/    micrologiciel Arduino pour ESP32
-├── sequences/               chorégraphies enregistrées (JSON)
-├── partenaire/
-│   ├── sources/             vos documents (base de connaissances)
-│   ├── index/               index de recherche et livret structuré (générés)
-│   ├── pieces/              pièces de la bibliothèque (JSON)
-│   ├── repertoire/          catalogues DraCor en cache (recherche hors ligne)
-│   ├── demo/                scène de démonstration originale « Le Souffleur »
-│   └── donnees/             acteurs, passages, plans scellés (exclus de Git)
+├── sequences/               chorégraphies (JSON)
+├── partenaire/              sources, index, pièces, répertoire, démo
 └── tests/
 ```
+
+Les données (`donnees/`, `corpus/`, `donnees_ett/`, `partenaire/donnees/`) restent sur l'ordinateur et sont exclues de Git.
