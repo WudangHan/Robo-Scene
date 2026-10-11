@@ -1,0 +1,20 @@
+# État de gouvernance lu par la plateforme (verrous G-02 et G-04 du cahier des fonctions).
+# À tenir à jour par le chercheur ; chaque changement est un commit (traçabilité ISO/IEC 42001, A.2).
+#
+# Tant que « avis_ethique.obtenu » est false, toute collecte auprès de personnes participantes est refusée :
+# mode « atelier » de P1, répétition avec un acteur consentant au versement « recherche », questionnaires
+# I-6 et I-7, entretiens. Les essais sans personne participante restent permis.
+
+avis_ethique:
+  obtenu: false           # jalon J02
+  comite: ""              # comité d'éthique indépendant retenu (G.3)
+  reference: ""
+  date: ""
+
+politique_ia:
+  version: "1.1"          # G.5 ; amendement v1.2 à adopter pour SI-08 (GPT-6, décision D13 du 11 oct. 2026)
+  prochaine_revue: "2027-01-15"   # revue trimestrielle (P-04)
+
+personne_ressource_externe: ""     # G.5, § 3 (signalement contre le responsable) ; à désigner
+
+assurance_responsabilite_civile: false   # G.11, C4 ; exigée avant tout atelier avec public ou robot

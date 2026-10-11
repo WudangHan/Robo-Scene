@@ -13,7 +13,6 @@ Garde-fous contre la fabrication :
 from __future__ import annotations
 
 import json
-import os
 import re
 from datetime import datetime
 from typing import Any
@@ -53,27 +52,30 @@ def _json(texte: str) -> dict[str, Any]:
 
 
 class Agents:
-    def __init__(self, cfg: dict[str, Any], index: Index):
+    """Les agents passent par le service unique des modèles (D03, D13) : rôle « analyse » (Claude Opus ou
+    GPT Sol) pour le conseiller et l'analyse dramaturgique, rôle « rapide » (Claude Sonnet ou GPT Luna) pour
+    les variations ; sans clé API, chaque agent emprunte sa voie déterministe et le dit."""
+
+    def __init__(self, cfg: dict[str, Any], index: Index, service=None):
         self.cfg = cfg
         self.index = index
-        self.client = None
-        if cfg.get("ia_active", True) and os.environ.get("ANTHROPIC_API_KEY"):
-            try:
-                from anthropic import AsyncAnthropic
-                self.client = AsyncAnthropic()
-            except ImportError:
-                self.client = None
+        self.service = service if cfg.get("ia_active", True) else None
+        self.derniere_trace: dict[str, Any] | None = None
+
+    def disponible(self, role: str = "analyse") -> bool:
+        return self.service is not None and self.service.disponible(role)
 
     @property
     def moteur(self) -> str:
-        return f"claude:{self.cfg.get('modele')}" if self.client else "déterministe"
+        return self.service.moteur("analyse") if self.disponible() else "déterministe"
 
-    async def _appel(self, consigne: str, contenu: str, temperature: float, max_tokens: int = 1800) -> dict[str, Any]:
-        rep = await self.client.messages.create(
-            model=self.cfg.get("modele", "claude-sonnet-5-5"), max_tokens=max_tokens,
-            temperature=temperature, system=CADRE + "\n" + consigne,
-            messages=[{"role": "user", "content": contenu}])
-        return _json("".join(b.text for b in rep.content if getattr(b, "type", "") == "text"))
+    async def _appel(self, consigne: str, contenu: str, temperature: float, max_tokens: int = 1800,
+                     role: str = "analyse") -> dict[str, Any]:
+        r = await self.service.generer(role, CADRE + "\n" + consigne, contenu, temperature=temperature,
+                                       max_tokens=max_tokens)
+        self.derniere_trace = {**r.trace(), "famille": r.famille}
+        self._source = "claude" if r.fournisseur == "anthropic" else ("gpt" if r.fournisseur == "openai" else "local")
+        return _json(r.texte)
 
     # ── Conseiller du spectacle (formation, jeu, mise en scène, scénographie, robotique, IA) ──
     async def conseiller(self, question: str, domaines: list[str] | None = None) -> dict[str, Any]:
@@ -86,7 +88,7 @@ class Agents:
                                                         "cette question. Ajoutez des documents dans "
                                                         "partenaire/sources puis reconstruisez l'index.",
                                              "sources": []})
-        if self.client:
+        if self.disponible():
             try:
                 contenu = f"Question : {question}\n\nPassages autorisés :\n" + "\n\n".join(
                     f"[{p['id']}] ({reference(p)})\n{p['texte']}" for p in passages)
@@ -114,7 +116,7 @@ class Agents:
         stats = dramaturgie.analyser(piece)
         sortie = {"piece": piece["titre"], "auteur": piece.get("auteur", ""), "statistiques": stats,
                   "licence": piece.get("source", {}).get("licence", "")}
-        if not self.client:
+        if not self.disponible():
             return envelopper("analyste_piece", {**sortie, "mode": "déterministe", "interpretation": None,
                                                  "note": "Analyse interprétative disponible avec une clé API."})
         persos = ", ".join(f"{p['nom']} ({p['part_parole']:.0%} de la parole)" for p in stats["personnages"][:8])
@@ -156,7 +158,7 @@ class Agents:
         base = variations.propositions(el["texte"], el.get("didascalies"), el.get("didascalies_types"))
         out = {"replique": rid, "personnage": el["nom"], "texte": el["texte"], "indices": base["indices"],
                "propositions": base["propositions"], "mode": "règles"}
-        if not self.client:
+        if not self.disponible("rapide"):
             return envelopper("variation", out)
         voisins = [e for e in piece["elements"] if e["scene"] == el["scene"] and e["type"] == "replique"]
         i = next(k for k, e in enumerate(voisins) if e["id"] == rid)
@@ -169,13 +171,14 @@ class Agents:
                 '"style": "...", "etiquette": "...", "indice": "mots exacts du texte qui la justifient", '
                 '"justification": "..."}]}',
                 f"Contexte :\n{contexte}\n\nRéplique cible ({el['nom']}) : {el['texte']}\n"
-                f"Didascalies : {el.get('didascalies')}", float(self.cfg.get("temperature_variation", 0.7)))
+                f"Didascalies : {el.get('didascalies')}", float(self.cfg.get("temperature_variation", 0.7)),
+                role="rapide")
             props = []
             for p in d.get("propositions", [])[:3]:
                 try:
                     v = variations.variation(p.get("emotion", "neutre"), int(p.get("intensite", 5)), p.get("melange"),
                                              0.4, p.get("style", "réalisme psychologique"), p.get("etiquette", ""),
-                                             p.get("justification", ""), source="claude")
+                                             p.get("justification", ""), source=getattr(self, "_source", "ia"))
                 except (ValueError, TypeError):
                     continue
                 indice = str(p.get("indice", ""))

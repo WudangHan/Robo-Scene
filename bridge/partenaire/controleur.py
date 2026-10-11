@@ -46,7 +46,7 @@ class Partenaire:
         self.biblio = texte_mod.Bibliotheque()
         self.repertoire = texte_mod.RepertoireDraCor()
         self.stockage = Stockage()
-        self.agents = Agents(self.cfg, self.index)
+        self.agents = Agents(self.cfg, self.index, getattr(ctl, "service", None))
         self.incarnation = bool(self.cfg["incarnation"])
         self.repetition: dict[str, Any] | None = None
         self.piece_indexee: str | None = None

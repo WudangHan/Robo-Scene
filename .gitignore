@@ -7,3 +7,6 @@ sequences/_brouillon.json
 partenaire/donnees/*
 !partenaire/donnees/.gitkeep
 .netlify/
+donnees/
+sequences/_essais.jsonl
+modules/p2/simulation_MuJoCo/rapports/*.png

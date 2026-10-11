@@ -215,13 +215,22 @@ def test_perturbations_appliquees():
 
 # ── Agents : convention et garde-fous ───────────────────────
 class _Faux:
-    def __init__(self, texte):
-        self.texte, self.messages = texte, self
+    """Service des modèles factice (aucun appel réseau) : même interface que bridge.modeles.ServiceModeles."""
 
-    async def create(self, **kw):
-        self.appel = kw
-        bloc = type("B", (), {"type": "text", "text": self.texte})()
-        return type("R", (), {"content": [bloc]})()
+    def __init__(self, texte, fournisseur="anthropic"):
+        self.texte, self.fournisseur, self.appel = texte, fournisseur, None
+
+    def disponible(self, role="analyse"):
+        return True
+
+    def moteur(self, role="analyse"):
+        return "claude-opus-5-5"
+
+    async def generer(self, role, systeme, contenu, **kw):
+        from bridge.modeles.clients import Reponse
+        self.appel = {"role": role, "systeme": systeme, **kw}
+        return Reponse(self.texte, self.fournisseur, "SI-01", "claude-opus-5-5", "claude-opus-5-5", 1, 1,
+                       {k: v for k, v in kw.items() if v is not None}, {}, [], famille="claude-opus")
 
 
 def test_convention_agents():
@@ -236,16 +245,16 @@ def test_conseiller_retire_les_references_inventees():
     idx = Index.charger()
     a = ag.Agents({"modele": "test"}, idx)
     vraie = idx.rechercher("respiration de scène", k=1)[0]["id"]
-    a.client = _Faux(json.dumps({"reponse": f"La respiration régule le trac [{vraie}]. Autre fait [K99999].",
+    a.service = _Faux(json.dumps({"reponse": f"La respiration régule le trac [{vraie}]. Autre fait [K99999].",
                                  "citations": [vraie, "K99999"]}))
     r = run(a.conseiller("respiration de scène"))
     assert r["citations"] == [vraie] and r["references_retirees"] == ["K99999"] and "[K99999]" not in r["reponse"]
-    assert "top_p" not in a.client.appel
+    assert "top_p" not in a.service.appel and a.service.appel["role"] == "analyse"
 
 
 def test_analyste_retire_les_citations_introuvables(demo):
     a = ag.Agents({"modele": "test"}, Index([]))
-    a.client = _Faux(json.dumps({"fable": "…", "modele_actantiel": {}, "citations": [
+    a.service = _Faux(json.dumps({"fable": "…", "modele_actantiel": {}, "citations": [
         {"texte": "Le texte vient toujours après le souffle", "commentaire": "ok"},
         {"texte": "Je suis la reine des abeilles", "commentaire": "inventée"}]}))
     r = run(a.analyser_piece(demo))
@@ -255,7 +264,7 @@ def test_analyste_retire_les_citations_introuvables(demo):
 
 def test_variations_claude_filtrees(demo):
     a = ag.Agents({"modele": "test"}, Index([]))
-    a.client = _Faux(json.dumps({"propositions": [
+    a.service = _Faux(json.dumps({"propositions": [
         {"emotion": "colère", "intensite": 8, "style": "tragédie grecque", "etiquette": "fureur",
          "indice": "Facile à dire", "justification": "…"},
         {"emotion": "extase cosmique", "intensite": 5}]}))
@@ -271,6 +280,8 @@ def cfg(tmp_path):
     c = charger_config(RACINE / "config.toml")
     c["robot"]["transport"] = "sim"
     c["protocole"]["dossier_corpus"] = str(tmp_path / "corpus")
+    c["donnees"] = {"dossier": str(tmp_path / "donnees")}
+    c["flotte"] = {"dossier_profils": "robots_absent"}
     return c
 
 

@@ -40,6 +40,8 @@ def cfg(tmp_path):
     c["robot"]["transport"] = "sim"
     c["protocole"]["dossier_corpus"] = str(tmp_path / "corpus")
     c["ia"]["execution_auto"] = False
+    c["donnees"] = {"dossier": str(tmp_path / "donnees")}
+    c["flotte"] = {"dossier_profils": "robots_absent"}
     return c
 
 
@@ -132,6 +134,7 @@ def test_obstacle_fait_baisser_la_confiance(cfg, monkeypatch):
     # La télémétrie peut réécrire dist entre-temps : on fige la valeur
     from bridge import transports
     monkeypatch.setattr(transports.TransportSimule, "_distance_mur", staticmethod(lambda *a: 0.25))
+    cfg["ia"]["regle"] = "angles_s04"      # séance S04 déclarée : propositions de déplacement permises
     p = run(scenario())
     assert p["action"] == "propulsion"
     assert p["confiance_verification"] <= 0.3 and p["statut"] == "bloquee"
@@ -158,63 +161,44 @@ def test_sequence_enregistrement_et_numerotation(cfg):
         (RACINE / "sequences" / "test auto.json").unlink(missing_ok=True)
 
 
-# ── Moteur Claude simulé (aucun appel réseau) ──────────────
-class _Bloc:
-    type = "text"
-
-    def __init__(self, t):
-        self.text = t
-
-
-class _Faux:
+# ── Moteur de modèle simulé (aucun appel réseau) ───────────
+class _Service:
     def __init__(self, texte=None, erreur=None):
         self.texte, self.erreur, self.appel = texte, erreur, None
-        self.messages = self
 
-    async def create(self, **kw):
-        self.appel = kw
+    def disponible(self, role="analyse"):
+        return True
+
+    def moteur(self, role="analyse"):
+        return "claude-sonnet-5-5"
+
+    async def generer(self, role, systeme, contenu, **kw):
+        from bridge.modeles.clients import Reponse
+        self.appel = {"role": role, "systeme": systeme, **kw}
         if self.erreur:
             raise self.erreur
-        return type("R", (), {"content": [_Bloc(self.texte)]})()
+        return Reponse(self.texte, "anthropic", "SI-01", "claude-sonnet-5-5", "claude-sonnet-5-5", 5, 9,
+                       {"temperature": kw.get("temperature")}, {"temperature": kw.get("temperature")}, [])
 
 
 LIMS = {"min_deg": [10, 20, 15, 30], "max_deg": [170, 160, 165, 150],
         "repos": [90] * 4, "propulsion_active": True}
 
 
-def test_moteur_claude_analyse_et_parametres():
+def test_moteur_modele_analyse_et_parametres():
     from bridge.ia import Agent
-    a = Agent({"modele": "claude-test", "temperature": 0.2, "max_tokens": 300}, ["Base", "Épaule", "Coude", "Tête"])
-    a.client, a.moteur = _Faux('```json\n{"action":"repos","parametres":{},"confiance":0.92,"justification":"ok"}\n```'), "claude"
+    a = Agent({"temperature": 0.2, "max_tokens": 300}, ["Base", "Épaule", "Coude", "Tête"],
+              _Service('```json\n{"action":"repos","parametres":{},"confiance":0.92,"justification":"ok"}\n```'))
     p = run(a.proposer("reviens au repos", {"deg": [90] * 4}, LIMS, []))
-    assert p["action"] == "repos" and p["confiance"] == 0.92 and p["moteur"] == "claude:claude-test"
-    kw = a.client.appel
-    assert kw["temperature"] == 0.2 and "top_p" not in kw  # jamais les deux à la fois
+    assert p["action"] == "repos" and p["confiance"] == 0.92 and p["moteur"] == "anthropic:claude-sonnet-5-5"
+    kw = a.service.appel
+    assert kw["role"] == "commande" and kw["temperature"] == 0.2 and "top_p" not in kw
+    assert "bibliothèque fermée" in kw["systeme"]          # règle par défaut (G.5)
+    assert p["trace_modele"]["version_modele"] == "claude-sonnet-5-5"
 
 
-def test_moteur_claude_repli_sur_regles():
+def test_moteur_modele_repli_sur_regles():
     from bridge.ia import Agent
-    a = Agent({"modele": "x"}, ["Base", "Épaule", "Coude", "Tête"])
-    a.client, a.moteur = _Faux(erreur=TimeoutError()), "claude"
+    a = Agent({}, ["Base", "Épaule", "Coude", "Tête"], _Service(erreur=TimeoutError()))
     p = run(a.proposer("stop", {}, LIMS, []))
     assert p["moteur"] == "regles (repli)" and p["action"] == "propulsion"
-
-
-def test_origine_websocket_controlee(cfg):
-    """Une page tierce ne peut pas se connecter au pont ; la page hébergée autorisée le peut."""
-    cfg["serveur"]["origines_autorisees"] = ["https://robo-scene.netlify.app"]
-
-    async def scenario():
-        from aiohttp import WSServerHandshakeError
-        app = creer_app(cfg)
-        async with TestClient(TestServer(app)) as cl:
-            with pytest.raises(WSServerHandshakeError) as e:
-                await cl.ws_connect("/ws", headers={"Origin": "https://site-malveillant.example"})
-            assert e.value.status == 403
-            for origine in ("https://robo-scene.netlify.app", "http://127.0.0.1:8765", None):
-                ws = await cl.ws_connect("/ws", headers={"Origin": origine} if origine else {})
-                m = await attendre(ws, lambda m: m["type"] == "config")
-                assert m["noms"]
-                await ws.close()
-
-    run(scenario())

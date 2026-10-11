@@ -1,0 +1,61 @@
+# Registre des systèmes d'IA (politique G.5 v1.1, § registre) — copie de travail lue par la plateforme (G-03).
+# Les versions courantes de SI-01 et SI-08 sont mises à jour automatiquement à chaque adoption (D13) ;
+# l'historique est conservé dans donnees/adoptions_modeles.json.
+
+systemes:
+  SI-01:
+    nom: "Claude par l'API d'Anthropic (familles Opus et Sonnet)"
+    fournisseur: F-01
+    usage: "Propositions de texte, analyse, conseiller, gestes nommés ; données NON sensibles seulement (D03)"
+    risque: modere
+    mesures: "Aiguillage D03 ; plafond de jetons ; version consignée par génération"
+    version_courante: claude-opus-5-5 ; claude-sonnet-5-5
+  SI-02:
+    nom: "Modèle ouvert local servi par Ollama"
+    fournisseur: F-03
+    usage: "Consignes et matériaux sensibles ; codage local des entretiens"
+    risque: modere
+    mesures: "verifier_local (aucun serveur ni modèle infonuagique) ; refus sans repli"
+    version_courante: "gemma4:12b (PROVISOIRE, essais seulement, en attente de l'évaluation à l'aveugle)"
+  SI-03:
+    nom: "whisper.cpp (MIT), transcription locale"
+    fournisseur: F-04
+    usage: "Transcription des entretiens"
+    risque: eleve
+    mesures: "Hors ligne ; audio détruit après vérification (G.6)"
+  SI-04:
+    nom: "P1 — Atelier dramaturgique"
+    usage: "Cinq opérations, journal I-5"
+    risque: modere
+    mesures: "Verrou de mise en service (fiche P1.1, § 7)"
+  SI-05:
+    nom: "P2 — Scénographie robotique (bibliothèque fermée, pont scénique)"
+    usage: "Gestes nommés, conduite"
+    risque: eleve
+    mesures: "Aucune commande motrice par l'IA ; statuts brouillon → valide ; observateur ; arrêt matériel"
+  SI-06:
+    nom: "P3 — Interface spectateur"
+    usage: "Rétroaction émotionnelle anonyme"
+    risque: faible
+    mesures: "Aucune donnée individuelle ; seuil de diffusion de 5"
+  SI-07:
+    nom: "Régisseur IA de l'application Régie (appel à SI-01 ou SI-08)"
+    usage: "Synthèses en lecture seule"
+    risque: faible
+    mesures: "Aucune écriture ; références vérifiées"
+  SI-08:
+    nom: "GPT-6 par l'API Responses d'OpenAI (familles Sol et Luna)"
+    fournisseur: F-08
+    usage: "Mêmes usages que SI-01, au choix du chercheur ; données NON sensibles seulement (D03)"
+    risque: modere
+    mesures: "Aiguillage D03 ; paramètres appliqués consignés (A-08) ; version consignée par génération"
+    version_courante: gpt-6.1-sol ; gpt-6-luna
+    statut: "PROPOSÉ le 11 octobre 2026 (D13) — à inscrire à la politique G.5 v1.2 ; fiche fournisseur F-08 à établir"
+
+fournisseurs:
+  F-01: Anthropic
+  F-02: Pollen Robotics (Reachy Mini)
+  F-03: Ollama
+  F-04: "Éditeurs des modèles candidats à SI-02 ; whisper.cpp"
+  F-07: "Hiwonder (AiNex)"
+  F-08: "OpenAI — fiche à établir (conservation des données, entraînement, localisation)"

@@ -1,0 +1,20 @@
+# Conservation et destruction (plan de gestion des données G.6, § 2 et § 8 ; fonction G-07).
+# Le plan G.6 v1.0 ne fixe pas de durées chiffrées : « echeance » reste vide tant que le chercheur ne l'a
+# pas arrêtée ; la plateforme signale alors l'échéance comme « à fixer » et ne détruit rien.
+# Formats : echeance = "AAAA-MM-JJ" (date fixe) ou "après:<événement>" (destruction déclenchée par un événement).
+# Toute destruction est consignée (date, jeu de données, méthode) dans donnees/gouvernance/destructions.jsonl.
+
+jeux:
+  DO-01:
+    libelle: "Enregistrements audio des entretiens"
+    sensibilite: elevee
+    chemins: []                      # volume chiffré, hors du dépôt : à renseigner sur la machine du chercheur
+    echeance: "après:verification_transcription"
+  DO-02: {libelle: "Transcriptions pseudonymisées", sensibilite: moyenne, chemins: [], echeance: ""}
+  DO-03: {libelle: "Questionnaires post-performance (anonymes)", sensibilite: faible, chemins: ["donnees/questionnaires/*.csv"], echeance: ""}
+  DO-04: {libelle: "Rétroaction agrégée P3", sensibilite: faible, chemins: ["donnees/p3/*.json"], echeance: ""}
+  DO-05: {libelle: "Journaux de cocréation", sensibilite: moyenne, chemins: ["corpus/traces/**/*.jsonl"], echeance: ""}
+  DO-06: {libelle: "Séquences gestuelles et paramètres des robots", sensibilite: faible, chemins: ["sequences/**/*.json"], echeance: ""}
+  DO-07: {libelle: "Captations vidéo", sensibilite: elevee, chemins: [], echeance: ""}
+  DO-08: {libelle: "Code source", sensibilite: faible, chemins: [], echeance: ""}
+  DO-09: {libelle: "Consentements et table des pseudonymes", sensibilite: tres_elevee, chemins: [], echeance: ""}

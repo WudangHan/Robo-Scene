@@ -1,0 +1,23 @@
+# Couverture de l'évaluation des facteurs relatifs à la vie privée (G6_EFVP_projet_v1.0 ; fonction G-04).
+# Chaque fonction qui touche des renseignements personnels porte une version ; l'EFVP indique la version
+# qu'elle couvre. En mode avec personnes participantes, une fonction dont la version dépasse celle que
+# couvre l'EFVP est REFUSÉE jusqu'à la révision de l'EFVP (critère : « EFVP révisée avant chaque mise en service »).
+
+efvp:
+  document: "G6_EFVP_projet_v1.0.docx"
+  date: "2026-10-06"
+
+fonctions:          # version actuelle de la fonction dans la plateforme
+  P1_atelier: "1.1"              # 1.1 : appels réels par D13 (SI-01, SI-08), journal unifié
+  P3_spectateur: "1.0"
+  P3_questionnaires: "1.0"       # S-05, nouveau
+  partenaire_repetition: "2.0"
+  partenaire_camera: "2.0"       # descripteurs de pose, sans image conservée (G-06)
+  entretiens_codage_local: "1.0" # Q-05, nouveau
+  surtitres: "1.0"               # O-06, nouveau
+
+couverture:         # version couverte par l'EFVP en vigueur
+  P1_atelier: "1.0"
+  P3_spectateur: "1.0"
+  partenaire_repetition: "2.0"
+  partenaire_camera: "2.0"

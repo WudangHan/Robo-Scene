@@ -25,6 +25,12 @@ CONSENTEMENTS = {
     "camera": "Utiliser la caméra pour une estimation de pose locale et conserver les descripteurs de mouvement "
               "(aucune image n'est enregistrée).",
     "recherche": "Verser ces traces, pseudonymisées, au corpus de recherche ROBO-SCÈNE.",
+    # Consentements généralisés à toute la plateforme (cahier des fonctions, G-01)
+    "atelier_p1": "Participer aux ateliers d'écriture (P1) : consignes, choix et réécritures consignés sous pseudonyme "
+                  "dans le journal des cinq opérations (I-5).",
+    "entretien": "Entretien enregistré (I-1), transcrit sur cette machine (SI-03) puis pseudonymisé ; l'audio est "
+                 "détruit après vérification de la transcription.",
+    "captation_video": "Captation vidéo des ateliers ou présentations (DO-07), conservée dans le volume chiffré.",
 }
 
 
