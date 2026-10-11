@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Questionnaire</title>
+<style>
+:root{--bg:#0f0e0c;--surface:#1a1815;--surface-2:#24211c;--ink:#ece6d8;--muted:#b4ab98;--accent:#d9b25c;--accent-ink:#141210;--line:#857b68;--focus:#ffd66b;--err:#ffb4a8;--radius:14px}
+:root[data-contrast="high"]{--bg:#000;--surface:#000;--surface-2:#111;--ink:#fff;--muted:#e6e6e6;--accent:#ffe14d;--line:#fff;--focus:#00e5ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:640px;margin:0 auto;padding:16px 16px 96px}
+header{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px}
+h1{font-size:1.4rem;margin:.2em 0}
+h2{font-size:1.15rem;margin:1.4em 0 .5em}
+.muted{color:var(--muted)}
+.carte{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin:12px 0}
+.essai{border:2px dashed var(--accent);padding:8px 12px;border-radius:10px;color:var(--accent);font-weight:700}
+fieldset{border:0;margin:0 0 18px;padding:0}
+legend{font-weight:600;margin-bottom:8px}
+.echelle{display:grid;grid-template-columns:repeat(auto-fit,minmax(44px,1fr));gap:6px}
+.echelle label,.choix label{display:flex;align-items:center;justify-content:center;min-height:48px;border:2px solid var(--line);border-radius:10px;background:var(--surface-2);cursor:pointer}
+.choix{display:grid;gap:6px}
+.choix label{justify-content:flex-start;padding:0 12px;gap:10px}
+.echelle input,.choix input{position:absolute;opacity:0;width:1px;height:1px}
+.echelle input:checked+span,.choix input:checked+span{color:var(--accent-ink)}
+.echelle label:has(input:checked),.choix label:has(input:checked){background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ancres{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted);margin-top:4px;gap:8px}
+input[type=range]{width:100%;min-height:44px}
+textarea,input[type=text]{width:100%;font:inherit;color:inherit;background:var(--surface-2);border:2px solid var(--line);border-radius:10px;padding:10px;min-height:48px}
+.case{display:flex;gap:12px;align-items:flex-start;min-height:48px}
+.case input{width:28px;height:28px;flex:none;margin-top:2px}
+.btn{font:inherit;min-height:56px;padding:12px 18px;border-radius:var(--radius);border:2px solid var(--line);background:var(--surface-2);color:inherit;cursor:pointer}
+.btn.primaire{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700;width:100%}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.erreur{color:var(--err)}
+.facultatif{font-size:.85rem;color:var(--muted);font-weight:400}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="muted" id="marque">Recherche indépendante — Sylvain Gagné, Ph. D.</div>
+    <div>
+      <button class="btn" id="langue" type="button" aria-label="English">EN</button>
+      <button class="btn" id="contraste" type="button" aria-pressed="false">◐</button>
+    </div>
+  </header>
+  <main id="principal" aria-live="polite"><p>…</p></main>
+</div>
+<script>
+"use strict";
+const T = {
+  fr: {ferme: "Aucun questionnaire n'est ouvert pour le moment.", envoyer: "Envoyer mes réponses", merci: "Merci ! Vos réponses ont été enregistrées.",
+       exclu: "Merci de votre intérêt. Ce questionnaire est réservé aux personnes de 18 ans ou plus ; aucune donnée n'a été conservée.",
+       facultatif: "(facultatif)", pseudo: "Votre pseudonyme d'atelier", erreur: "Erreur : ", contraste: "Contraste élevé", autre: "EN", autreLib: "English",
+       requis: "Réponse requise", curseur: "Valeur choisie : "},
+  en: {ferme: "No questionnaire is open at the moment.", envoyer: "Send my answers", merci: "Thank you! Your answers have been recorded.",
+       exclu: "Thank you for your interest. This questionnaire is for people aged 18 or over; no data was kept.",
+       facultatif: "(optional)", pseudo: "Your workshop pseudonym", erreur: "Error: ", contraste: "High contrast", autre: "FR", autreLib: "Français",
+       requis: "Answer required", curseur: "Selected value: "}
+};
+let langue = (navigator.language || "fr").startsWith("en") ? "en" : "fr";
+let form = null;
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+$("#contraste").onclick = e => {
+  const h = document.documentElement, on = h.dataset.contrast !== "high";
+  h.dataset.contrast = on ? "high" : ""; e.currentTarget.setAttribute("aria-pressed", on);
+};
+$("#langue").onclick = () => { langue = langue === "fr" ? "en" : "fr"; charger(); };
+
+function avisHtml(a) {
+  return `<section class="carte" aria-labelledby="t-avis"><h2 id="t-avis">${esc(a.titre)}</h2><ul>${a.points.map(p => `<li>${esc(p)}</li>`).join("")}</ul></section>`;
+}
+
+function enonceHtml(e) {
+  const lab = `${esc(e.texte)}${e.facultatif ? ` <span class="facultatif">${T[langue].facultatif}</span>` : ""}`;
+  if (e.type === "echelle" || e.type === "differentiel") {
+    let opts = "";
+    for (let v = e.min; v <= e.max; v++) opts += `<label><input type="radio" name="${e.id}" value="${v}"><span>${v}</span></label>`;
+    const anc = e.ancres ? `<div class="ancres" aria-hidden="true"><span>${esc(e.ancres[0])}</span><span>${esc(e.ancres[1])}</span></div>` : "";
+    const desc = e.ancres ? ` aria-describedby="d-${e.id}"` : "";
+    const sr = e.ancres ? `<span id="d-${e.id}" hidden>${e.min} = ${esc(e.ancres[0])} ; ${e.max} = ${esc(e.ancres[1])}</span>` : "";
+    return `<fieldset${desc}><legend>${lab}</legend><div class="echelle">${opts}</div>${anc}${sr}</fieldset>`;
+  }
+  if (e.type === "curseur") {
+    const mid = Math.round((e.min + e.max) / 2);
+    return `<fieldset><legend id="l-${e.id}">${lab}</legend><input type="range" name="${e.id}" min="${e.min}" max="${e.max}" value="${mid}" aria-labelledby="l-${e.id}" data-touche="0">
+      <div class="muted" aria-live="polite">${T[langue].curseur}<output>${mid}</output> %</div></fieldset>`;
+  }
+  if (e.type === "choix") {
+    return `<fieldset><legend>${lab}</legend><div class="choix">${e.valeurs.map((v, i) =>
+      `<label><input type="radio" name="${e.id}" value="${esc(v)}"><span>${esc(e.libelles[i] ?? v)}</span></label>`).join("")}</div></fieldset>`;
+  }
+  return `<fieldset><legend><label for="t-${e.id}">${lab}</label></legend><textarea id="t-${e.id}" name="${e.id}" maxlength="1000" rows="3"></textarea></fieldset>`;
+}
+
+async function charger() {
+  document.documentElement.lang = langue;
+  $("#langue").textContent = T[langue].autre; $("#langue").setAttribute("aria-label", T[langue].autreLib);
+  $("#contraste").setAttribute("aria-label", T[langue].contraste);
+  const r = await fetch(`/api/formulaire?langue=${langue}`, {cache: "no-store"});
+  const d = await r.json();
+  const m = $("#principal");
+  if (d.ferme) { m.innerHTML = `<h1>${T[langue].ferme}</h1>${avisHtml(d.avis)}`; return; }
+  form = d;
+  if (!d.langues.includes(langue)) { langue = d.langues[0]; }
+  let h = `<h1>${esc(d.titre)}</h1>`;
+  if (d.essai) h += `<p class="essai" role="note">${langue === "en" ? "Technical trial" : "Essai technique"}</p>`;
+  h += avisHtml(d.avis);
+  if (d.feuillet) h += `<section class="carte"><p>${esc(d.feuillet).replace(/\n/g, "<br>")}</p></section>`;
+  h += `<form id="f" novalidate>`;
+  for (const a of d.admissibilite) h += `<div class="case"><input type="checkbox" id="adm-${a.id}" data-adm="${a.id}"><label for="adm-${a.id}">${esc(a.texte)}</label></div>`;
+  if (d.pseudonyme_requis) h += `<p><label for="pseudo">${T[langue].pseudo}</label><input type="text" id="pseudo" maxlength="20" autocomplete="off"></p>`;
+  for (const p of d.parties) {
+    h += `<h2>${esc(p.titre)}${p.facultatif ? ` <span class="facultatif">${T[langue].facultatif}</span>` : ""}</h2>`;
+    h += p.enonces.map(enonceHtml).join("");
+  }
+  if (d.presence) h += `<div class="case"><input type="checkbox" id="presence"><label for="presence">${esc(d.presence.texte)}</label></div>`;
+  h += `<p id="msg" class="erreur" role="alert"></p><button class="btn primaire" type="submit">${T[langue].envoyer}</button></form>`;
+  m.innerHTML = h;
+  m.querySelectorAll('input[type=range]').forEach(x => x.addEventListener("input", () => {
+    x.dataset.touche = "1"; x.parentElement.querySelector("output").textContent = x.value; }));
+  $("#f").addEventListener("submit", envoyer);
+}
+
+async function envoyer(ev) {
+  ev.preventDefault();
+  const f = ev.target, reponses = {}, adm = {};
+  f.querySelectorAll("[data-adm]").forEach(x => adm[x.dataset.adm] = x.checked);
+  for (const p of form.parties) for (const e of p.enonces) {
+    if (e.type === "curseur") { const x = f.elements[e.id]; reponses[e.id] = x.dataset.touche === "1" ? Number(x.value) : null; }
+    else if (e.type === "texte") reponses[e.id] = f.elements[e.id].value.trim() || null;
+    else { const x = f.querySelector(`input[name="${e.id}"]:checked`); reponses[e.id] = x ? (e.type === "choix" ? x.value : Number(x.value)) : null; }
+  }
+  const corps = {langue, admissibilite: adm, reponses, presence: form.presence ? $("#presence").checked : null};
+  if (form.pseudonyme_requis) corps.pseudonyme = $("#pseudo").value;
+  const r = await fetch("/api/reponses", {method: "POST", headers: {"Content-Type": "application/json", "X-Questionnaire": "1"}, body: JSON.stringify(corps)});
+  const d = await r.json();
+  if (!r.ok) { $("#msg").textContent = T[langue].erreur + (d.erreur || r.status); return; }
+  $("#principal").innerHTML = `<h1 tabindex="-1">${d.enregistre ? T[langue].merci : T[langue].exclu}</h1>`;
+  $("#principal h1").focus();
+}
+charger().catch(e => { $("#principal").innerHTML = `<p class="erreur">${esc(e)}</p>`; });
+</script>
+</body>
+</html>

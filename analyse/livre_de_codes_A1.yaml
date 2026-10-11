@@ -1,0 +1,362 @@
+livre: A.1 — Livre de codes préliminaire
+version: '1.0'
+date: '2026-10-05'
+source: 07_Analyse/Qualitative/A1_Livre_de_codes_v1.0.xlsx (copie lisible par la plateforme ; le classeur fait foi)
+note: Codes déductifs issus du cadre R.4 ; codes inductifs EMG-xx ajoutés en cours d'analyse. Exemples construits,
+  non tirés de données.
+codes:
+- code: OP-CONS
+  famille: Opérations (R.4)
+  libelle: Consigner
+  definition: 'Formulation par une personne de la demande adressée au système : situation, contrainte, amorce, repère
+    scénique, ou toute instruction.'
+  utiliser_quand: Le passage décrit ou cite ce qui a été demandé au système, ou la manière de le demander.
+  ne_pas_utiliser_quand: Le passage porte sur ce que le système a produit (OP-GEN).
+  exemple_construit: « Je lui ai donné juste la première phrase et je l'ai laissé continuer. »
+  lien: QR1
+  origine: déductif
+  version: '1.0'
+- code: OP-GEN
+  famille: Opérations (R.4)
+  libelle: Générer
+  definition: Production par le système de propositions (texte, geste, image, son).
+  utiliser_quand: Le passage décrit ce que le système a proposé ou la qualité de ses propositions.
+  ne_pas_utiliser_quand: Le passage porte sur le choix fait parmi ces propositions (OP-SEL).
+  exemple_construit: « Il sortait trois versions, toujours un peu pareilles. »
+  lien: QR1
+  origine: déductif
+  version: '1.0'
+- code: OP-SEL
+  famille: Opérations (R.4)
+  libelle: Sélectionner
+  definition: Décision humaine de retenir, rejeter ou redemander une proposition, et ses motifs.
+  utiliser_quand: Le passage rapporte un tri, un refus, une nouvelle demande ou un critère de choix.
+  ne_pas_utiliser_quand: 'La proposition retenue est ensuite modifiée : coder aussi OP-TRANS.'
+  exemple_construit: « J'ai gardé la deuxième parce qu'elle laissait un silence. »
+  lien: QR1 · H1
+  origine: déductif
+  version: '1.0'
+- code: OP-TRANS
+  famille: Opérations (R.4)
+  libelle: Transformer
+  definition: Réécriture, combinaison, mise en jeu ou en corps d'une proposition retenue.
+  utiliser_quand: Le passage décrit une modification d'une proposition, y compris au plateau.
+  ne_pas_utiliser_quand: Écriture sans point de départ issu du système (coder AG-DECL-SOI si pertinent).
+  exemple_construit: « Au plateau, on l'a dite à l'envers, et là ça marchait. »
+  lien: QR1 · H1 · H3
+  origine: déductif
+  version: '1.0'
+- code: OP-ATTR
+  famille: Opérations (R.4)
+  libelle: Attribuer
+  definition: Désignation de l'origine d'un passage (humaine, système, mixte) et fixation du crédit.
+  utiliser_quand: Le passage traite de l'étiquetage, de la signature, du programme de soirée ou de la répartition
+    du crédit.
+  ne_pas_utiliser_quand: Discussion juridique générale sans attribution concrète (ETH-CREDIT).
+  exemple_construit: '« Sur le programme, on a écrit : texte de la compagnie, avec des propositions d''un outil
+    d''IA. »'
+  lien: QR1 · QR3
+  origine: déductif
+  version: '1.0'
+- code: AG-DECL-SOI
+  famille: Agentivité
+  libelle: Agentivité déclarée à soi
+  definition: La personne s'attribue l'initiative, le choix ou la responsabilité du résultat.
+  utiliser_quand: Formules du type « j'ai décidé », « c'est moi qui ».
+  ne_pas_utiliser_quand: Attribution au collectif humain sans référence à soi (AG-PARTAGE).
+  exemple_construit: « Au fond, tout ce qui reste, c'est moi qui l'ai choisi. »
+  lien: H1
+  origine: déductif
+  version: '1.0'
+- code: AG-DECL-SYS
+  famille: Agentivité
+  libelle: Agentivité déclarée au système
+  definition: La personne attribue au système une initiative, une idée ou une part du résultat.
+  utiliser_quand: Le système est sujet de verbes d'action créatrice (« il a trouvé », « elle a eu l'idée »).
+  ne_pas_utiliser_quand: Simple description technique sans attribution d'initiative (OP-GEN).
+  exemple_construit: « C'est lui qui a eu l'idée du personnage muet. »
+  lien: H1
+  origine: déductif
+  version: '1.0'
+- code: AG-PARTAGE
+  famille: Agentivité
+  libelle: Agentivité partagée ou distribuée
+  definition: Le résultat est présenté comme issu d'une interaction dont aucune partie n'est seule à l'origine.
+  utiliser_quand: Formules de coproduction, d'aller-retour, de « nous » incluant le système.
+  ne_pas_utiliser_quand: Partage entre humains seulement.
+  exemple_construit: « C'est sorti d'un ping-pong, je ne saurais pas dire qui. »
+  lien: H1
+  origine: déductif
+  version: '1.0'
+- code: AG-INTENTION
+  famille: Agentivité
+  libelle: Intention prêtée au système
+  definition: Attribution au système de désirs, de goûts, d'intentions ou d'émotions.
+  utiliser_quand: « Il voulait », « elle aime », « il comprend ».
+  ne_pas_utiliser_quand: Usage manifestement métaphorique corrigé aussitôt par la personne (coder quand même, avec
+    mémo).
+  exemple_construit: « On aurait dit qu'il voulait la faire mourir à la fin. »
+  lien: H1 · H2
+  origine: déductif
+  version: '1.0'
+- code: AG-PERCUE
+  famille: Agentivité
+  libelle: Agentivité perçue par le public
+  definition: Rôle que des spectateurs prêtent au système ou au robot dans l'œuvre vue.
+  utiliser_quand: Entretiens I-2 et questions ouvertes I-7.
+  ne_pas_utiliser_quand: Perception rapportée par un artiste à propos du public (coder PUB-REACT).
+  exemple_construit: « J'avais l'impression que le robot écoutait vraiment. »
+  lien: QR2 · H2 · H4
+  origine: déductif
+  version: '1.0'
+- code: REG-INSTR
+  famille: Régimes (R.4)
+  libelle: Régime de l'instrument
+  definition: Le dispositif est décrit comme un outil au service d'une intention humaine.
+  utiliser_quand: Vocabulaire de l'outil, du pinceau, du moteur de recherche, de l'assistant.
+  ne_pas_utiliser_quand: Le dispositif est présenté comme partenaire de dialogue (REG-INTERLOC).
+  exemple_construit: « C'est un outil, comme un dictionnaire de rimes. »
+  lien: QR1
+  origine: déductif
+  version: '1.0'
+- code: REG-INTERLOC
+  famille: Régimes (R.4)
+  libelle: Régime de l'interlocuteur
+  definition: Le dispositif est décrit comme un partenaire de dialogue dont les répliques sont jouées ou discutées.
+  utiliser_quand: Vocabulaire de la conversation, de la réplique, de l'échange.
+  ne_pas_utiliser_quand: Présence du dispositif dans la fiction (REG-PERSO).
+  exemple_construit: « On improvisait avec lui comme avec un acteur de plus. »
+  lien: QR1 · H2
+  origine: déductif
+  version: '1.0'
+- code: REG-PERSO
+  famille: Régimes (R.4)
+  libelle: Régime du personnage ou du double
+  definition: Le dispositif figure dans la fiction ou sur scène comme personnage, double ou corps.
+  utiliser_quand: Le robot ou le système est un rôle ; un double numérique est présenté.
+  ne_pas_utiliser_quand: Robot employé comme machine de scène sans rôle fictionnel (ESTH-CORPS).
+  exemple_construit: « Le robot joue la sœur qui n'est jamais revenue. »
+  lien: QR2 · H2
+  origine: déductif
+  version: '1.0'
+- code: CRE-EXPLO
+  famille: Créativité
+  libelle: Créativité exploratoire
+  definition: 'Variation à l''intérieur d''un cadre donné : variantes, déclinaisons, options.'
+  utiliser_quand: Le système ou la personne explore des possibilités sans changer les règles du jeu.
+  ne_pas_utiliser_quand: Changement de cadre (CRE-TRANSF).
+  exemple_construit: « Ça nous a donné dix fins possibles pour la même scène. »
+  lien: R.4 §6
+  origine: déductif
+  version: '1.0'
+- code: CRE-TRANSF
+  famille: Créativité
+  libelle: Créativité transformationnelle
+  definition: 'Changement du cadre lui-même : de forme, de convention, de rapport scène-salle.'
+  utiliser_quand: Le passage rapporte une rupture de convention attribuée à la sélection, à la transformation ou
+    au système.
+  ne_pas_utiliser_quand: Nouveauté locale sans changement de cadre (CRE-EXPLO).
+  exemple_construit: « À partir de là, on a décidé que le public écrirait la fin. »
+  lien: R.4 §6 · H3
+  origine: déductif
+  version: '1.0'
+- code: CTRL-MAITRISE
+  famille: Contrôle
+  libelle: Maîtrise
+  definition: Sentiment ou exercice d'un contrôle sur le processus et le résultat.
+  utiliser_quand: La personne dit pouvoir orienter, arrêter, corriger.
+  ne_pas_utiliser_quand: —
+  exemple_construit: « Je savais exactement quand l'arrêter. »
+  lien: H1
+  origine: déductif
+  version: '1.0'
+- code: CTRL-DEPOSS
+  famille: Contrôle
+  libelle: Dépossession
+  definition: Sentiment de perte de contrôle, d'homogénéisation ou d'effacement de sa voix.
+  utiliser_quand: Malaise, impression que « ce n'est plus mon texte ».
+  ne_pas_utiliser_quand: Critique de la qualité seule (ESTH-EVAL).
+  exemple_construit: « À la fin, j'avais l'impression que tout le monde écrivait pareil. »
+  lien: P1.1 dim. 8
+  origine: déductif
+  version: '1.0'
+- code: CTRL-DEPEND
+  famille: Contrôle
+  libelle: Dépendance
+  definition: Recours jugé excessif ou difficulté à écrire sans le système.
+  utiliser_quand: La personne décrit une habitude, un réflexe, une difficulté sans l'outil.
+  ne_pas_utiliser_quand: —
+  exemple_construit: « Le lendemain, je n'arrivais plus à commencer une scène seule. »
+  lien: P1.1 dim. 8
+  origine: déductif
+  version: '1.0'
+- code: ETH-CREDIT
+  famille: Éthique
+  libelle: Crédit et droits
+  definition: Questions de paternité, de droit d'auteur, de rémunération et de crédit.
+  utiliser_quand: Le passage discute qui signe, qui est payé, à qui appartient le texte.
+  ne_pas_utiliser_quand: Étiquetage concret d'un passage précis (OP-ATTR).
+  exemple_construit: « Si la machine a écrit la moitié, est-ce que je touche la moitié ? »
+  lien: QR3
+  origine: déductif
+  version: '1.0'
+- code: ETH-TRANSP
+  famille: Éthique
+  libelle: Transparence envers le public
+  definition: Information du public sur la présence et le rôle de l'IA.
+  utiliser_quand: Programme, annonce, interface P3, choix de dire ou de taire.
+  ne_pas_utiliser_quand: Réaction du public à cette information (PUB-PROV).
+  exemple_construit: « On a hésité à le dire avant le spectacle, de peur que ça gâche tout. »
+  lien: QR3 · H4
+  origine: déductif
+  version: '1.0'
+- code: ETH-BIAIS
+  famille: Éthique
+  libelle: Biais et représentation
+  definition: Stéréotypes, effacement ou caricature repérés dans les propositions ou dans l'œuvre.
+  utiliser_quand: Le passage commente une représentation jugée biaisée (voir grille B1 à B8).
+  ne_pas_utiliser_quand: —
+  exemple_construit: « Chaque fois, la femme ingénieure était la secrétaire. »
+  lien: QR3 · A4
+  origine: déductif
+  version: '1.0'
+- code: ETH-DONNEES
+  famille: Éthique
+  libelle: Données et confidentialité
+  definition: Préoccupations sur ce que deviennent les textes, les voix, les images transmis aux systèmes.
+  utiliser_quand: Inquiétude, règle, refus liés aux données.
+  ne_pas_utiliser_quand: —
+  exemple_construit: « Je ne veux pas que mon texte serve à entraîner leur modèle. »
+  lien: QR3
+  origine: déductif
+  version: '1.0'
+- code: ETH-TRAVAIL
+  famille: Éthique
+  libelle: Travail et métiers
+  definition: Effets attendus ou constatés sur l'emploi, les métiers et la rémunération des artistes.
+  utiliser_quand: Remplacement, déqualification, nouveaux rôles.
+  ne_pas_utiliser_quand: —
+  exemple_construit: « Les petites compagnies vont couper le poste de dramaturge. »
+  lien: QR4
+  origine: déductif
+  version: '1.0'
+- code: INC-ACCES
+  famille: Inclusion
+  libelle: Accessibilité
+  definition: Effets du dispositif sur la participation de personnes en situation de handicap ou neurodivergentes.
+  utiliser_quand: Barrière levée ou créée ; adaptation ; tests P3.3.
+  ne_pas_utiliser_quand: —
+  exemple_construit: « Pour moi qui suis sourde, l'interface sans son, c'était parfait. »
+  lien: QR3
+  origine: déductif
+  version: '1.0'
+- code: INC-LANGUE
+  famille: Inclusion
+  libelle: Langue et francophonies
+  definition: Rapport du dispositif aux langues, aux parlers et à la francophonie minoritaire.
+  utiliser_quand: Qualité en français, parlers régionaux, anglicisation, sentiment linguistique.
+  ne_pas_utiliser_quand: —
+  exemple_construit: « Il corrigeait mon chiac comme si c'était une faute. »
+  lien: QR3 · T.5 · A4
+  origine: déductif
+  version: '1.0'
+- code: INC-REPRES
+  famille: Inclusion
+  libelle: Représentation des récits
+  definition: Capacité du dispositif à porter ou à empêcher des récits multiculturels.
+  utiliser_quand: Le passage évalue la diversité des récits produits ou rendus possibles.
+  ne_pas_utiliser_quand: Biais ponctuel dans une proposition (ETH-BIAIS).
+  exemple_construit: « Ça nous a permis d'écrire des histoires qu'on n'aurait pas osé écrire. »
+  lien: Hypothèse directrice
+  origine: déductif
+  version: '1.0'
+- code: ESTH-EVAL
+  famille: Esthétique
+  libelle: Évaluation esthétique
+  definition: Jugement de valeur sur la qualité des propositions ou de l'œuvre.
+  utiliser_quand: Beau, plat, juste, cliché, surprenant, faible.
+  ne_pas_utiliser_quand: —
+  exemple_construit: « C'était correct, mais jamais vivant. »
+  lien: H3
+  origine: déductif
+  version: '1.0'
+- code: ESTH-CORPS
+  famille: Esthétique
+  libelle: Corps et présence
+  definition: Effets de la présence physique d'un robot ou d'un dispositif sur le jeu et la scène.
+  utiliser_quand: Rythme, regard, proximité, présence, gêne physique.
+  ne_pas_utiliser_quand: Robot comme personnage de la fiction (REG-PERSO).
+  exemple_construit: « Quand il tournait la tête vers moi, je changeais mon rythme. »
+  lien: H2
+  origine: déductif
+  version: '1.0'
+- code: PUB-REACT
+  famille: Publics
+  libelle: Réactions et engagement
+  definition: Émotions, attention, engagement du public pendant ou après la représentation.
+  utiliser_quand: Témoignages de spectateurs ; observations ; agrégats P3 commentés.
+  ne_pas_utiliser_quand: Réaction à l'information sur la provenance (PUB-PROV).
+  exemple_construit: « J'ai complètement oublié que c'était un robot. »
+  lien: QR2
+  origine: déductif
+  version: '1.0'
+- code: PUB-PROV
+  famille: Publics
+  libelle: Réaction à la provenance
+  definition: Effet sur le public de l'information relative à l'origine des répliques.
+  utiliser_quand: Condition « provenance affichée » (H4) ; commentaires sur l'étiquette.
+  ne_pas_utiliser_quand: —
+  exemple_construit: « Savoir que la réplique venait de l'IA m'a fait l'écouter autrement. »
+  lien: H4
+  origine: déductif
+  version: '1.0'
+- code: POL-SOUTIEN
+  famille: Politique culturelle
+  libelle: Soutien et financement
+  definition: Rôle des conseils des arts, des programmes et des règles de financement.
+  utiliser_quand: Demandes, critères, obstacles, besoins.
+  ne_pas_utiliser_quand: —
+  exemple_construit: « Le formulaire ne prévoyait pas de case pour un outil d'IA. »
+  lien: QR4
+  origine: déductif
+  version: '1.0'
+- code: POL-FORMATION
+  famille: Politique culturelle
+  libelle: Formation et compétences
+  definition: Besoins de formation des artistes et des équipes techniques.
+  utiliser_quand: Apprentissage, ateliers, littératie de l'IA.
+  ne_pas_utiliser_quand: —
+  exemple_construit: « Il faudrait l'enseigner à l'école de théâtre, avec ses limites. »
+  lien: QR4
+  origine: déductif
+  version: '1.0'
+- code: EMG-01
+  famille: Émergents
+  origine: inductif
+- code: EMG-02
+  famille: Émergents
+  origine: inductif
+- code: EMG-03
+  famille: Émergents
+  origine: inductif
+- code: EMG-04
+  famille: Émergents
+  origine: inductif
+- code: EMG-05
+  famille: Émergents
+  origine: inductif
+- code: EMG-06
+  famille: Émergents
+  origine: inductif
+- code: EMG-07
+  famille: Émergents
+  origine: inductif
+- code: EMG-08
+  famille: Émergents
+  origine: inductif
+- code: EMG-09
+  famille: Émergents
+  origine: inductif
+- code: EMG-10
+  famille: Émergents
+  origine: inductif
