@@ -8,8 +8,9 @@ Protocole outillé ici :
 3. l'accord entre juges est mesuré par l'alpha de Krippendorff (fonction du prototype P1), nominal pour
    l'émotion, intervalle pour l'intensité ; la justesse est la part d'étiquettes égales à l'émotion visée.
 
-Seuils : Krippendorff recommande α ≥ 0,800 et tolère α ≥ 0,667 pour des conclusions provisoires (Krippendorff,
-*Content Analysis*, 2e éd., 2004, § 11.4 ; référence tirée des connaissances d'entraînement, à vérifier). La
+Seuils : Krippendorff retient α ≥ 0,800 et tolère 0,667 ≤ α < 0,800 pour des conclusions provisoires (Krippendorff,
+*Content Analysis*, 2e éd., Sage, 2004, p. 241-243, d'après la notice « Krippendorff's alpha » de Wikipédia,
+consultée le 11 oct. 2026 ; pagination à confirmer dans l'ouvrage). La
 plateforme en déduit trois statuts par régime : « non validé », « exploratoire » (≥ 0,667), « validé » (≥ 0,800).
 """
 from __future__ import annotations
