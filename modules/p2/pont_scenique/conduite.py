@@ -7,7 +7,11 @@ from typing import Any
 
 import yaml
 
-TYPES_ACTION = ("lumiere", "son", "osc", "geste", "provenance")
+TYPES_ACTION = ("lumiere", "son", "osc", "geste", "provenance", "replique", "voix")
+# Extension plateforme Robo-Scène (11 oct. 2026) :
+#   geste    : champ facultatif « robot » (conduite multi-robots, O-11) ;
+#   replique : texte dit en scène (surtitres O-06) ; le repère doit porter une provenance (N-05) ;
+#   voix     : voix de synthèse du robot (O-12) ; la conduite doit déclarer « divulgations: [voix_synthese] ».
 PROVENANCES = ("humaine", "systeme", "mixte")
 
 
@@ -17,6 +21,7 @@ class Action:
     valeur: Any
     delai: float = 0.0
     transfert: float = 0.0
+    robot: str | None = None
 
 
 @dataclass
@@ -31,6 +36,7 @@ class Conduite:
     titre: str
     projecteurs: dict[str, int]
     reperes: list[Repere]
+    divulgations: list[str] = field(default_factory=list)
 
 
 def _action(brut: dict, n: str) -> Action:
@@ -38,10 +44,10 @@ def _action(brut: dict, n: str) -> Action:
     if len(types) != 1:
         raise ValueError(f"Repère {n} : chaque action doit avoir exactement un type parmi {TYPES_ACTION}")
     t = types[0]
-    autres = set(brut) - {t, "delai", "transfert"}
+    autres = set(brut) - {t, "delai", "transfert"} - ({"robot"} if t == "geste" else set())
     if autres:
         raise ValueError(f"Repère {n} : champs inconnus {sorted(autres)}")
-    a = Action(t, brut[t], float(brut.get("delai", 0.0)), float(brut.get("transfert", 0.0)))
+    a = Action(t, brut[t], float(brut.get("delai", 0.0)), float(brut.get("transfert", 0.0)), brut.get("robot"))
     if a.delai < 0 or a.transfert < 0:
         raise ValueError(f"Repère {n} : délai et transfert doivent être positifs")
     return a
@@ -53,7 +59,7 @@ def charger(chemin: str | Path) -> Conduite:
     proj = {nom: int(v["canal"]) for nom, v in (d.get("projecteurs") or {}).items()}
     reperes = [Repere(str(r["numero"]), r.get("nom", ""), [_action(a, str(r["numero"])) for a in r.get("actions", [])])
                for r in d["reperes"]]
-    return Conduite(d.get("titre", ""), proj, reperes)
+    return Conduite(d.get("titre", ""), proj, reperes, list(d.get("divulgations") or []))
 
 
 def valider(c: Conduite, gestes_connus: set[str] | None = None) -> list[str]:
@@ -86,4 +92,14 @@ def valider(c: Conduite, gestes_connus: set[str] | None = None) -> list[str]:
             elif a.type == "son":
                 if not str(a.valeur).strip():
                     pb.append(f"Repère {r.numero} : numéro de cue QLab vide")
+            elif a.type == "replique":
+                texte = a.valeur.get("texte") if isinstance(a.valeur, dict) else a.valeur
+                if not str(texte or "").strip():
+                    pb.append(f"Repère {r.numero} : réplique vide")
+                if not any(x.type == "provenance" for x in r.actions):
+                    pb.append(f"Repère {r.numero} : réplique sans étiquette de provenance (N-05)")
+            elif a.type == "voix":
+                if "voix_synthese" not in c.divulgations:
+                    pb.append(f"Repère {r.numero} : voix de synthèse sans divulgation déclarée "
+                              "(ajouter « divulgations: [voix_synthese] » à la conduite, O-12)")
     return pb

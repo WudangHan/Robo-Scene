@@ -1,0 +1,124 @@
+instrument: I-6
+titre:
+  fr: Questionnaire après l'atelier
+  en: Post-workshop questionnaire
+source: T1_Instruments_de_collecte_v1.0, § 7
+anonyme: false
+identification: pseudonyme
+jeu_de_donnees: 'DO-03 (partie liée au journal I-5 par pseudonyme : sensibilité moyenne)'
+feuillet_information:
+  fr: null
+  en: null
+  note: Rappel du consentement et du droit de retrait (G.3).
+parties:
+- id: A
+  titre:
+    fr: Soutien à la créativité
+    en: Creativity support
+  echelle:
+    min: 1
+    max: 10
+  enonces:
+  - id: CSI_EXPL_1
+    fr: null
+    en: null
+    note: Indice de soutien à la créativité (Cherry et Latulipe, 2014), facteur exploration, énoncé 1 ; facteur
+      « collaboration » selon l'adaptation de Rezwana et Maher (2022) ; texte à saisir et à traduire.
+  - id: CSI_EXPL_2
+    fr: null
+    en: null
+    note: Indice de soutien à la créativité (Cherry et Latulipe, 2014), facteur exploration, énoncé 2 ; facteur
+      « collaboration » selon l'adaptation de Rezwana et Maher (2022) ; texte à saisir et à traduire.
+  - id: CSI_EXPR_1
+    fr: null
+    en: null
+    note: Indice de soutien à la créativité (Cherry et Latulipe, 2014), facteur expressivité, énoncé 1 ; facteur
+      « collaboration » selon l'adaptation de Rezwana et Maher (2022) ; texte à saisir et à traduire.
+  - id: CSI_EXPR_2
+    fr: null
+    en: null
+    note: Indice de soutien à la créativité (Cherry et Latulipe, 2014), facteur expressivité, énoncé 2 ; facteur
+      « collaboration » selon l'adaptation de Rezwana et Maher (2022) ; texte à saisir et à traduire.
+  - id: CSI_IMM_1
+    fr: null
+    en: null
+    note: Indice de soutien à la créativité (Cherry et Latulipe, 2014), facteur immersion, énoncé 1 ; facteur «
+      collaboration » selon l'adaptation de Rezwana et Maher (2022) ; texte à saisir et à traduire.
+  - id: CSI_IMM_2
+    fr: null
+    en: null
+    note: Indice de soutien à la créativité (Cherry et Latulipe, 2014), facteur immersion, énoncé 2 ; facteur «
+      collaboration » selon l'adaptation de Rezwana et Maher (2022) ; texte à saisir et à traduire.
+  - id: CSI_PLAI_1
+    fr: null
+    en: null
+    note: Indice de soutien à la créativité (Cherry et Latulipe, 2014), facteur plaisir, énoncé 1 ; facteur « collaboration
+      » selon l'adaptation de Rezwana et Maher (2022) ; texte à saisir et à traduire.
+  - id: CSI_PLAI_2
+    fr: null
+    en: null
+    note: Indice de soutien à la créativité (Cherry et Latulipe, 2014), facteur plaisir, énoncé 2 ; facteur « collaboration
+      » selon l'adaptation de Rezwana et Maher (2022) ; texte à saisir et à traduire.
+  - id: CSI_RES_1
+    fr: null
+    en: null
+    note: Indice de soutien à la créativité (Cherry et Latulipe, 2014), facteur résultats à la hauteur de l'effort,
+      énoncé 1 ; facteur « collaboration » selon l'adaptation de Rezwana et Maher (2022) ; texte à saisir et à traduire.
+  - id: CSI_RES_2
+    fr: null
+    en: null
+    note: Indice de soutien à la créativité (Cherry et Latulipe, 2014), facteur résultats à la hauteur de l'effort,
+      énoncé 2 ; facteur « collaboration » selon l'adaptation de Rezwana et Maher (2022) ; texte à saisir et à traduire.
+  - id: CSI_COLL_1
+    fr: null
+    en: null
+    note: Indice de soutien à la créativité (Cherry et Latulipe, 2014), facteur collaboration, énoncé 1 ; facteur
+      « collaboration » selon l'adaptation de Rezwana et Maher (2022) ; texte à saisir et à traduire.
+  - id: CSI_COLL_2
+    fr: null
+    en: null
+    note: Indice de soutien à la créativité (Cherry et Latulipe, 2014), facteur collaboration, énoncé 2 ; facteur
+      « collaboration » selon l'adaptation de Rezwana et Maher (2022) ; texte à saisir et à traduire.
+  note: Les quinze comparaisons par paires ne sont administrées qu'au premier atelier (T.1, § 7.1).
+- id: B
+  titre:
+    fr: Votre rôle et celui du système
+    en: Your role and the system's
+  echelle:
+    min: 1
+    max: 7
+    fr:
+    - Pas du tout d'accord
+    - Tout à fait d'accord
+    en:
+    - Strongly disagree
+    - Strongly agree
+  enonces:
+  - id: B1
+    fr: Le système a influencé la direction prise par la scène.
+    en: The system influenced the direction the scene took.
+  - id: B2
+    fr: Les idées importantes de la scène venaient du système.
+    en: The key ideas in the scene came from the system.
+  - id: B3
+    fr: J'ai eu le sentiment de diriger le travail du début à la fin.
+    en: I felt I was directing the work from beginning to end.
+  - id: B4
+    fr: Je considère le texte final comme le mien.
+    en: I consider the final text to be mine.
+  - id: B5
+    fr: Je signerais ce texte de mon seul nom.
+    en: I would sign this text under my name alone.
+  - id: B6
+    fr: Je mentionnerais au public l'usage du système.
+    en: I would tell the audience that the system was used.
+  - id: B7
+    fr: Ce qui a été produit a une valeur artistique réelle.
+    en: What was produced has real artistic value.
+  - id: B8
+    fr: J'ai beaucoup transformé les propositions que j'ai retenues.
+    en: I substantially transformed the proposals I kept.
+  - id: B_ouverte
+    type: texte
+    fr: Décrivez en une phrase le rôle du système aujourd'hui.
+    en: Describe in one sentence the system's role today.

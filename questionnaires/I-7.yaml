@@ -1,0 +1,411 @@
+instrument: I-7
+titre:
+  fr: Questionnaire après la présentation
+  en: Post-performance questionnaire
+source: T1_Instruments_de_collecte_v1.0, § 8 ; dictionnaire A2_Dictionnaire_donnees_I-7_v1.0
+anonyme: true
+jeu_de_donnees: DO-03
+feuillet_information:
+  fr: null
+  en: null
+  note: 'À insérer : feuillet d''information du protocole éthique G.3, § 4 (obligatoire en tête du questionnaire).'
+admissibilite:
+- id: majeur
+  fr: J'ai 18 ans ou plus.
+  en: I am 18 or older.
+  obligatoire: true
+parties:
+- id: A
+  titre:
+    fr: Votre expérience du récit
+    en: Your experience of the story
+  echelle:
+    min: 1
+    max: 7
+    fr:
+    - Pas du tout d'accord
+    - Tout à fait d'accord
+    en:
+    - Strongly disagree
+    - Strongly agree
+  enonces:
+  - id: NE_COMP_1
+    fr: null
+    en: null
+    inverse: null
+    note: 'Engagement narratif — compréhension du récit, énoncé 1 (Busselle et Bilandzic, 2009) : texte à saisir
+      depuis l''instrument original, traduit et rétrotraduit (T.1, § 3.1) ; énoncés inversés à recoder selon l''original.'
+  - id: NE_COMP_2
+    fr: null
+    en: null
+    inverse: null
+    note: 'Engagement narratif — compréhension du récit, énoncé 2 (Busselle et Bilandzic, 2009) : texte à saisir
+      depuis l''instrument original, traduit et rétrotraduit (T.1, § 3.1) ; énoncés inversés à recoder selon l''original.'
+  - id: NE_COMP_3
+    fr: null
+    en: null
+    inverse: null
+    note: 'Engagement narratif — compréhension du récit, énoncé 3 (Busselle et Bilandzic, 2009) : texte à saisir
+      depuis l''instrument original, traduit et rétrotraduit (T.1, § 3.1) ; énoncés inversés à recoder selon l''original.'
+  - id: NE_ATT_1
+    fr: null
+    en: null
+    inverse: null
+    note: 'Engagement narratif — focalisation de l''attention, énoncé 1 (Busselle et Bilandzic, 2009) : texte à
+      saisir depuis l''instrument original, traduit et rétrotraduit (T.1, § 3.1) ; énoncés inversés à recoder selon
+      l''original.'
+  - id: NE_ATT_2
+    fr: null
+    en: null
+    inverse: null
+    note: 'Engagement narratif — focalisation de l''attention, énoncé 2 (Busselle et Bilandzic, 2009) : texte à
+      saisir depuis l''instrument original, traduit et rétrotraduit (T.1, § 3.1) ; énoncés inversés à recoder selon
+      l''original.'
+  - id: NE_ATT_3
+    fr: null
+    en: null
+    inverse: null
+    note: 'Engagement narratif — focalisation de l''attention, énoncé 3 (Busselle et Bilandzic, 2009) : texte à
+      saisir depuis l''instrument original, traduit et rétrotraduit (T.1, § 3.1) ; énoncés inversés à recoder selon
+      l''original.'
+  - id: NE_EMO_1
+    fr: null
+    en: null
+    inverse: null
+    note: 'Engagement narratif — engagement émotionnel, énoncé 1 (Busselle et Bilandzic, 2009) : texte à saisir
+      depuis l''instrument original, traduit et rétrotraduit (T.1, § 3.1) ; énoncés inversés à recoder selon l''original.'
+  - id: NE_EMO_2
+    fr: null
+    en: null
+    inverse: null
+    note: 'Engagement narratif — engagement émotionnel, énoncé 2 (Busselle et Bilandzic, 2009) : texte à saisir
+      depuis l''instrument original, traduit et rétrotraduit (T.1, § 3.1) ; énoncés inversés à recoder selon l''original.'
+  - id: NE_EMO_3
+    fr: null
+    en: null
+    inverse: null
+    note: 'Engagement narratif — engagement émotionnel, énoncé 3 (Busselle et Bilandzic, 2009) : texte à saisir
+      depuis l''instrument original, traduit et rétrotraduit (T.1, § 3.1) ; énoncés inversés à recoder selon l''original.'
+  - id: NE_PRES_1
+    fr: null
+    en: null
+    inverse: null
+    note: 'Engagement narratif — présence narrative, énoncé 1 (Busselle et Bilandzic, 2009) : texte à saisir depuis
+      l''instrument original, traduit et rétrotraduit (T.1, § 3.1) ; énoncés inversés à recoder selon l''original.'
+  - id: NE_PRES_2
+    fr: null
+    en: null
+    inverse: null
+    note: 'Engagement narratif — présence narrative, énoncé 2 (Busselle et Bilandzic, 2009) : texte à saisir depuis
+      l''instrument original, traduit et rétrotraduit (T.1, § 3.1) ; énoncés inversés à recoder selon l''original.'
+  - id: NE_PRES_3
+    fr: null
+    en: null
+    inverse: null
+    note: 'Engagement narratif — présence narrative, énoncé 3 (Busselle et Bilandzic, 2009) : texte à saisir depuis
+      l''instrument original, traduit et rétrotraduit (T.1, § 3.1) ; énoncés inversés à recoder selon l''original.'
+- id: B
+  titre:
+    fr: Le système dans la présentation
+    en: The system in the performance
+  echelle:
+    min: 1
+    max: 7
+    fr:
+    - Pas du tout d'accord
+    - Tout à fait d'accord
+    en:
+    - Strongly disagree
+    - Strongly agree
+  enonces:
+  - id: AG_1
+    fr: Le système avait ses propres intentions.
+    en: null
+  - id: AG_2
+    fr: Le système a choisi ce qu'il disait.
+    en: null
+  - id: AG_3
+    fr: Le système comprenait la situation.
+    en: null
+  - id: AG_4
+    fr: Le système aurait pu agir autrement.
+    en: null
+  - id: AG_5
+    fr: Quelqu'un dirigeait le système.
+    en: null
+    inverse: true
+  - id: AG_6
+    fr: Le système était un personnage à part entière.
+    en: null
+  note: Énoncés propres au projet (exploratoires) ; versions anglaises à produire par traduction et rétrotraduction
+    (T.1, § 3.1).
+- id: C
+  titre:
+    fr: Le robot
+    en: The robot
+  condition:
+    cond_support: robot
+  echelle:
+    min: 1
+    max: 5
+    type: differentiel
+  enonces:
+  - id: GS_ANTH_1
+    fr: null
+    en: null
+    note: Godspeed (anthropomorphisme) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  - id: GS_ANTH_2
+    fr: null
+    en: null
+    note: Godspeed (anthropomorphisme) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  - id: GS_ANTH_3
+    fr: null
+    en: null
+    note: Godspeed (anthropomorphisme) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  - id: GS_ANTH_4
+    fr: null
+    en: null
+    note: Godspeed (anthropomorphisme) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  - id: GS_ANTH_5
+    fr: null
+    en: null
+    note: Godspeed (anthropomorphisme) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  - id: GS_ANIM_1
+    fr: null
+    en: null
+    note: Godspeed (animéité) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française à produire
+      (T.1, § 3.1).
+  - id: GS_ANIM_2
+    fr: null
+    en: null
+    note: Godspeed (animéité) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française à produire
+      (T.1, § 3.1).
+  - id: GS_ANIM_3
+    fr: null
+    en: null
+    note: Godspeed (animéité) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française à produire
+      (T.1, § 3.1).
+  - id: GS_ANIM_4
+    fr: null
+    en: null
+    note: Godspeed (animéité) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française à produire
+      (T.1, § 3.1).
+  - id: GS_ANIM_5
+    fr: null
+    en: null
+    note: Godspeed (animéité) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française à produire
+      (T.1, § 3.1).
+  - id: GS_ANIM_6
+    fr: null
+    en: null
+    note: Godspeed (animéité) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française à produire
+      (T.1, § 3.1).
+  - id: GS_LIKE_1
+    fr: null
+    en: null
+    note: Godspeed (sympathie) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française à
+      produire (T.1, § 3.1).
+  - id: GS_LIKE_2
+    fr: null
+    en: null
+    note: Godspeed (sympathie) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française à
+      produire (T.1, § 3.1).
+  - id: GS_LIKE_3
+    fr: null
+    en: null
+    note: Godspeed (sympathie) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française à
+      produire (T.1, § 3.1).
+  - id: GS_LIKE_4
+    fr: null
+    en: null
+    note: Godspeed (sympathie) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française à
+      produire (T.1, § 3.1).
+  - id: GS_LIKE_5
+    fr: null
+    en: null
+    note: Godspeed (sympathie) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française à
+      produire (T.1, § 3.1).
+  - id: GS_INTL_1
+    fr: null
+    en: null
+    note: Godspeed (intelligence perçue) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  - id: GS_INTL_2
+    fr: null
+    en: null
+    note: Godspeed (intelligence perçue) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  - id: GS_INTL_3
+    fr: null
+    en: null
+    note: Godspeed (intelligence perçue) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  - id: GS_INTL_4
+    fr: null
+    en: null
+    note: Godspeed (intelligence perçue) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  - id: GS_INTL_5
+    fr: null
+    en: null
+    note: Godspeed (intelligence perçue) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  - id: GS_SAFE_1
+    fr: null
+    en: null
+    note: Godspeed (sécurité perçue) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  - id: GS_SAFE_2
+    fr: null
+    en: null
+    note: Godspeed (sécurité perçue) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  - id: GS_SAFE_3
+    fr: null
+    en: null
+    note: Godspeed (sécurité perçue) — paire d'adjectifs à saisir depuis Bartneck et al. (2009) ; version française
+      à produire (T.1, § 3.1).
+  note: 'Divergence documentaire sur le nombre d''énoncés de sympathie (4 ou 5) : à vérifier dans l''article original
+    avant la saisie (A2, § 4).'
+- id: D
+  titre:
+    fr: Provenance du texte
+    en: Origin of the text
+  enonces:
+  - id: MC_part_systeme
+    type: curseur
+    min: 0
+    max: 100
+    unite: '%'
+    fr: Selon vous, quelle part du texte entendu venait du système ?
+    en: null
+  - id: MC_savait
+    type: choix
+    valeurs:
+    - oui
+    - non
+    - en_partie
+    libelles:
+      fr:
+      - Oui
+      - Non
+      - En partie
+      en:
+      - 'Yes'
+      - 'No'
+      - Partly
+    fr: Saviez-vous, pendant le spectacle, quelles répliques venaient du système ?
+    en: null
+- id: E
+  titre:
+    fr: Votre réponse à la présentation
+    en: Your response to the performance
+  echelle:
+    min: 1
+    max: 7
+    fr:
+    - Pas du tout d'accord
+    - Tout à fait d'accord
+    en:
+    - Strongly disagree
+    - Strongly agree
+  enonces:
+  - id: ES_1
+    fr: La présentation m'a touché.
+    en: null
+  - id: ES_2
+    fr: J'y ai trouvé de la beauté.
+    en: null
+  - id: ES_3
+    fr: Elle m'a fait réfléchir.
+    en: null
+  - id: ES_ouverte
+    type: texte
+    facultatif: true
+    fr: Si vous le souhaitez, dites-nous en quelques mots ce que vous retenez.
+    en: null
+    note: Formulation de la question ouverte à confirmer (T.1, § 8, partie E).
+- id: F
+  titre:
+    fr: Profil (facultatif)
+    en: Profile (optional)
+  facultatif: true
+  enonces:
+  - id: PR_age
+    type: choix
+    valeurs:
+    - '18_34'
+    - '35_54'
+    - 55_plus
+    - nr
+    libelles:
+      fr:
+      - 18 à 34 ans
+      - 35 à 54 ans
+      - 55 ans et plus
+      - Préfère ne pas répondre
+      en:
+      - 18–34
+      - 35–54
+      - 55 and over
+      - Prefer not to say
+    fr: Tranche d'âge
+    en: Age group
+  - id: PR_langue_usage
+    type: choix
+    valeurs:
+    - fr
+    - en
+    - autre
+    - nr
+    libelles:
+      fr:
+      - Français
+      - Anglais
+      - Autre
+      - Préfère ne pas répondre
+      en:
+      - French
+      - English
+      - Other
+      - Prefer not to say
+    fr: Langue d'usage
+    en: Language used most often
+  - id: PR_frequentation
+    type: choix
+    valeurs: null
+    fr: Fréquentation du théâtre
+    en: null
+    note: Modalités à préciser dans l'instrument (dictionnaire A2).
+  - id: PR_usage_IA
+    type: choix
+    valeurs: null
+    fr: Usage de l'IA générative
+    en: null
+    note: Modalités à préciser dans l'instrument (dictionnaire A2).
+  - id: PR_besoin_access
+    type: choix
+    valeurs:
+    - oui
+    - non
+    - nr
+    libelles:
+      fr:
+      - Oui
+      - Non
+      - Préfère ne pas répondre
+      en:
+      - 'Yes'
+      - 'No'
+      - Prefer not to say
+    fr: Avez-vous un besoin d'accessibilité ?
+    en: Do you have an accessibility need?
+presence:
+  id: presence_complete
+  fr: J'ai assisté à toute la représentation.
+  en: I attended the whole performance.
