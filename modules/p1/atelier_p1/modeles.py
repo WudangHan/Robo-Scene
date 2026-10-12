@@ -157,7 +157,8 @@ class ModeleLocal:
         except (urllib.error.URLError, OSError, ValueError):
             return False
         for m in entrees:
-            if m.get("name", "") in (self.modele, f"{self.modele}:latest"):
+            # Ollama traite les noms sans égard à la casse (il peut afficher « :Q4_K_M » pour « :q4_k_m »)
+            if m.get("name", "").lower() in (self.modele.lower(), f"{self.modele}:latest".lower()):
                 # par prudence : une entrée qui annonce un hôte ou un modèle distant est refusée
                 if any(k.startswith("remote") and v for k, v in m.items()):
                     self.refus = [f"Ollama annonce « {self.modele} » comme modèle distant"]
