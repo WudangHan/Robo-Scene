@@ -12,7 +12,7 @@ avis_ethique:
   date: ""
 
 politique_ia:
-  version: "1.1"          # G.5 ; amendement v1.2 à adopter pour SI-08 (GPT-6, décision D13 du 11 oct. 2026)
+  version: "1.1"          # G.5 en vigueur ; v1.2 rédigée le 12 oct. 2026 (SI-08, D13, F-07, F-08) : passer à "1.2" à la signature
   prochaine_revue: "2027-01-15"   # revue trimestrielle (P-04)
 
 personne_ressource_externe: ""     # G.5, § 3 (signalement contre le responsable) ; à désigner

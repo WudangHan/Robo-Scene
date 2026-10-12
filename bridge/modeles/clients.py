@@ -106,7 +106,9 @@ class ClientOpenAI:
         if effort == "none" and SANS_NONE.search(modele):
             effort = "low"
             ecarts.append(f"effort « none » non accepté par {modele} : « low » appliqué")
-        corps: dict[str, Any] = {"model": modele, "instructions": systeme, "input": contenu,
+        # store=False : la réponse n'est pas conservée comme « état d'application » (30 jours par défaut sur
+        # /v1/responses, guide « Data controls in the OpenAI platform ») ; fiche fournisseur F-08.
+        corps: dict[str, Any] = {"model": modele, "instructions": systeme, "input": contenu, "store": False,
                                  "max_output_tokens": max_tokens, "reasoning": {"effort": effort}}
         if effort == "none":
             if temperature is not None:

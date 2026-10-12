@@ -101,6 +101,7 @@ def test_parametres_appliques_openai_et_anthropic():
     assert r.texte == "ok" and r.modele_exact == "gpt-6.1-sol-2026-09-29" and len(r.ecarts) == 2
     r = ClientOpenAI("k", transport=transport).generer("gpt-6-luna", "s", "c", temperature=0.7, effort="none")
     assert envoyes[-1]["temperature"] == 0.7 and r.ecarts == []
+    assert all(c.get("store") is False for c in envoyes)   # F-08 : aucun état d'application conservé chez OpenAI
     r = ClientAnthropic("k", transport=transport).generer("claude-opus-5-5", "s", "c", temperature=0.7, top_p=0.9)
     assert "top_p" not in envoyes[-1] and r.appliques == {"temperature": 0.7, "max_tokens": 1500}
     assert r.ecarts and "top_p" in r.ecarts[0]

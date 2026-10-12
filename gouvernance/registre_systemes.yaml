@@ -1,4 +1,4 @@
-# Registre des systèmes d'IA (politique G.5 v1.1, § registre) — copie de travail lue par la plateforme (G-03).
+# Registre des systèmes d'IA (politique G.5 v1.2, § 5) — copie de travail lue par la plateforme (G-03).
 # Les versions courantes de SI-01 et SI-08 sont mises à jour automatiquement à chaque adoption (D13) ;
 # l'historique est conservé dans donnees/adoptions_modeles.json.
 
@@ -50,7 +50,7 @@ systemes:
     risque: modere
     mesures: "Aiguillage D03 ; paramètres appliqués consignés (A-08) ; version consignée par génération"
     version_courante: gpt-6.1-sol ; gpt-6-luna
-    statut: "PROPOSÉ le 11 octobre 2026 (D13) — à inscrire à la politique G.5 v1.2 ; fiche fournisseur F-08 à établir"
+    statut: "Inscrit à la politique G.5 v1.2 (12 oct. 2026, à signer) ; fiche F-08 v1.0 établie le 12 oct. 2026 ; store=false à chaque appel ; GPT-6 Terra en attente de publication"
 
 fournisseurs:
   F-01: Anthropic
@@ -58,4 +58,4 @@ fournisseurs:
   F-03: Ollama
   F-04: "Éditeurs des modèles candidats à SI-02 ; whisper.cpp"
   F-07: "Hiwonder (AiNex)"
-  F-08: "OpenAI — fiche à établir (conservation des données, entraînement, localisation)"
+  F-08: "OpenAI — fiche v1.0 du 12 oct. 2026 (G5_Fiche_fournisseur_F-08_OpenAI_v1.0.docx)"
