@@ -14,8 +14,10 @@ Fonctionnement :
   motif est consigné.
 
 Versions de référence vérifiées le 11 octobre 2026 : claude-opus-5-5 et claude-sonnet-5-5 (Anthropic) ;
-gpt-6.1-sol et gpt-6-luna (OpenAI, guide « Using GPT-6 »). Il n'existe pas de GPT-6 Terra : le palier
-équilibré de la famille GPT-6 est 6.1 Sol.
+gpt-6.1-sol et gpt-6-luna (OpenAI, guide « Using GPT-6 »). Vérification du 12 octobre 2026 : aucun GPT-6 Terra
+n'est publié (seul existe gpt-5.6-terra, de la génération précédente) ; la famille « gpt-terra » est donc
+déclarée « en attente » : elle n'est jamais employée tant qu'aucun identifiant de génération 6 ou plus n'apparaît
+dans la liste du fournisseur, puis elle est adoptée automatiquement au début de la séance suivante.
 """
 from __future__ import annotations
 
@@ -38,6 +40,7 @@ class Famille:
     reference: str              # version de référence si la veille est impossible
     systeme: str                # code du registre G.5
     libelle: str
+    generation_min: int = 0     # génération minimale acceptée (0 : toute version de la famille)
 
 
 FAMILLES: dict[str, Famille] = {
@@ -47,6 +50,8 @@ FAMILLES: dict[str, Famille] = {
                              "SI-01", "Claude Sonnet (Anthropic)"),
     "gpt-sol": Famille("gpt-sol", "openai", r"^gpt-(\d+)(?:\.(\d+))?-sol$", "gpt-6.1-sol",
                        "SI-08", "GPT Sol (OpenAI)"),
+    "gpt-terra": Famille("gpt-terra", "openai", r"^gpt-(\d+)(?:\.(\d+))?-terra$", "",
+                         "SI-08", "GPT Terra (OpenAI)", generation_min=6),
     "gpt-luna": Famille("gpt-luna", "openai", r"^gpt-(\d+)(?:\.(\d+))?-luna$", "gpt-6-luna",
                         "SI-08", "GPT Luna (OpenAI)"),
     "local": Famille("local", "ollama", None, "gemma4:12b", "SI-02", "Modèle local (Ollama)"),
@@ -56,8 +61,8 @@ FAMILLES: dict[str, Famille] = {
 ROLES_DEFAUT: dict[str, list[str]] = {
     "ecriture": ["claude-opus", "gpt-sol"],     # atelier P1, scènes, monologues, dialogues
     "analyse": ["claude-opus", "gpt-sol"],      # analyse dramaturgique, conseiller, régisseur IA
-    "rapide": ["claude-sonnet", "gpt-luna"],    # variations, surtitres, tâches courtes
-    "commande": ["claude-sonnet", "gpt-luna"],  # proposition de gestes nommés (bibliothèque fermée)
+    "rapide": ["claude-sonnet", "gpt-terra", "gpt-luna"],    # variations, surtitres, tâches courtes
+    "commande": ["claude-sonnet", "gpt-terra", "gpt-luna"],  # gestes nommés (bibliothèque fermée)
 }
 
 CLES_API = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
@@ -67,7 +72,7 @@ def version(identifiant: str, famille: Famille) -> tuple[int, int] | None:
     if not famille.motif:
         return None
     m = re.match(famille.motif, identifiant)
-    if not m:
+    if not m or int(m.group(1)) < famille.generation_min:
         return None
     return int(m.group(1)), int(m.group(2) or 0)
 
@@ -167,7 +172,7 @@ class Catalogue:
                                                 "nouvelle": nouveau})
                 self.notes.append(f"{fam.libelle} : adoption de {nouveau} (remplace {courant}).")
                 courant = nouveau
-            elif courant not in ids:
+            elif courant and courant not in ids:
                 self.notes.append(f"{fam.libelle} : {courant} n'apparaît plus dans la liste du fournisseur.")
             resolus[cle] = courant
         self.etat["courants"] = {k: v for k, v in resolus.items() if k != "local"}
@@ -189,7 +194,7 @@ class Catalogue:
                                for k, f in FAMILLES.items() if k != "local"}, "local": self.local}
         for cle in self.familles_pour(role):
             fam = FAMILLES[cle]
-            if self.disponible(fam.fournisseur):
+            if self.resolus.get(cle) and self.disponible(fam.fournisseur):   # famille « en attente » ignorée
                 return fam, self.resolus[cle]
         return None
 

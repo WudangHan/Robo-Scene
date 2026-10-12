@@ -31,7 +31,7 @@ Toutes les pages sont bilingues (français par défaut, anglais), sans ressource
 
 - **Bibliothèque fermée** : l'IA ne propose qu'un nom de geste ; le mode « angles proposés » reste verrouillé hors séance S04.
 - **D03** : un contenu sensible ou confidentiel ne part que vers le modèle local ; si celui-ci est indisponible, la génération est refusée, sans repli distant.
-- **D13** : à l'ouverture de chaque séance, la version la plus récente de chaque famille (Claude Opus 5.5 et Sonnet 5.5 ; GPT 6.1 Sol et 6 Luna) est adoptée et consignée ; jamais en cours de séance.
+- **D13** : à l'ouverture de chaque séance, la version la plus récente de chaque famille (Claude Opus 5.5 et Sonnet 5.5 ; GPT 6.1 Sol et 6 Luna ; GPT Terra dès qu’une version 6 sera publiée) est adoptée et consignée ; jamais en cours de séance.
 - **G-02 et G-04** : toute collecte auprès de personnes (atelier, questionnaires publics, séance P3 publique) est refusée tant que l'avis éthique n'est pas consigné dans `gouvernance/etat.yaml` et que l'EFVP ne couvre pas la version de la fonction ; le mode « essai » reste ouvert, ses données rangées à part.
 - **Validation humaine avant diffusion** : surtitres, tableau public, décisions concernant des personnes, notices bibliographiques.
 - **Anonymat des publics** : aucune adresse IP, aucun témoin, seuil de cinq ; les moins de 18 ans ne sont jamais enregistrés.
@@ -195,8 +195,8 @@ pip install -r requirements.txt -r requirements-dev.txt
 python -m pytest -q
 ```
 
-149 tests réussis et 1 ignoré (classeur de la grille de biais absent du dépôt), tous sans appel réseau ni matériel :
-prototypes P1, P2, P3, T.6 et X.2 (60) ; console (7) ; partenaire (22) ; robots et pilotes (16) ; modèles D13 (6) ;
+150 tests réussis et 1 ignoré (classeur de la grille de biais absent du dépôt), tous sans appel réseau ni matériel :
+prototypes P1, P2, P3, T.6 et X.2 (60) ; console (7) ; partenaire (22) ; robots et pilotes (16) ; modèles D13 (7) ;
 traçabilité (6) ; spectateur (10) ; analyse (11) ; extensions (8) ; plateforme (3). L'intégration continue
 (`.github/workflows/tests.yml`) les exécute à chaque dépôt.
 

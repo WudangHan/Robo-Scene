@@ -80,8 +80,8 @@ plafond_jetons_seance = 200000
 [modeles.roles]                    # familles par rôle, dans l'ordre de préférence
 ecriture = ["claude-opus", "gpt-sol"]
 analyse  = ["claude-opus", "gpt-sol"]
-rapide   = ["claude-sonnet", "gpt-luna"]
-commande = ["claude-sonnet", "gpt-luna"]
+rapide   = ["claude-sonnet", "gpt-terra", "gpt-luna"]   # gpt-terra : adopté dès qu'un GPT-6 Terra sera publié
+commande = ["claude-sonnet", "gpt-terra", "gpt-luna"]
 
 [flotte]
 dossier_profils = "robots"         # un fichier .toml par robot (AiNex, Reachy Mini, ROS 2, MQTT, OSC, HTTP, externe)

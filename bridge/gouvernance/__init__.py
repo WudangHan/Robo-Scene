@@ -86,7 +86,8 @@ class Gouvernance:
         """Inscrit les versions adoptées (D13) dans le registre ; renvoie les changements."""
         s = self.registre.setdefault("systemes", {})
         nouv = {"SI-01": f"{resolus.get('claude-opus')} ; {resolus.get('claude-sonnet')}",
-                "SI-08": f"{resolus.get('gpt-sol')} ; {resolus.get('gpt-luna')}"}
+                "SI-08": " ; ".join(v for v in (resolus.get("gpt-sol"), resolus.get("gpt-terra"), resolus.get("gpt-luna"))
+                                    if v) or "None"}
         changes = []
         for si, v in nouv.items():
             if si in s and str(s[si].get("version_courante")) != v and "None" not in v:

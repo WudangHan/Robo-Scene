@@ -68,8 +68,9 @@ class ServiceModeles:
 
     def moteur(self, role: str = "analyse") -> str:
         for f in self.catalogue.familles_pour(role):
-            if self._client(FAMILLES[f].fournisseur) is not None:
-                return self.catalogue.resolus.get(f) or self.catalogue.etat["courants"].get(f) or FAMILLES[f].reference
+            m = self.catalogue.resolus.get(f) or self.catalogue.etat["courants"].get(f) or FAMILLES[f].reference
+            if m and self._client(FAMILLES[f].fournisseur) is not None:
+                return m
         return "déterministe"
 
     # ── Génération ──────────────────────────────────────────
@@ -98,7 +99,10 @@ class ServiceModeles:
             if self.jetons[fam.fournisseur] >= self.plafond:
                 dernier = ErreurModele(f"Plafond de jetons de la séance atteint pour {fam.fournisseur} (ENF-04)")
                 continue
-            modele = self.catalogue.resolus.get(cle) or self.catalogue.choisir(role)[1]
+            modele = self.catalogue.resolus.get(cle) if self.catalogue.resolus else (
+                self.catalogue.etat["courants"].get(cle) or fam.reference)
+            if not modele:
+                continue          # famille en attente (ex. GPT-6 Terra non publié) : jamais appelée
             try:
                 r = client.generer(modele, systeme, contenu, temperature=temperature, top_p=top_p,
                                    max_tokens=max_tokens, effort=self.efforts.get(role, "none"))

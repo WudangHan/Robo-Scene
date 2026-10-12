@@ -104,3 +104,19 @@ def test_parametres_appliques_openai_et_anthropic():
     r = ClientAnthropic("k", transport=transport).generer("claude-opus-5-5", "s", "c", temperature=0.7, top_p=0.9)
     assert "top_p" not in envoyes[-1] and r.appliques == {"temperature": 0.7, "max_tokens": 1500}
     assert r.ecarts and "top_p" in r.ecarts[0]
+
+
+def test_gpt_terra_en_attente_puis_adopte(tmp_path, monkeypatch):
+    """GPT-6 Terra n'existe pas (vérifié le 12 oct. 2026) : la famille reste inutilisée, gpt-5.6-terra est
+    refusé (génération antérieure), puis un GPT-6 Terra publié est adopté au début de la séance suivante."""
+    from bridge.modeles.catalogue import Catalogue
+    monkeypatch.setenv("OPENAI_API_KEY", "x")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    liste = ["gpt-6.1-sol", "gpt-6-luna", "gpt-5.6-terra"]
+    c = Catalogue({}, tmp_path, listeurs={"openai": lambda _k: liste, "anthropic": lambda _k: []})
+    r = c.resoudre("20261012_X_A_001")
+    assert r["gpt-terra"] == "" and c.choisir("rapide")[1] == "gpt-6-luna"
+    liste.append("gpt-6-terra")
+    r = c.resoudre("20261012_X_A_002")
+    assert r["gpt-terra"] == "gpt-6-terra" and c.choisir("rapide")[1] == "gpt-6-terra"
+    assert c.etat["historique"][-1]["nouvelle"] == "gpt-6-terra"
