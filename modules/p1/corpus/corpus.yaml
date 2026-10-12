@@ -1,0 +1,34 @@
+# Corpus sous licence du prototype 1 — reprend l'onglet « Corpus » du registre P1-2 (v1.0).
+# Règles : politique P1.2, section 3. Catégories admises : A, B, C, E (E toujours « local seulement »).
+# Toute ligne ajoutée ici doit d'abord être inscrite au registre P1-2_Registre_provenance_v1.0.xlsx.
+version: "0.1"
+date: "2026-10-05"
+extraits:
+  - code: CORP-001
+    titre: "Amphitryon"
+    auteur: "Molière (Jean-Baptiste Poquelin, 1622-1673)"
+    annee_deces: 1673
+    edition: "Œuvres complètes, t. 4, éd. Philarète Chasles, Calmann Lévy, 1889 ; Project Gutenberg, livre n° 57270"
+    source: "https://www.gutenberg.org/ebooks/57270"
+    consultation: "2026-10-05"
+    categorie: A
+    licence: "Domaine public canadien (auteur décédé en 1673 ; éditeur scientifique décédé en 1873)"
+    passage: "Prologue, v. 1-10"
+    fichier: CORP-001_Amphitryon_prologue.txt
+    admis: true
+    local_seulement: false
+    remarque: "Transcription relevée le 5 oct. 2026 ; à collationner avec le fichier source avant le premier atelier."
+  - code: CORP-002
+    titre: "Amphitryon"
+    auteur: "Molière (Jean-Baptiste Poquelin, 1622-1673)"
+    annee_deces: 1673
+    edition: "Œuvres complètes, t. 4, éd. Philarète Chasles, Calmann Lévy, 1889 ; Project Gutenberg, livre n° 57270"
+    source: "https://www.gutenberg.org/ebooks/57270"
+    consultation: "2026-10-05"
+    categorie: A
+    licence: "Domaine public canadien (auteur décédé en 1673 ; éditeur scientifique décédé en 1873)"
+    passage: "Acte I, scène 1, v. 1-8"
+    fichier: CORP-002_Amphitryon_I-1.txt
+    admis: true
+    local_seulement: false
+    remarque: "Graphies anciennes conservées (avoit, auroit) ; à collationner avec la source."
