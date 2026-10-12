@@ -1,34 +1,41 @@
-# Candidats au rôle de SI-02 (fiche SI-02, G.5 v1.1). Renseigner « etiquette_ollama » après téléchargement
-# d'une quantification GGUF (Q4_K_M par défaut) : ollama pull hf.co/<dépôt GGUF>:Q4_K_M
+# Candidats au rôle de SI-02 (fiche SI-02, G.5 v1.2). Liste révisée le 2026-10-12 : versions les plus récentes
+# publiées sur Hugging Face à cette date (vérification par l'API du site), choix confirmé par le responsable.
+# Quantification Q4_K_M ; téléchargement : ollama pull <etiquette_ollama>.
 # Ne jamais utiliser une étiquette « -cloud » : le contrôle verifier_local() la refuse.
-# Les dépôts GGUF sont listés sous « Quantizations » sur la page Hugging Face de chaque modèle ; choisir de
-# préférence celui du développeur, sinon un dépôt communautaire dont la provenance est consignée ici.
+# Provenance du GGUF : dépôt du développeur quand il existe, sinon dépôt communautaire consigné ici.
+revision: "2026-10-12"
 candidats:
   - code: A
     modele: Apertus-8B-Instruct-2509
     depot_hf: swiss-ai/Apertus-8B-Instruct-2509
     licence: Apache-2.0
     donnees_entrainement_publiques: true      # « open weights + open data + full training details »
-    etiquette_ollama: ""
-    depot_gguf: ""
+    depot_gguf: bartowski/swiss-ai_Apertus-8B-Instruct-2509-GGUF   # communautaire (aucun GGUF du développeur)
+    etiquette_ollama: hf.co/bartowski/swiss-ai_Apertus-8B-Instruct-2509-GGUF:Q4_K_M
+    note: >-
+      Apertus v1.5 8B (swiss-ai/Apertus-v1.5-8B) existe mais son accès est restreint (acceptation des conditions et
+      partage de l'adresse courriel) et aucun GGUF de provenance établie n'était publié au 2026-10-12 ; à réévaluer.
   - code: B
-    modele: EuroLLM-9B-Instruct
-    depot_hf: utter-project/EuroLLM-9B-Instruct
+    modele: EuroLLM-9B-Instruct-2512
+    depot_hf: utter-project/EuroLLM-9B-Instruct-2512
     licence: Apache-2.0
-    donnees_entrainement_publiques: partiel   # sources décrites ; corpus complet non redistribué selon la fiche consultée
-    etiquette_ollama: ""
-    depot_gguf: ""
+    donnees_entrainement_publiques: partiel   # jeu SFT EuroBlocks-SFT-2512 publié ; préentraînement non détaillé
+    depot_gguf: mradermacher/EuroLLM-9B-Instruct-2512-GGUF          # communautaire
+    etiquette_ollama: hf.co/mradermacher/EuroLLM-9B-Instruct-2512-GGUF:Q4_K_M
+    remplace: EuroLLM-9B-Instruct
   - code: C
-    modele: Lucie-7B-Instruct-v1.1
-    depot_hf: OpenLLM-France/Lucie-7B-Instruct-v1.1
+    modele: Luciole-8B-Instruct-1.1
+    depot_hf: OpenLLM-France/Luciole-8B-Instruct-1.1
     licence: Apache-2.0
-    donnees_entrainement_publiques: true      # Lucie Training Dataset redistribué
-    etiquette_ollama: ""
-    depot_gguf: ""
+    donnees_entrainement_publiques: partiel   # post-entraînement publié ; corpus de base « coming soon » sur la fiche
+    depot_gguf: OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF          # officiel (développeur)
+    etiquette_ollama: hf.co/OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF:Q4_K_M
+    remplace: Lucie-7B-Instruct-v1.1
+    note: post-entraînement presque exclusivement anglais selon la fiche ; base ≈ 30 % de français
   - code: T
     modele: Mistral-Small-3.2-24B-Instruct-2506   # témoin : qualité attendue élevée, données non documentées
     depot_hf: mistralai/Mistral-Small-3.2-24B-Instruct-2506
     licence: Apache-2.0
     donnees_entrainement_publiques: false
-    etiquette_ollama: ""
-    depot_gguf: ""
+    depot_gguf: bartowski/mistralai_Mistral-Small-3.2-24B-Instruct-2506-GGUF   # communautaire
+    etiquette_ollama: hf.co/bartowski/mistralai_Mistral-Small-3.2-24B-Instruct-2506-GGUF:Q4_K_M

@@ -87,7 +87,7 @@ Le fichier `essai_grille.xlsx` contient des propositions générées : le conser
 |---|---|
 | `atelier_p1/modeles.py` | `verifier_local()` : SI-02 refuse un serveur Ollama non local (autre que 127.0.0.1, localhost, ::1) et tout modèle infonuagique d'Ollama (étiquette `-cloud`, ou entrée annoncée comme distante par `/api/tags`) |
 | `atelier_p1/evaluation_si02.py` | Évaluation à l'aveugle des candidats : 12 consignes fictives × 3 propositions, codes M1…Mn, clé séparée, mesures automatiques, dépouillement |
-| `config/candidats_si02.yaml` | Quatre candidats (Apertus-8B, EuroLLM-9B, Lucie-7B, témoin Mistral-Small-3.2-24B) ; étiquettes Ollama à renseigner |
+| `config/candidats_si02.yaml` | Quatre candidats révisés le 2026-10-12 (Apertus-8B-2509, EuroLLM-9B-2512, Luciole-8B 1.1, témoin Mistral-Small-3.2-24B) ; étiquettes Ollama et provenance des GGUF renseignées |
 | `tests/test_evaluation_si02.py` | 3 tests (contrôle local, modèle annoncé distant, génération aveugle et dépouillement) |
 
 ```bash

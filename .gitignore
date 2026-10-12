@@ -13,3 +13,4 @@ modules/p2/simulation_MuJoCo/rapports/*.png
 sdk/cpp/build/
 donnees_ett/
 sequences/externe-*/
+modules/p1/eval_si02/
