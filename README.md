@@ -54,7 +54,7 @@ export ANTHROPIC_API_KEY=…   OPENAI_API_KEY=…    # facultatif ; jamais dans 
 python -m bridge.serveur --sim                       # tous les robots en simulation
 ```
 
-Ouvrir <http://127.0.0.1:8765>. Réglages : `config.toml` (sections `[modeles]`, `[flotte]`, `[scene]`, `[spectateur]`,
+Ouvrir <http://127.0.0.1:8765>. Pour que le pont démarre seul à chaque ouverture de session (en simulation, dans une fenêtre du Terminal) : `bash outils/demarrage_automatique.sh installer` (`retirer` pour l'annuler, `etat` pour vérifier). `lancer.command` réinstalle les dépendances dès que `requirements.txt` change. Réglages : `config.toml` (sections `[modeles]`, `[flotte]`, `[scene]`, `[spectateur]`,
 `[pilotage]`, `[pedagogie]`, `[diffusion]`). Analyse hors interface : `python -m bridge.analyse --exclure X2-03`.
 Le script R de l'analyse principale (lme4, pbkrtest, ordinal) est copié dans chaque dossier d'analyse.
 

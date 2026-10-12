@@ -18,7 +18,7 @@ window.ROBO_PONT = (() => {
       bandeau = document.createElement("div");
       bandeau.className = "bandeau-pont";
       bandeau.innerHTML = `<b>Pont ROBO-SCÈNE non joint</b> à <code>${url.replace(/[<>&"]/g, "")}</code>. Lancez le pont sur votre ordinateur
-        (dans le dossier robo-scene-console : <code>bash lancer.command</code>), puis attendez quelques secondes.
+        (dans le dossier Robo-Scene : <code>bash lancer.command</code>, ou une fois pour toutes : <code>bash outils/demarrage_automatique.sh installer</code>), puis attendez quelques secondes.
         Le robot, vos documents et les données des acteurs restent sur votre machine.
         <button type="button">Modifier l'adresse</button>`;
       bandeau.querySelector("button").onclick = () => {
