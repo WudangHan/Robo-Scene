@@ -132,6 +132,9 @@ def verifier_local(modele: str, url: str) -> list[str]:
     return motifs
 
 
+NUM_CTX = 8192
+
+
 class ModeleLocal:
     """SI-02 : modèle ouvert servi localement par Ollama (http://127.0.0.1:11434) ; fiche SI-02 (G.5 v1.1).
 
@@ -169,6 +172,10 @@ class ModeleLocal:
             raise ErreurModele("SI-02 refusé, traitement non local : " + " ; ".join(self.refus))
         r = _post_json(self.url + "/api/chat", {
             "model": self.modele, "stream": False, "format": "json",
+            # Contexte borné : un réglage global d'Ollama (OLLAMA_CONTEXT_LENGTH, p. ex. 262 144) ferait déborder
+            # un modèle de 24 G de paramètres sur le processeur et dépasser le délai ; une consigne et ses
+            # extraits tiennent largement dans 8 192 jetons.
+            "options": {"num_ctx": NUM_CTX},
             "messages": [{"role": "system", "content": SYSTEME},
                          {"role": "user", "content": construire_consigne(texte, type_, nb, extraits)}],
         }, {}, self.delai)
