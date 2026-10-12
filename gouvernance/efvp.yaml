@@ -6,6 +6,8 @@
 efvp:
   document: "G6_EFVP_projet_v1.0.docx"
   date: "2026-10-06"
+  # v1.1 rédigée le 12 oct. 2026 (P1_atelier 1.1, P3_questionnaires 1.0, entretiens_codage_local 1.0, surtitres 1.0) :
+  # à l'acceptation signée par le responsable, mettre document, date et la couverture ci-dessous à jour.
 
 fonctions:          # version actuelle de la fonction dans la plateforme
   P1_atelier: "1.1"              # 1.1 : appels réels par D13 (SI-01, SI-08), journal unifié
