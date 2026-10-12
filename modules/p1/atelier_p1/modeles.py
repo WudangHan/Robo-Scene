@@ -177,6 +177,9 @@ class ModeleLocal:
             # un modèle de 24 G de paramètres sur le processeur et dépasser le délai ; une consigne et ses
             # extraits tiennent largement dans 8 192 jetons.
             "options": {"num_ctx": NUM_CTX},
+            # Sans délibération : pour un modèle « à raisonnement » (p. ex. Luciole), Ollama verserait sinon
+            # toute la sortie dans le champ « thinking » et laisserait « content » vide.
+            "think": False,
             "messages": [{"role": "system", "content": SYSTEME},
                          {"role": "user", "content": construire_consigne(texte, type_, nb, extraits)}],
         }, {}, self.delai)
