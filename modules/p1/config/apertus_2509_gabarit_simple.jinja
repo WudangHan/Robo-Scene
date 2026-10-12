@@ -1,0 +1,19 @@
+{{ bos_token }}
+{%- if messages and messages[0].role == 'system' -%}
+{{ '<|system_start|>' + messages[0].content + '<|system_end|>' }}
+{%- set loop_messages = messages[1:] -%}
+{%- else -%}
+{{ '<|system_start|>You are Apertus, a helpful assistant created by the SwissAI initiative.<|system_end|>' }}
+{%- set loop_messages = messages -%}
+{%- endif -%}
+{{ '<|developer_start|>Deliberation: disabled\nTool Capabilities: disabled<|developer_end|>' }}
+{%- for message in loop_messages -%}
+{%- if message.role == 'user' -%}
+{{ '<|user_start|>' + message.content + '<|user_end|>' }}
+{%- elif message.role == 'assistant' -%}
+{{ '<|assistant_start|>' + message.content + '<|assistant_end|>' }}
+{%- endif -%}
+{%- endfor -%}
+{%- if add_generation_prompt -%}
+{{ '<|assistant_start|>' }}
+{%- endif -%}

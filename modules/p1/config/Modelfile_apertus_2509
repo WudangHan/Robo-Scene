@@ -1,0 +1,14 @@
+# Apertus-8B-Instruct-2509 (GGUF bartowski, Q4_K_M) avec un gabarit de conversation Ollama.
+# Le gabarit Jinja embarqué dans le GGUF (appels d'outils) fait échouer le chargement dans Ollama 0.33
+# (« Unable to generate parser for this template »). Ce gabarit reprend les jetons de rôle du gabarit
+# d'origine pour un échange système + utilisateur, délibération et outils désactivés, comme le gabarit
+# d'origine en l'absence d'outils. Comme llama-server lit aussi le gabarit des métadonnées du GGUF, celui-ci
+# est remplacé dans une copie (poids inchangés) par config/apertus_2509_gabarit_simple.jinja :
+#   gguf-new-metadata --chat-template-file config/apertus_2509_gabarit_simple.jinja \
+#     <blob du GGUF bartowski Q4_K_M> eval_si02/apertus_2509_Q4_K_M_gabarit_simple.gguf
+#   ollama create apertus-8b-instruct-2509-local:q4_k_m -f config/Modelfile_apertus_2509
+FROM ../eval_si02/apertus_2509_Q4_K_M_gabarit_simple.gguf
+TEMPLATE """{{- range .Messages }}{{- if eq .Role "system" }}<|system_start|>{{ .Content }}<|system_end|><|developer_start|>Deliberation: disabled
+Tool Capabilities: disabled<|developer_end|>{{- else if eq .Role "user" }}<|user_start|>{{ .Content }}<|user_end|>{{- else if eq .Role "assistant" }}<|assistant_start|>{{ .Content }}<|assistant_end|>{{- end }}{{- end }}<|assistant_start|>"""
+PARAMETER stop "<|assistant_end|>"
+PARAMETER stop "<|user_start|>"

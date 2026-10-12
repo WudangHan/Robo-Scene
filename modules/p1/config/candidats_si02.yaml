@@ -11,7 +11,10 @@ candidats:
     licence: Apache-2.0
     donnees_entrainement_publiques: true      # « open weights + open data + full training details »
     depot_gguf: bartowski/swiss-ai_Apertus-8B-Instruct-2509-GGUF   # communautaire (aucun GGUF du développeur)
-    etiquette_ollama: hf.co/bartowski/swiss-ai_Apertus-8B-Instruct-2509-GGUF:Q4_K_M
+    etiquette_ollama: apertus-8b-instruct-2509-local:q4_k_m   # créée par config/Modelfile_apertus_2509
+    gabarit: >-
+      Gabarit Jinja du GGUF illisible par Ollama 0.33 (échec au chargement) ; remplacé dans une copie locale par
+      config/apertus_2509_gabarit_simple.jinja (mêmes jetons de rôle, délibération et outils désactivés).
     note: >-
       Apertus v1.5 8B (swiss-ai/Apertus-v1.5-8B) existe mais son accès est restreint (acceptation des conditions et
       partage de l'adresse courriel) et aucun GGUF de provenance établie n'était publié au 2026-10-12 ; à réévaluer.
