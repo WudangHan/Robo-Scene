@@ -1,13 +1,14 @@
-# Couverture de l'évaluation des facteurs relatifs à la vie privée (G6_EFVP_projet_v1.0 ; fonction G-04).
+# Couverture de l'évaluation des facteurs relatifs à la vie privée (G6_EFVP_projet_v1.1 ; fonction G-04).
 # Chaque fonction qui touche des renseignements personnels porte une version ; l'EFVP indique la version
 # qu'elle couvre. En mode avec personnes participantes, une fonction dont la version dépasse celle que
 # couvre l'EFVP est REFUSÉE jusqu'à la révision de l'EFVP (critère : « EFVP révisée avant chaque mise en service »).
 
 efvp:
-  document: "G6_EFVP_projet_v1.0.docx"
-  date: "2026-10-06"
-  # v1.1 rédigée le 12 oct. 2026 (P1_atelier 1.1, P3_questionnaires 1.0, entretiens_codage_local 1.0, surtitres 1.0) :
-  # à l'acceptation signée par le responsable, mettre document, date et la couverture ci-dessous à jour.
+  document: "G6_EFVP_projet_v1.1.docx"
+  date: "2026-10-12"
+  acceptation: "2026-10-12"      # § 9 signé par le responsable (risque résiduel VP-01 accepté)
+  precedente: "G6_EFVP_projet_v1.0.docx (2026-10-06)"
+  revue: "au choix de SI-02 et de SI-03, après D08, avant les présentations X.2, après tout incident, au moins une fois l'an"
 
 fonctions:          # version actuelle de la fonction dans la plateforme
   P1_atelier: "1.1"              # 1.1 : appels réels par D13 (SI-01, SI-08), journal unifié
@@ -19,7 +20,10 @@ fonctions:          # version actuelle de la fonction dans la plateforme
   surtitres: "1.0"               # O-06, nouveau
 
 couverture:         # version couverte par l'EFVP en vigueur
-  P1_atelier: "1.0"
+  P1_atelier: "1.1"
   P3_spectateur: "1.0"
+  P3_questionnaires: "1.0"
   partenaire_repetition: "2.0"
   partenaire_camera: "2.0"
+  entretiens_codage_local: "1.0"
+  surtitres: "1.0"
