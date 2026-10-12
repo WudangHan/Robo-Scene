@@ -66,7 +66,7 @@ FONCTIONS: list[dict[str, Any]] = [
     {"id": "G-01", "etat": R, "code": "bridge/gouvernance/retrait.py ; partenaire/stockage.py", "test": "tests/test_trace.py", "reste": ""},
     {"id": "G-02", "etat": R, "code": "bridge/gouvernance (exiger_avis_ethique)", "test": "tests/test_spectateur.py", "reste": ""},
     {"id": "G-03", "etat": R, "code": "gouvernance/registre_systemes.yaml ; synchroniser_registre", "test": "tests/test_trace.py",
-     "reste": "Signer la politique G.5 v1.2 (fiche F-08 établie)"},
+     "reste": ""},
     {"id": "G-04", "etat": C, "code": "gouvernance/efvp.yaml ; exiger_efvp", "test": "tests/test_spectateur.py",
      "reste": "Réviser l'EFVP : P1_atelier 1.1, P3_questionnaires, entretiens, surtitres"},
     {"id": "G-05", "etat": R, "code": "bridge/gouvernance/decisions.py", "test": "tests/test_trace.py", "reste": ""},

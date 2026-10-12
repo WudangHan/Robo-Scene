@@ -50,7 +50,7 @@ systemes:
     risque: modere
     mesures: "Aiguillage D03 ; paramètres appliqués consignés (A-08) ; version consignée par génération"
     version_courante: gpt-6.1-sol ; gpt-6-luna
-    statut: "Inscrit à la politique G.5 v1.2 (12 oct. 2026, à signer) ; fiche F-08 v1.0 établie le 12 oct. 2026 ; store=false à chaque appel ; GPT-6 Terra en attente de publication"
+    statut: "Inscrit à la politique G.5 v1.2 (signée le 12 oct. 2026) ; fiche F-08 v1.0 établie le 12 oct. 2026 ; store=false à chaque appel ; GPT-6 Terra en attente de publication"
 
 fournisseurs:
   F-01: Anthropic
