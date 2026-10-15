@@ -98,7 +98,7 @@ FIN
     echo "Démarrage automatique retiré (un pont déjà lancé reste actif jusqu'à la fermeture de session)." ;;
   etat)
     launchctl print "gui/$(id -u)/$ETIQ" >/dev/null 2>&1 && echo "Agent launchd chargé." || echo "Agent launchd non chargé."
-    pgrep -f "Pont ROBO-SCÈNE.app" >/dev/null && echo "Service « Pont ROBO-SCÈNE » actif." || echo "Service inactif."
+    pgrep -f "Pont ROBO-SC.*/Contents/MacOS/applet" >/dev/null && echo "Service « Pont ROBO-SCÈNE » actif." || echo "Service inactif."
     lsof -nP -iTCP:8765 -sTCP:LISTEN >/dev/null 2>&1 && echo "Pont à l'écoute sur 127.0.0.1:8765." || echo "Pont non joint." ;;
   *) echo "Usage : $0 installer | retirer | etat" ; exit 1 ;;
 esac
