@@ -1,0 +1,70 @@
+/* Page « Robot virtuel » — complète style.css (thème régie de scène). */
+[hidden] { display: none !important; }
+.avatar-grille { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(330px, 1fr); gap: 14px; padding: 14px 16px 20px; height: calc(100vh - var(--barre, 74px)); min-height: 560px; }
+@media (max-width: 980px) { .avatar-grille { grid-template-columns: 1fr; height: auto; } .scene-zone { height: 62vh; min-height: 380px; } }
+.scene-zone { position: relative; border: 1px solid var(--bord); border-radius: var(--rayon); overflow: hidden; background: #07080b; min-height: 0; }
+#vue3d { position: absolute; inset: 0; }
+#vue3d canvas { width: 100% !important; height: 100% !important; border: 0; border-radius: 0; background: transparent; touch-action: none; }
+.barre-vue { position: absolute; left: 10px; right: 10px; top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; pointer-events: none; }
+.barre-vue > * { pointer-events: auto; }
+.barre-vue button, .barre-vue select { background: #0d0f14cc; backdrop-filter: blur(4px); padding: 5px 9px; font-size: 12px; border: 1px solid #343c4d; border-radius: 7px; color: var(--texte); }
+.groupe-boutons { display: inline-flex; gap: 2px; flex-wrap: wrap; }
+.etat-scene { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 8px; font-size: 12px; }
+.etat-scene span:not(:empty) { background: #0d0f14cc; border: 1px solid #343c4d; border-radius: 999px; padding: 3px 10px; color: var(--accent); }
+#sous-titre { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); max-width: min(86%, 900px); margin: 0; text-align: center;
+  background: #000a; color: #fff; padding: 8px 16px; border-radius: 8px; font-size: clamp(15px, 1.6vw, 22px); line-height: 1.35; }
+.commandes { display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 0; }
+.onglets { display: flex; flex-wrap: wrap; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid var(--bord); }
+.onglets [role=tab] { border: 0; border-radius: 8px 8px 0 0; background: transparent; color: var(--doux); padding: 8px 10px; font-size: 13px; }
+.onglets [role=tab][aria-selected=true] { background: #232937; color: var(--texte); box-shadow: inset 0 -2px 0 var(--accent); }
+.panneau-onglet { padding: 12px 14px 16px; overflow-y: auto; min-height: 0; flex: 1; }
+.puces { display: flex; flex-wrap: wrap; gap: 6px; }
+.puces button { padding: 5px 9px; font-size: 12.5px; }
+.puces button.actif { border-color: var(--accent); color: var(--accent); }
+#exemples button { background: #1a1f2a; color: var(--doux); font-size: 12px; }
+.micro.actif { background: #4a1f24; border-color: var(--alerte); color: #fff; animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 4px #ff5d5d33; } }
+.interim { font-style: italic; color: var(--info); }
+.flux.directives { max-height: none; font: 12.5px/1.45 var(--police); }
+.flux.directives li { padding: 6px 0; }
+.flux.directives .actions { margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px; }
+.flux.directives code { font: 11.5px var(--mono); background: #0f1218; border: 1px solid #262c38; padding: 1px 6px; border-radius: 5px; color: var(--info); }
+.flux .ignore { color: var(--avert); font-size: 12px; margin-top: 3px; }
+.flux li.alerte { color: var(--alerte); } .flux li.avert { color: var(--avert); }
+.prop-claude { border: 1px solid #343c4d; border-radius: 8px; padding: 8px; margin-top: 6px; background: #0f1218; }
+.prop-claude .alerte { color: var(--alerte); } .prop-claude .ok { color: var(--ok); }
+.aide-directives summary { cursor: pointer; color: var(--doux); font-size: 12.5px; margin: 8px 0; }
+textarea, select { font: inherit; color: inherit; background: #0f1218; border: 1px solid #343c4d; border-radius: 8px; padding: 7px 9px; }
+textarea { width: 100%; resize: vertical; }
+#seuil { width: 64px; }
+.efforts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0; }
+.effort { font-size: 11px; color: var(--doux); }
+.effort i { display: block; height: 6px; border-radius: 3px; margin: 3px 0; background: linear-gradient(90deg, #6fa8ff, #262c38 50%, #f2b544) ; position: relative; }
+.effort i::after { content: ""; position: absolute; top: -3px; width: 3px; height: 12px; background: #fff; left: calc(var(--v) * 100% - 1px); border-radius: 2px; }
+.curseur-dof { display: grid; grid-template-columns: 1fr 120px 36px; gap: 8px; align-items: center; font-size: 12px; margin: 4px 0; }
+.curseur-dof output { font: 12px var(--mono); text-align: right; }
+details > summary { cursor: pointer; padding: 4px 0; color: var(--doux); }
+.liste { list-style: none; padding: 0; margin: 6px 0; font-size: 12.5px; }
+.liste li { display: flex; align-items: center; gap: 6px; padding: 3px 0; border-bottom: 1px dashed #232836; }
+.liste li span { flex: 1; }
+.liste input[type=number] { width: 72px; padding: 3px 6px; }
+.liste button { padding: 3px 8px; }
+.bouton-fichier { display: inline-block; background: #232937; border: 1px solid #343c4d; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+.grille-ap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; font-size: 12.5px; }
+.grille-ap label { display: flex; flex-direction: column; gap: 4px; color: var(--doux); }
+.grille-ap label.case { flex-direction: row; align-items: center; }
+.grille-ap output { font: 12px var(--mono); color: var(--texte); }
+.grille-ap input[type=color] { width: 100%; height: 30px; padding: 2px; background: #0f1218; border: 1px solid #343c4d; border-radius: 6px; }
+#video { width: 100%; max-width: 320px; border-radius: 8px; border: 1px solid var(--bord); transform: scaleX(-1); margin-top: 6px; }
+/* mode scène : seule la scène, plein écran */
+body.mode-scene .barre, body.mode-scene .commandes, body.mode-scene .bandeau-pont { display: none !important; }
+body.mode-scene .avatar-grille { grid-template-columns: 1fr; padding: 0; height: 100vh; }
+body.mode-scene .scene-zone { border: 0; border-radius: 0; }
+body.mode-scene .barre-vue { opacity: 0; transition: opacity .3s; }
+body.mode-scene .barre-vue:hover { opacity: 1; }
+@media (max-width: 760px) { .grille-ap { grid-template-columns: 1fr; } .curseur-dof { grid-template-columns: 1fr 100px 32px; } }
+
+.ligne input[type=checkbox], .ligne input[type=radio] { flex: 0 0 auto; min-width: 0; margin: 0 4px 0 0; }
+.ligne label { display: inline-flex; align-items: center; gap: 4px; }
+.ligne input#seuil { flex: 0 0 64px; min-width: 0; }
+.ligne select { min-width: 0; max-width: 100%; }

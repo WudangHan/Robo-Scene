@@ -599,7 +599,8 @@ class Controleur:
             elif op == "rearmer":
                 await self.rearmer()
             elif op == "articulations":
-                await self.cmd_articulations(m["deg"], float(m.get("ms", 0)), "manuel", rob)
+                origine = "avatar" if m.get("origine") == "avatar" else "manuel"
+                await self.cmd_articulations(m["deg"], float(m.get("ms", 0)), origine, rob)
             elif op == "articulation":
                 deg = [None] * len(self._r(rob).desc.noms)
                 deg[int(m["i"])] = float(m["deg"])
@@ -812,6 +813,7 @@ def creer_app(cfg: dict[str, Any]) -> web.Application:
     app.on_cleanup.append(arreter)
     app.router.add_get("/", _page("index.html"))
     app.router.add_get("/partenaire", _page("partenaire.html"))
+    app.router.add_get("/avatar", _page("avatar.html"))
     app.router.add_get("/ws", ws_handler)
     from . import plateforme
     plateforme.monter(app, ctl)

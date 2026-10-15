@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from aiohttp import web
 
-from . import consigne_graduee, copresence, dramaturgie, livret as livret_mod, texte as texte_mod, variations
+from . import avatar as avatar_mod, consigne_graduee, copresence, dramaturgie, livret as livret_mod, texte as texte_mod, variations
 from .agents import Agents, envelopper
 from .analyse_jeu import descripteurs_mouvement, mesure_replique, synthese_passage, trajectoire
 from .connaissances import DOMAINES, Index
@@ -511,6 +511,32 @@ class Partenaire:
         # L'interface de plateau ne reçoit pas le détail des perturbations (plan scellé)
         return {"situation": m["situation"], "description": copresence.SITUATIONS[m["situation"]],
                 "joue": joue, "duree_s": round(sum(i["ms"] for i in images) / 1000, 1)}
+
+    # ── Robot virtuel ───────────────────────────────────────
+    async def op_avatar_etat(self, m):
+        dispo = self.agents.disponible("commande")
+        return {"moteur": self.agents.service.moteur("commande") if dispo else "déterministe",
+                "schema_version": avatar_mod.schema().get("version")}
+
+    async def op_avatar_interpreter(self, m):
+        service = self.agents.service if self.agents.disponible("commande") else None
+        r = await avatar_mod.interpreter(service, m.get("texte", ""), m.get("etat"))
+        self._journal("avatar_interpretation", texte=r["texte"], moteur=r["moteur"], confiance=r["confiance"],
+                      actions=r["actions"], rejets=[x["motif"] for x in r["rejets"]], justification=r["justification"],
+                      trace=r["trace"])
+        return r
+
+    async def op_avatar_journal(self, m):
+        ev = m.get("evenement") if isinstance(m.get("evenement"), dict) else {}
+        propre = {k: ev[k] for k in ("texte", "origine", "source", "decision", "confiance") if k in ev and isinstance(ev[k], (str, int, float))}
+        actions, _ = avatar_mod.valider(ev.get("actions"))
+        propre["actions"] = actions[:40]
+        if isinstance(ev.get("ignores"), list):
+            propre["ignores"] = [str(x)[:200] for x in ev["ignores"][:20]]
+        if "texte" in propre:
+            propre["texte"] = str(propre["texte"])[:600]
+        self._journal("avatar_directive", **propre)
+        return None
 
 
 def _int(v: Any) -> int | None:

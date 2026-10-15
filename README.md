@@ -1,7 +1,7 @@
 # Robo-Scène
 
 *Plateforme intégrée du projet de recherche « L'IA au service de la création théâtrale »* (Sylvain Gagné, Ph. D., chercheur indépendant non affilié et autofinancé) :
-console de pilotage multi-robots, partenaire de théâtre, atelier dramaturgique instrumenté, pont scénique, interface
+console de pilotage multi-robots, partenaire de théâtre, robot virtuel humanoïde, atelier dramaturgique instrumenté, pont scénique, interface
 spectateur, analyse et gouvernance, réunis autour d'un seul journal des cinq opérations de la cocréation instrumentée
 (consigne, génération, sélection, transformation, attribution).
 
@@ -148,7 +148,7 @@ Renseigner `operatrice` et `type` dans `[protocole]` avant la séance. Le dossie
 
 ## Interface en ligne (Netlify)
 
-L'interface est publiée sur <https://robo-scene.netlify.app> (console) et <https://robo-scene.netlify.app/partenaire>. Netlify ne sert que des pages statiques : le pont Python, le robot, vos documents et les données des acteurs restent sur votre ordinateur, et la page en ligne se connecte au pont local, `ws://127.0.0.1:8765/ws`.
+L'interface est publiée sur <https://robo-scene.netlify.app> (console), <https://robo-scene.netlify.app/partenaire> et <https://robo-scene.netlify.app/avatar> (robot virtuel, utilisable sans pont). Netlify ne sert que des pages statiques : le pont Python, le robot, vos documents et les données des acteurs restent sur votre ordinateur, et la page en ligne se connecte au pont local, `ws://127.0.0.1:8765/ws`.
 
 1. Lancer le pont sur l'ordinateur (`bash lancer.command`).
 2. Ouvrir l'adresse en ligne : la pastille passe à « Robot connecté ». Si le pont n'est pas joint, un bandeau l'indique ; « Modifier l'adresse » permet de viser un autre port ou une autre machine.
@@ -188,6 +188,23 @@ Désactivée par défaut (`[partenaire] incarnation = false`), elle se bascule d
 
 La base de connaissances indexe les fichiers de `partenaire/sources/`. Pour en ajouter : déposer le fichier (.docx, .pdf, .md, .txt, .html), puis lancer `python -m bridge.partenaire.connaissances`. Après une nouvelle édition du livret : `python -m bridge.partenaire.livret`.
 
+## Robot virtuel humanoïde
+
+Ouvrir <http://127.0.0.1:8765/avatar> (lien « Robot virtuel » dans l'en-tête), ou <https://robo-scene.netlify.app/avatar> : le robot virtuel fonctionne entièrement dans le navigateur ; le pont n'est requis que pour le journal de séance, l'interprète par modèle (service unique des modèles, rôle « commande ») et le jumeau du robot physique. Guide complet : `docs/Guide_robot_virtuel_ROBO-SCENE.docx`.
+
+Personnage masculin procédural en 3D (three.js 0.169, licence MIT, servi localement depuis `web/vendor/`) : 31 degrés de liberté bornés (tête, tronc, bassin, épaules, coudes, poignets, doigts, hanches, genoux, chevilles), visage animé par unités d'action FACS (sourcils, paupières, regard, lèvres, mâchoire), présence vivante (respiration, transfert de poids, saccades, clignements), marche sur un plateau figuré (cour, jardin, lointain, avant-scène).
+
+| Onglet | Rôle |
+|---|---|
+| **Directives** | Consignes écrites ou dictées en français (« lève le bras droit lentement puis souris », « va côté cour et salue le public », « deviens triste, puis dis « Je ne reviendrai pas. » »). Interprète de règles hors ligne ; ce qu'il ne comprend pas peut être soumis par le pont au service des modèles (routeur de sensibilité compris), puis revalidé et présenté pour validation humaine. *Annule*, *répète*, *stop*, mémoire de poses. |
+| **Émotions et parole** | Douze émotions (les onze du partenaire et le dégoût) à intensité réglable : visage, posture, qualité d'effort de Laban et prosodie. Expressions isolées. Parole par synthèse vocale avec synchronisation labiale par visèmes et battements de tête et de sourcils. |
+| **Corps** | Clic et glisser sur une partie du corps ; curseurs de tous les degrés de liberté ; 24 gestes, 7 poses, poses mémorisées, chorégraphie d'images clés, export et import JSON. |
+| **Apparence** | Taille, carrure, corpulence, âge, coiffure, barbe, moustache, peau, yeux, vêtements et couleurs (aussi par directive). |
+| **Imitation** | Reproduction en direct du visage, de la tête et de la posture d'une personne filmée (MediaPipe, traitement local, accord explicite, mode miroir) ; « figer l'expression » ; lecture émotionnelle indicative. |
+| **Liaisons** | Voix et visage pour les répliques de la page Partenaire (case « Robot virtuel » dans son en-tête) ; journalisation dans la séance ; jumeau du robot physique en lecture ou en pilotage, via la couche de sécurité. |
+
+Cadrages (face, trois-quarts, profil, gros plan, plan américain, en pied, plan large, plongée), cinq ambiances lumineuses, *Mode scène* plein écran et *Fenêtre* séparée pour un second écran. Le bouton ARRÊT et la touche Échap figent le personnage, coupent la parole et envoient l'arrêt d'urgence au pont.
+
 ## Tests
 
 ```bash
@@ -195,9 +212,9 @@ pip install -r requirements.txt -r requirements-dev.txt
 python -m pytest -q
 ```
 
-150 tests réussis et 1 ignoré (classeur de la grille de biais absent du dépôt), tous sans appel réseau ni matériel :
+158 tests réussis et 1 ignoré (classeur de la grille de biais absent du dépôt), tous sans appel réseau ni matériel :
 prototypes P1, P2, P3, T.6 et X.2 (60) ; console (7) ; partenaire (22) ; robots et pilotes (16) ; modèles D13 (7) ;
-traçabilité (6) ; spectateur (10) ; analyse (11) ; extensions (8) ; plateforme (3). L'intégration continue
+traçabilité (6) ; spectateur (10) ; analyse (11) ; extensions (8) ; plateforme (3) ; robot virtuel (8, dont 3 en JavaScript exécutés par Node.js s'il est présent). L'intégration continue
 (`.github/workflows/tests.yml`) les exécute à chaque dépôt.
 
 ## Arborescence
@@ -221,14 +238,16 @@ robo-scene/
 │   ├── diffusion/           C2PA (O-07), tableau public (O-09)
 │   ├── gouvernance/         verrous, incidents, décisions, conservation, retrait, biométrie
 │   ├── pilotage/            régie, dépôts, rapports, table de couverture
-│   └── partenaire/          partenaire de théâtre
+│   └── partenaire/          partenaire de théâtre ; avatar.py : validation et interprète Claude du robot virtuel
 ├── modules/                 prototypes P1, P2, P3, T.6, X.2 et outils de la Régie (importés tels quels)
 ├── gouvernance/             état, registre des systèmes, EFVP, conservation (YAML)
 ├── questionnaires/          instruments I-7 et I-6 (YAML)
 ├── analyse/                 livre de codes A.1
 ├── robots/                  profils de robots (TOML)
 ├── sdk/                     trousses de pilote : Python, JavaScript, C++, Arduino
-├── web/                     interfaces (HTML, CSS, JS sans dépendance externe)
+├── web/                     interfaces (HTML, CSS, JS)
+│   ├── avatar/              robot virtuel (corps, visage, animation, parole, directives, imitation)
+│   └── vendor/              three.js 0.169 (MIT), servi localement
 ├── firmware/esp32_robot/    micrologiciel Arduino pour ESP32
 ├── sequences/               chorégraphies (JSON)
 ├── partenaire/              sources, index, pièces, répertoire, démo

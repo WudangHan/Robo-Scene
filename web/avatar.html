@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot virtuel ROBO-SCÈNE</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/avatar/avatar.css">
+<script type="importmap">{ "imports": { "three": "/static/vendor/three.module.min.js", "three/addons/": "/static/vendor/" } }</script>
+</head>
+<body>
+<header class="barre">
+  <div class="titre">
+    <span class="marque">ROBO-SCÈNE</span>
+    <span class="sous">Robot virtuel humanoïde</span>
+  </div>
+  <nav data-nav class="nav-pages"><a href="/">Console</a><a href="/partenaire">Partenaire</a><a href="/avatar" aria-current="page">Robot virtuel</a></nav>
+  <div class="statuts">
+    <span class="pastille neutre" id="st-pont">Pont : —</span>
+    <span class="pastille neutre" id="st-voix">Voix : —</span>
+    <span class="pastille neutre" id="st-imitation">Imitation : —</span>
+    <span class="pastille neutre" id="st-liaison">Partenaire : —</span>
+  </div>
+  <div class="urgence">
+    <button id="btn-arret" class="arret" title="Arrêt : immobilise le robot virtuel, coupe la parole et envoie l'arrêt d'urgence au pont s'il est relié (touche Échap)">ARRÊT</button>
+  </div>
+</header>
+
+<main class="avatar-grille">
+  <section class="scene-zone" aria-label="Scène">
+    <div id="vue3d"></div>
+    <div class="barre-vue">
+      <div class="groupe-boutons" role="group" aria-label="Cadrage">
+        <button data-vue="face">Face</button><button data-vue="trois_quarts">¾</button><button data-vue="profil">Profil</button>
+        <button data-vue="gros_plan">Gros plan</button><button data-vue="plan_americain">Américain</button><button data-vue="plein_pied">Pied</button>
+        <button data-vue="plan_large">Large</button><button data-vue="plongee">Plongée</button>
+      </div>
+      <select id="lumiere" aria-label="Éclairage">
+        <option value="plein_feux">Plein feux</option><option value="douche">Douche</option><option value="contre_jour">Contre-jour</option>
+        <option value="chaude">Lumière chaude</option><option value="froide">Lumière froide</option>
+      </select>
+      <button id="btn-photo" title="Enregistrer une image">Image</button>
+      <button id="btn-fenetre" title="Ouvrir la scène seule dans une fenêtre (second écran, projecteur)">Fenêtre</button>
+      <button id="btn-scene" title="Plein écran sans panneaux (Échap pour sortir)">Mode scène</button>
+    </div>
+    <div class="etat-scene"><span id="replique-perso"></span><span id="etat-emotion">neutre</span></div>
+    <p id="sous-titre" hidden></p>
+  </section>
+
+  <aside class="panneau commandes">
+    <div class="onglets" role="tablist">
+      <button role="tab" data-onglet="directives">Directives</button>
+      <button role="tab" data-onglet="emotions">Émotions et parole</button>
+      <button role="tab" data-onglet="corps">Corps</button>
+      <button role="tab" data-onglet="apparence">Apparence</button>
+      <button role="tab" data-onglet="imitation">Imitation</button>
+      <button role="tab" data-onglet="liaisons">Liaisons</button>
+    </div>
+
+    <!-- ── Directives ── -->
+    <div class="panneau-onglet" id="ong-directives" role="tabpanel">
+      <form id="form-directive" class="ligne">
+        <input id="directive" autocomplete="off" maxlength="600" placeholder="Ex. : « lève le bras droit lentement puis souris »" aria-label="Directive">
+        <button type="submit" class="primaire">Exécuter</button>
+        <button type="button" id="btn-micro" class="micro" aria-pressed="false" title="Dicter une directive (reconnaissance vocale du navigateur)">🎙 Dicter</button>
+      </form>
+      <div class="ligne petit">
+        <label><input type="checkbox" id="ecoute-continue"> écoute continue</label>
+        <span id="dictee-interim" class="interim"></span>
+      </div>
+      <div id="exemples" class="puces">
+        <button>Lève le bras droit lentement puis souris</button><button>Sois très en colère et croise les bras</button>
+        <button>Va côté cour puis salue le public</button><button>Assieds-toi et regarde en bas</button>
+        <button>Deviens triste, puis dis « Je ne reviendrai pas. »</button><button>Tourne la tête vers ma gauche</button>
+        <button>Mets une chemise rouge et des cheveux gris</button><button>Fais un clin d'œil</button>
+        <button>Gros plan</button><button>Lumière douche</button><button>Annule</button><button>Repos</button>
+      </div>
+      <details class="aide-directives">
+        <summary>Vocabulaire compris</summary>
+        <p class="petit">Parties du corps (tête, tronc, bras, coude, poignet, main, jambe, genou, pied, bassin) avec <i>lever, baisser, tourner, pencher, plier, tendre, ouvrir, fermer</i>, un côté (<i>droit, gauche, les deux</i>) et une mesure facultative (<i>45 degrés, un peu, complètement</i>).
+          Émotions : colère, joie, tristesse, peur, tendresse, mépris, surprise, ironie, lassitude, assurance, dégoût, neutre (<i>très, un peu, 8/10, plus, moins</i>).
+          Gestes : saluer, révérence, oui, non, hausser les épaules, croiser les bras, mains sur les hanches, réfléchir, applaudir, bras ouverts, pointer, poing levé, main sur le cœur, rire, pleurer, soupirer, clin d'œil, danser…
+          Poses : assis, accroupi, à genoux, garde-à-vous, debout, repos. Parole : <i>dis…, chuchote…, crie…</i> ou texte « entre guillemets ».
+          Scène : <i>va côté cour / jardin / au lointain / à l'avant-scène, avance de 3 pas, recule, tourne-toi, de profil, de dos</i> ; <i>regarde-moi, en haut, au loin</i> ; cadrages et lumières.
+          Apparence : taille, carrure, âge, cheveux, barbe, moustache, peau, yeux, vêtements et couleurs. Mémoire : <i>mémorise cette pose sous le nom X, reprends la pose X, annule, répète, stop</i>.</p>
+        <p class="petit"><b>Côtés</b> : <i>gauche</i> et <i>droite</i> sont ceux du personnage, comme pour un acteur ; <i>ma gauche</i> est la vôtre ; <i>cour</i> est à droite vu de la salle (donc à la gauche de l'acteur face au public), <i>jardin</i> à gauche.</p>
+      </details>
+      <div class="ligne petit">
+        <label><input type="checkbox" id="recours-claude" disabled> Faire interpréter par un modèle (service du pont : Claude, GPT ou modèle local) ce que les règles ne comprennent pas</label>
+      </div>
+      <div class="ligne petit">
+        <span>Interprète par modèle : <span id="etat-claude">—</span> <small id="moteur-ia"></small></span>
+        <label>seuil <input type="number" id="seuil" min="0" max="1" step="0.05" value="0.75"></label>
+        <label><input type="checkbox" id="auto-claude"> appliquer sans validation au-dessus du seuil</label>
+      </div>
+      <ol id="journal-directives" class="flux directives"></ol>
+    </div>
+
+    <!-- ── Émotions et parole ── -->
+    <div class="panneau-onglet" id="ong-emotions" role="tabpanel" hidden>
+      <h3>Émotion <small>(visage, posture, rythme du geste et prosodie)</small></h3>
+      <div id="emotions" class="puces"></div>
+      <div class="ligne"><label for="intensite">Intensité</label><input type="range" id="intensite" min="0" max="10" step="0.5" value="7"><output id="intensite-val">7</output></div>
+      <div id="effort" class="efforts" aria-label="Facteurs d'effort de Laban"></div>
+      <h3>Expressions du visage <small>(unités d'action FACS)</small></h3>
+      <div id="expressions" class="puces"></div>
+      <h3>Parole</h3>
+      <textarea id="replique" rows="3" placeholder="Réplique à dire (la voix suit l'émotion choisie)"></textarea>
+      <div class="ligne">
+        <select id="replique-emotion" aria-label="Émotion de la réplique"></select>
+        <button id="btn-dire" class="primaire">Dire</button><button id="btn-taire">Taire</button>
+      </div>
+      <div class="ligne petit"><label for="voix">Voix</label><select id="voix"></select></div>
+      <div class="ligne petit"><label for="voix-hauteur">Registre</label><input type="range" id="voix-hauteur" min="0.6" max="1.2" step="0.02" value="0.92"></div>
+      <div class="ligne petit">
+        <label><input type="checkbox" id="vivant" checked> présence vivante (respiration, regard, clignements)</label>
+        <label for="vitesse">Vitesse</label><input type="range" id="vitesse" min="0.3" max="2.5" step="0.1" value="1"><output id="vitesse-val">×1</output>
+      </div>
+    </div>
+
+    <!-- ── Corps ── -->
+    <div class="panneau-onglet" id="ong-corps" role="tabpanel" hidden>
+      <p class="petit">Cliquez une partie du corps dans la scène pour la sélectionner, puis faites-la glisser (vertical : flexion ; horizontal : écart ou rotation). Le fond se fait glisser pour tourner autour du personnage, la molette pour s'approcher.</p>
+      <h3 id="selection-titre">Aucune partie sélectionnée</h3>
+      <div id="selection-curseurs"></div>
+      <div class="ligne"><button id="btn-annuler">Annuler</button></div>
+      <h3>Gestes <select id="cote-geste" aria-label="Côté du geste"><option value="d">main droite</option><option value="g">main gauche</option></select></h3>
+      <div id="gestes" class="puces"></div>
+      <h3>Poses</h3>
+      <div id="poses" class="puces"></div>
+      <h3>Poses mémorisées</h3>
+      <form id="form-pose" class="ligne"><input id="nom-pose" placeholder="Nom de la pose" maxlength="40"><button type="submit">Mémoriser</button></form>
+      <ul id="liste-poses" class="liste"></ul>
+      <h3>Chorégraphie</h3>
+      <div class="ligne"><button id="btn-capturer">Capturer la pose</button><button id="btn-jouer-choreo" class="primaire">Jouer</button><button id="btn-vider-choreo" class="discret">Vider</button></div>
+      <ol id="choreo" class="liste"></ol>
+      <div class="ligne"><button id="btn-exporter">Exporter (JSON)</button><label class="bouton-fichier">Importer<input type="file" id="fichier-import" accept="application/json,.json" hidden></label></div>
+      <h3>Toutes les articulations</h3>
+      <div id="tous-curseurs"></div>
+    </div>
+
+    <!-- ── Apparence ── -->
+    <div class="panneau-onglet" id="ong-apparence" role="tabpanel" hidden>
+      <div class="grille-ap">
+        <label>Taille <input type="range" id="ap-taille"><output id="ap-taille-val"></output></label>
+        <label>Carrure <input type="range" id="ap-carrure"><output id="ap-carrure-val"></output></label>
+        <label>Corpulence <input type="range" id="ap-corpulence"><output id="ap-corpulence-val"></output></label>
+        <label>Âge <input type="range" id="ap-age"><output id="ap-age-val"></output></label>
+        <label>Cheveux <select id="ap-cheveux"></select></label>
+        <label>Couleur des cheveux <input type="color" id="ap-couleur_cheveux"></label>
+        <label>Barbe <select id="ap-barbe"></select></label>
+        <label class="case"><input type="checkbox" id="ap-moustache"> Moustache</label>
+        <label>Peau <select id="ap-peau"></select></label>
+        <label>Yeux <select id="ap-yeux"></select></label>
+        <label>Haut <input type="color" id="ap-haut"></label>
+        <label>Manches <select id="ap-manches"></select></label>
+        <label>Pantalon <input type="color" id="ap-bas"></label>
+        <label>Chaussures <input type="color" id="ap-chaussures"></label>
+      </div>
+      <div class="ligne"><button id="ap-defaut">Apparence par défaut</button></div>
+      <p class="petit">L'apparence se modifie aussi par directive (« plus grand », « barbe pleine », « chemise rouge », « tu as 60 ans »). Elle est conservée dans ce navigateur.</p>
+    </div>
+
+    <!-- ── Imitation ── -->
+    <div class="panneau-onglet" id="ong-imitation" role="tabpanel" hidden>
+      <p class="petit">Le robot virtuel reproduit en direct l'expression du visage, l'orientation de la tête et la posture de la personne filmée. Les modèles de vision (MediaPipe) s'exécutent dans ce navigateur : aucune image n'est enregistrée ni envoyée. Le chargement initial des modèles nécessite une connexion.</p>
+      <label class="ligne petit"><input type="checkbox" id="consent-camera"> La personne filmée est informée et accepte l'utilisation de la caméra pour cette séance (accord révocable à tout moment).</label>
+      <div class="ligne"><button id="btn-imiter" class="primaire">Démarrer l'imitation</button><button id="btn-figer" title="Copier l'expression et la posture actuelles sur le robot virtuel">Figer l'expression</button></div>
+      <div class="ligne petit">
+        <label><input type="checkbox" id="imit-visage" checked> visage</label>
+        <label><input type="checkbox" id="imit-corps" checked> corps</label>
+        <label><input type="checkbox" id="imit-miroir" checked> miroir</label>
+      </div>
+      <p id="imit-etat" class="petit">—</p>
+      <video id="video" playsinline muted hidden></video>
+      <h3>Lecture de l'expression <small>(indicative)</small></h3>
+      <div id="lecture-emotion" class="puces">—</div>
+      <p class="petit">(Inférence) Proximité entre les unités d'action observées et les prototypes du répertoire ; ce n'est ni une mesure de l'état intérieur de la personne ni un diagnostic.</p>
+    </div>
+
+    <!-- ── Liaisons ── -->
+    <div class="panneau-onglet" id="ong-liaisons" role="tabpanel" hidden>
+      <h3>Page Partenaire</h3>
+      <label class="ligne petit"><input type="checkbox" id="liaison-partenaire" checked> Le robot virtuel donne la voix et le visage aux répliques du partenaire (répétition, variations, exercices) lorsque la page Partenaire est ouverte dans ce navigateur et que l'option « Robot virtuel » y est cochée.</label>
+      <h3>Pont local</h3>
+      <label class="ligne petit"><input type="checkbox" id="journaliser" checked> Journaliser les directives et décisions dans la séance ROBO-SCÈNE (fichiers .jsonl du corpus)</label>
+      <h3>Jumeau du robot physique</h3>
+      <p class="petit" id="jumeau-info">—</p>
+      <label class="ligne petit"><input type="checkbox" id="jumeau-reflet" disabled> Refléter le robot physique (lecture seule : le robot virtuel suit la télémétrie)</label>
+      <label class="ligne petit"><input type="checkbox" id="jumeau-pilote" disabled> Piloter le robot physique avec le robot virtuel (tronc → Base, bras droit → Épaule et Coude, tête → Tête ; via la couche de sécurité)</label>
+      <p class="petit">Correspondance proposée par conception, à ajuster selon la mécanique du robot. L'arrêt de cette page envoie aussi l'arrêt d'urgence au pont.</p>
+    </div>
+  </aside>
+</main>
+
+<script src="/static/i18n.js"></script>
+<script src="/static/pont.js"></script>
+<script type="module" src="/static/avatar/app.js"></script>
+</body>
+</html>

@@ -22,6 +22,11 @@
   to = "/tableau-public.html"
   status = 200
 
+[[redirects]]
+  from = "/avatar"
+  to = "/avatar.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

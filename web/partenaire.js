@@ -138,6 +138,41 @@ $("#p-retirer").onclick = async () => {
   const r = await demander("p_acteur_retirer", { id }); majActeurs(r.acteurs); ouvrirActeur();
 };
 
+/* ══════════ Robot virtuel : délégation de la voix et du visage (BroadcastChannel) ══════════ */
+const Avatar = {
+  canal: "BroadcastChannel" in window ? new BroadcastChannel("robo-scene-avatar") : null,
+  vu: 0, jeton: 0, attentes: new Map(),
+  init() {
+    if (!this.canal) { $("#avatar-voix").disabled = true; return; }
+    this.canal.onmessage = (ev) => {
+      const m = ev.data || {};
+      if (m.t === "pong") { this.vu = Date.now(); this.maj(); }
+      if (m.t === "fini" && this.attentes.has(m.jeton)) { this.attentes.get(m.jeton)(); this.attentes.delete(m.jeton); }
+    };
+    try { $("#avatar-voix").checked = localStorage.getItem("robo-scene-avatar-voix-partenaire") === "1"; } catch (e) {}
+    $("#avatar-voix").onchange = (e) => { try { localStorage.setItem("robo-scene-avatar-voix-partenaire", e.target.checked ? "1" : "0"); } catch (x) {} this.maj(); };
+    setInterval(() => { this.canal.postMessage({ t: "ping" }); this.maj(); }, 2500);
+    this.canal.postMessage({ t: "ping" });
+  },
+  present() { return Date.now() - this.vu < 6000; },
+  actif() { return !!this.canal && $("#avatar-voix").checked && this.present(); },
+  maj() {
+    const el = $("#st-avatar"); if (!el) return;
+    el.className = "pastille bascule " + (this.actif() ? "ok" : $("#avatar-voix").checked ? "avert" : "neutre");
+    el.title = this.present() ? "Robot virtuel ouvert dans ce navigateur" : "Ouvrez la page « Robot virtuel » pour qu'il donne sa voix et son visage aux répliques";
+  },
+  dire(rendu, opts) {
+    const jeton = ++this.jeton;
+    return new Promise((fin) => {
+      const garde = setTimeout(() => { this.attentes.delete(jeton); fin(); }, (rendu.duree_estimee_ms || 3000) * 2 + 4000);
+      this.attentes.set(jeton, () => { clearTimeout(garde); fin(); });
+      this.canal.postMessage({ t: "dire", jeton, rendu, volume: opts.volume, variation: opts.variation || null, nom: opts.nom || null });
+    });
+  },
+  taire() { if (this.canal) this.canal.postMessage({ t: "taire" }); for (const f of this.attentes.values()) f(); this.attentes.clear(); },
+};
+Avatar.init();
+
 /* ══════════ Voix : synthèse, voix machinique, signal tonal ══════════ */
 const Voix = {
   voix: [], jeton: 0, audio: null,
@@ -153,12 +188,14 @@ const Voix = {
   },
   annuler() {
     this.jeton++;
+    Avatar.taire();
     if ("speechSynthesis" in window) speechSynthesis.cancel();
     if (this.audio) { try { this.audio.close(); } catch (e) {} this.audio = null; }
   },
   /* rendu : {parler, debit, hauteur, volume, segments[{texte, pause_apres_ms}], duree_estimee_ms} */
-  async dire(rendu, { indexVoix = 0, tonale = false, volume = null } = {}) {
+  async dire(rendu, { indexVoix = 0, tonale = false, volume = null, variation = null, nom = null } = {}) {
     const j = ++this.jeton;
+    if (!tonale && Avatar.actif()) { await Avatar.dire(rendu, { volume, variation, nom }); return; }   // le robot virtuel parle
     if (!rendu.parler) { await attendre(rendu.duree_estimee_ms); return; }     // film muet : le texte s'affiche, le corps joue
     if (tonale) return this.tonale(rendu, j);
     const dispo = "speechSynthesis" in window && this.voix.length;
@@ -531,8 +568,8 @@ async function apercu(jouer) {
   dessinerGeste(r.geste);
   return r;
 }
-$("#v-ecouter").onclick = async () => { const r = await apercu(false); if (r) Voix.dire({ ...r.voix, effort: r.description.effort }, { tonale: $("#v-regime").value === "machinique" && $("#r-voixmach").value === "tonale" }); };
-$("#v-incarner").onclick = async () => { const r = await apercu(true); if (r) Voix.dire({ ...r.voix, effort: r.description.effort }, { tonale: $("#v-regime").value === "machinique" && $("#r-voixmach").value === "tonale" }); };
+$("#v-ecouter").onclick = async () => { const r = await apercu(false); if (r) Voix.dire({ ...r.voix, effort: r.description.effort }, { variation: variationComposee(), tonale: $("#v-regime").value === "machinique" && $("#r-voixmach").value === "tonale" }); };
+$("#v-incarner").onclick = async () => { const r = await apercu(true); if (r) Voix.dire({ ...r.voix, effort: r.description.effort }, { variation: variationComposee(), tonale: $("#v-regime").value === "machinique" && $("#r-voixmach").value === "tonale" }); };
 function dessinerGeste(images) {
   const cv = $("#v-geste"), ctx = cv.getContext("2d"), w = cv.width, h = cv.height;
   ctx.clearRect(0, 0, w, h);
@@ -585,7 +622,7 @@ const Repetition = {
         $("#r-precedent").innerHTML = `<span class="nom">${echapper(it.nom)} · ${echapper(it.variation.etiquette)}</span>${echapper(it.texte)}${it.didascalies.length ? ` <span class="didascalie">(${it.didascalies.map(echapper).join(" ; ")})</span>` : ""}`;
         Micro.muet = true;
         envoyer("p_repet_geste", { replique: it.id, variation: it.variation, duree_ms: it.voix.duree_estimee_ms });
-        await Voix.dire({ ...it.voix, effort: it.effort }, { indexVoix: 1 + persos.indexOf(it.perso), tonale: this.options.tonale });
+        await Voix.dire({ ...it.voix, effort: it.effort }, { indexVoix: 1 + persos.indexOf(it.perso), tonale: this.options.tonale, variation: it.variation, nom: it.nom });
         await attendre(150); Micro.muet = false;
         this.finCue = performance.now();
       } else {
