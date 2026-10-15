@@ -17,9 +17,10 @@ window.ROBO_PONT = (() => {
     if (!bandeau) {
       bandeau = document.createElement("div");
       bandeau.className = "bandeau-pont";
-      bandeau.innerHTML = `<b>Pont ROBO-SCÈNE non joint</b> à <code>${url.replace(/[<>&"]/g, "")}</code>. Lancez le pont sur votre ordinateur
-        (dans le dossier Robo-Scene : <code>bash lancer.command</code>, ou une fois pour toutes : <code>bash outils/demarrage_automatique.sh installer</code>), puis attendez quelques secondes.
-        Le robot, vos documents et les données des acteurs restent sur votre machine.
+      bandeau.innerHTML = `<b>Pont ROBO-SCÈNE non joint</b> à <code>${url.replace(/[<>&"]/g, "")}</code>. Sur un ordinateur où le service
+        « Pont ROBO-SCÈNE » est installé, il se relance de lui-même en moins d'une minute ; sinon, l'installer une fois pour toutes
+        (dans le dossier Robo-Scene : <code>bash outils/demarrage_automatique.sh installer</code>) ou ouvrir l'application « ROBO-SCÈNE ».
+        La page se reconnecte seule. Le robot, vos documents et les données des acteurs restent sur votre machine.
         <button type="button">Modifier l'adresse</button>`;
       bandeau.querySelector("button").onclick = () => {
         const v = prompt("Adresse WebSocket du pont", url);
