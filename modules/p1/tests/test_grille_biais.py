@@ -6,7 +6,8 @@ import pytest
 
 from atelier_p1.grille_biais import alpha_krippendorff, fiabilite, generer
 
-GRILLE = Path(__file__).resolve().parents[2] / "specifications" / "P1-GB_Grille_biais_narratifs_v1.0.xlsx"
+# modules/p1/specifications/ (A-07) ; parents[1] = modules/p1, comme dans l'arborescence d'origine du prototype
+GRILLE = Path(__file__).resolve().parents[1] / "specifications" / "P1-GB_Grille_biais_narratifs_v1.0.xlsx"
 
 # Données de référence ; valeurs attendues calculées avec le paquet indépendant « krippendorff » (PyPI).
 REF = [[2, None], [2, 2], [None, None], [0, 0], [None, 2], [None, 0], [0, 2], [1, 0], [0, None], [0, None], [2, 2],
