@@ -73,8 +73,14 @@ dossier = "donnees"                # données locales (hors dépôt) : traces, q
 # Décision D13 : version la plus récente adoptée au DÉBUT de chaque séance, jamais en cours de séance, consignée.
 # Clés lues dans l'environnement : ANTHROPIC_API_KEY, OPENAI_API_KEY. Sans clé : voies déterministes.
 fournisseur_prefere = "anthropic"  # "openai" pour placer GPT en premier
-local = "gemma4:12b"               # SI-02 PROVISOIRE (essais seulement, jusqu'à l'évaluation à l'aveugle)
-local_provisoire = true
+# SI-02 désigné le 2026-10-16 d'après l'évaluation à l'aveugle du 2026-10-12 (n = 131, SI-02_synthese) :
+#   M2 Luciole-8B-Instruct-1.1 : français 4,18/5, jouabilité 3,88/5, stéréotype 0,09 (aucun niveau 2), JSON 100 %, 3,5 s
+#   M1 Apertus-8B-Instruct-2509 : français 4,06/5, jouabilité 3,56/5, stéréotype 0,26 (deux niveaux 2), JSON 100 %, 2,1 s
+# Le secours n'est employé que si le modèle principal est absent d'Ollama ; il reste local (D03 inchangé).
+# Toute étiquette contenant « cloud » ou « remote » est refusée par verifier_local() (VP-14).
+local = "hf.co/OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF:Q4_K_M"
+local_secours = "apertus-8b-instruct-2509-local:q4_k_m"
+local_provisoire = false
 url_local = "http://127.0.0.1:11434"
 plafond_jetons_seance = 200000
 [modeles.roles]                    # familles par rôle, dans l'ordre de préférence

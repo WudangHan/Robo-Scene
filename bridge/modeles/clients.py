@@ -147,28 +147,55 @@ class ClientLocal:
     """SI-02 : modèle ouvert servi par Ollama sur cette machine ; refuse tout serveur ou modèle non local."""
     fournisseur = "ollama"
 
-    def __init__(self, modele: str, url: str = "http://127.0.0.1:11434", delai: float = 180.0, transport=None):
+    def __init__(self, modele: str, url: str = "http://127.0.0.1:11434", delai: float = 180.0, transport=None,
+                 secours: str | None = None, lister=None):
         from .. import _modules  # noqa: F401
         from atelier_p1.modeles import verifier_local
-        self.modele, self.url, self.delai = modele, url.rstrip("/"), delai
+        self.principal, self.url, self.delai = modele, url.rstrip("/"), delai
+        self.secours = secours or None
+        self.modele = modele                       # modèle effectivement servi (le secours si le principal manque)
         self.refus = verifier_local(modele, self.url) if modele else ["aucun modèle local configuré"]
+        # Un secours non conforme (cloud, remote, hôte distant) est écarté sans invalider le modèle principal.
+        self.refus_secours = verifier_local(self.secours, self.url) if self.secours else []
         self.transport = transport or _post
+        self._lister = lister or self._tags
+
+    def _tags(self) -> list[dict]:
+        with urllib.request.urlopen(self.url + "/api/tags", timeout=2) as r:
+            return json.loads(r.read()).get("models", [])
+
+    def _present(self, entrees: list[dict], nom: str) -> bool:
+        from atelier_p1.modeles import entree_distante
+        cibles = {nom.lower(), f"{nom}:latest".lower()}
+        # Ollama traite les noms sans égard à la casse (« :Q4_K_M » ou « :q4_k_m ») ; une entrée distante est refusée
+        return any(e.get("name", "").lower() in cibles and not entree_distante(e) for e in entrees)
+
+    def choisir(self) -> str | None:
+        """Modèle local à servir : le principal s'il est installé, sinon le secours ; None si aucun (D03 : refus)."""
+        if self.refus:
+            return None
+        try:
+            entrees = self._lister()
+        except (urllib.error.URLError, OSError, ValueError):
+            return None
+        if self._present(entrees, self.principal):
+            self.modele = self.principal
+            return self.modele
+        if self.secours and not self.refus_secours and self._present(entrees, self.secours):
+            self.modele = self.secours
+            return self.modele
+        return None
 
     @property
     def disponible(self) -> bool:
-        if self.refus:
-            return False
-        try:
-            with urllib.request.urlopen(self.url + "/api/tags", timeout=2) as r:
-                noms = {m.get("name") for m in json.loads(r.read()).get("models", [])}
-        except (urllib.error.URLError, OSError, ValueError):
-            return False
-        return self.modele in noms or f"{self.modele}:latest" in noms
+        return self.choisir() is not None
 
     def generer(self, modele: str, systeme: str, contenu: str, *, temperature: float | None = None,
                 top_p: float | None = None, max_tokens: int = 1500, json_attendu: bool = False, **_: Any) -> Reponse:
         if self.refus:
             raise ErreurModele("SI-02 refusé, traitement non local : " + " ; ".join(self.refus))
+        if self.modele == self.secours and self.refus_secours:
+            raise ErreurModele("SI-02 (secours) refusé, traitement non local : " + " ; ".join(self.refus_secours))
         options = {k: v for k, v in {"temperature": temperature, "top_p": top_p, "num_predict": max_tokens}.items()
                    if v is not None}
         corps = {"model": self.modele, "stream": False, "options": options,

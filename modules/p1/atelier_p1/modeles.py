@@ -127,9 +127,19 @@ def verifier_local(modele: str, url: str) -> list[str]:
     hote = (urllib.parse.urlsplit(url).hostname or "").lower()
     if hote not in HOTES_LOCAUX:
         motifs.append(f"serveur Ollama non local ({hote or 'hôte illisible'})")
-    if re.search(r"cloud", modele or "", re.I):
-        motifs.append(f"modèle « {modele} » exécuté dans le nuage d'Ollama (étiquette cloud)")
+    if RE_DISTANT.search(modele or ""):
+        motifs.append(f"modèle « {modele} » exécuté hors de cette machine (étiquette cloud ou remote, VP-14)")
     return motifs
+
+
+# Étiquettes Ollama exécutées hors poste : « :cloud », « -cloud », « :remote »… (EFVP v1.1, VP-14)
+RE_DISTANT = re.compile(r"cloud|remote", re.I)
+
+
+def entree_distante(entree: dict) -> bool:
+    """Vrai si une entrée de /api/tags annonce un modèle servi ailleurs (remote_host, remote_model…)."""
+    return bool(RE_DISTANT.search(entree.get("name", "") or "")) or any(
+        str(k).startswith("remote") and v for k, v in entree.items())
 
 
 NUM_CTX = 8192
@@ -160,7 +170,7 @@ class ModeleLocal:
             # Ollama traite les noms sans égard à la casse (il peut afficher « :Q4_K_M » pour « :q4_k_m »)
             if m.get("name", "").lower() in (self.modele.lower(), f"{self.modele}:latest".lower()):
                 # par prudence : une entrée qui annonce un hôte ou un modèle distant est refusée
-                if any(k.startswith("remote") and v for k, v in m.items()):
+                if entree_distante(m):
                     self.refus = [f"Ollama annonce « {self.modele} » comme modèle distant"]
                     return False
                 return True

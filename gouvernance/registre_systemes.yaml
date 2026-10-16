@@ -15,8 +15,10 @@ systemes:
     fournisseur: F-03
     usage: "Consignes et matériaux sensibles ; codage local des entretiens"
     risque: modere
-    mesures: "verifier_local (aucun serveur ni modèle infonuagique) ; refus sans repli"
-    version_courante: "gemma4:12b (PROVISOIRE, essais seulement, en attente de l'évaluation à l'aveugle)"
+    mesures: "verifier_local (aucun serveur hors de cette machine, aucune étiquette cloud ou remote, entrées remote_* refusées) ; refus sans repli distant"
+    version_courante: "hf.co/OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF:Q4_K_M (désigné le 2026-10-16, évaluation à l'aveugle du 2026-10-12, n = 131)"
+    secours: "apertus-8b-instruct-2509-local:q4_k_m (local ; stéréotype moyen 0,26 contre 0,09 : à surveiller)"
+    version_anterieure: "gemma4:12b (provisoire, essais seulement, jusqu'au 2026-10-16)"
   SI-03:
     nom: "whisper.cpp (MIT), transcription locale"
     fournisseur: F-04

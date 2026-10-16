@@ -44,7 +44,8 @@ class ServiceModeles:
         self.jetons = {"anthropic": 0, "openai": 0, "ollama": 0}
         self._clients = clients or {}
         self.local = self._clients.get("ollama") or ClientLocal(cfg.get("local", FAMILLES["local"].reference),
-                                                                cfg.get("url_local", "http://127.0.0.1:11434"))
+                                                                cfg.get("url_local", "http://127.0.0.1:11434"),
+                                                                secours=cfg.get("local_secours") or None)
         self.local_provisoire = bool(cfg.get("local_provisoire", True))
 
     # ── Séance ──────────────────────────────────────────────
@@ -86,7 +87,11 @@ class ServiceModeles:
                                    max_tokens=max_tokens, json_attendu=json_attendu)
             r.motifs_routage, r.famille = decision.motifs, "local"
             if self.local_provisoire:
-                r.ecarts.append("SI-02 provisoire (gemma4:12b), réservé aux essais jusqu'à l'évaluation à l'aveugle")
+                r.ecarts.append(f"SI-02 provisoire ({self.local.modele}), réservé aux essais jusqu'à l'évaluation "
+                                "à l'aveugle")
+            if getattr(self.local, "secours", None) and self.local.modele == self.local.secours:
+                r.ecarts.append(f"SI-02 servi par le modèle de secours ({self.local.modele}) : modèle principal "
+                                "absent d'Ollama")
             self.jetons["ollama"] += r.jetons_entree + r.jetons_sortie
             return r
         familles = [famille] if famille else self.catalogue.familles_pour(role)

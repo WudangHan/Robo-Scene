@@ -121,3 +121,56 @@ def test_gpt_terra_en_attente_puis_adopte(tmp_path, monkeypatch):
     r = c.resoudre("20261012_X_A_002")
     assert r["gpt-terra"] == "gpt-6-terra" and c.choisir("rapide")[1] == "gpt-6-terra"
     assert c.etat["historique"][-1]["nouvelle"] == "gpt-6-terra"
+
+
+# ── SI-02 désigné (audit du 2026-10-16 : A-009, A-010, VP-14) ──────────────────────────────
+LUCIOLE = "hf.co/OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF:Q4_K_M"
+APERTUS = "apertus-8b-instruct-2509-local:q4_k_m"
+
+
+def test_config_designe_luciole_et_secours_local():
+    import tomllib
+    from pathlib import Path
+    m = tomllib.loads(Path("config.toml").read_text(encoding="utf-8"))["modeles"]
+    assert m["local"] == LUCIOLE and m["local_secours"] == APERTUS and m["local_provisoire"] is False
+    assert FAMILLES["local"].reference == LUCIOLE
+
+
+@pytest.mark.parametrize("etiquette", ["glm-5.1:cloud", "deepseek-v4-flash:cloud", "kimi-k2.6:cloud",
+                                       "gpt-oss:120b-cloud", "qwen3:remote", "Mistral:REMOTE"])
+def test_etiquettes_distantes_refusees_vp14(etiquette):
+    from bridge.modeles.clients import ClientLocal
+    c = ClientLocal(etiquette, lister=lambda: [{"name": etiquette}])
+    assert c.refus and not c.disponible
+    with pytest.raises(Exception):
+        c.generer(etiquette, "s", "t")
+
+
+def test_casse_ollama_et_entree_remote_refusee():
+    from bridge.modeles.clients import ClientLocal
+    c = ClientLocal(LUCIOLE, lister=lambda: [{"name": LUCIOLE.lower()}])
+    assert c.disponible and c.modele == LUCIOLE
+    # une entrée qui annonce un hôte distant n'est jamais retenue, même sous le bon nom
+    c2 = ClientLocal(LUCIOLE, lister=lambda: [{"name": LUCIOLE, "remote_host": "https://ollama.com:443"}])
+    assert not c2.disponible
+
+
+def test_secours_local_seulement_si_principal_absent():
+    from bridge.modeles.clients import ClientLocal
+    tags = [{"name": "apertus-8b-instruct-2509-local:Q4_K_M"}]
+    c = ClientLocal(LUCIOLE, secours=APERTUS, lister=lambda: tags)
+    assert c.choisir() == APERTUS
+    tags.append({"name": LUCIOLE})
+    assert c.choisir() == LUCIOLE
+    # un secours infonuagique est écarté sans invalider le principal
+    c3 = ClientLocal(LUCIOLE, secours="glm-5.1:cloud", lister=lambda: [{"name": "glm-5.1:cloud"}])
+    assert c3.refus == [] and c3.refus_secours and c3.choisir() is None
+
+
+def test_aucun_modele_local_refus_sans_repli(tmp_path, monkeypatch):
+    from bridge.modeles.clients import ClientLocal
+    s, c = service(tmp_path, monkeypatch)
+    s.local = ClientLocal(LUCIOLE, secours=APERTUS, lister=lambda: [])
+    with pytest.raises(RefusSensibilite):
+        s.generer_sync("analyse", "s", "Écrire à eloise@example.org", confidentielle=True)
+    assert c["anthropic"].appels == [] and c["openai"].appels == []

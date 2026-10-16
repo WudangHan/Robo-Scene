@@ -140,8 +140,9 @@ class GestionAteliers:
         if manquants:
             raise VerrouGouvernance(f"Consentement « atelier_p1 » absent pour : {', '.join(manquants)} (G-01)")
         if self.ctl.service.local_provisoire:
-            raise VerrouGouvernance("SI-02 est provisoire (gemma4:12b) : mode atelier refusé tant que l'évaluation "
-                                    "à l'aveugle n'a pas désigné le modèle local (critère 4 de mise en service)")
+            raise VerrouGouvernance(f"SI-02 est provisoire ({self.ctl.service.local.modele}) : mode atelier refusé "
+                                    "tant que l'évaluation à l'aveugle n'a pas désigné le modèle local "
+                                    "(critère 4 de mise en service)")
 
     def ouvrir(self, *, pseudonymes: list[str], mode: str = "essai", famille: str = "claude-opus",
                simule: bool = False, type_: str = "ATELIER") -> dict[str, Any]:
@@ -156,7 +157,9 @@ class GestionAteliers:
                                  "P1", type_)
         journal = JournalCocreation(racine, sid, versionner=bool(self.ctl.cfg["protocole"].get("versionner_corpus", True)))
         distant = ModeleUnifie(self.ctl.service, famille, float(c.get("temperature", 0.7)))
-        local = ModeleLocal(self.ctl.service.local.modele, self.ctl.service.local.url)
+        sl = self.ctl.service.local
+        choisi = sl.choisir() if hasattr(sl, "choisir") else None     # principal, sinon secours (toujours local)
+        local = ModeleLocal(choisi or sl.modele, sl.url)
         dossier_journal = Path(c.get("dossier_journal") or (self.ctl.donnees / "p1" / "journaux"))
         mise_en_service = Path(c.get("mise_en_service") or (self.racine_p1 / "config" / "mise_en_service.yaml"))
         from atelier_p1.routeur import charger_liste_blocage

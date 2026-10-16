@@ -55,7 +55,8 @@ FAMILLES: dict[str, Famille] = {
                          "SI-08", "GPT Terra (OpenAI)", generation_min=6),
     "gpt-luna": Famille("gpt-luna", "openai", r"^gpt-(\d+)(?:\.(\d+))?-luna$", "gpt-6-luna",
                         "SI-08", "GPT Luna (OpenAI)"),
-    "local": Famille("local", "ollama", None, "gemma4:12b", "SI-02", "Modèle local (Ollama)"),
+    "local": Famille("local", "ollama", None, "hf.co/OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF:Q4_K_M", "SI-02",
+                     "Modèle local (Ollama)"),
 }
 
 # Rôles : ordre de préférence des familles ; le premier fournisseur disponible est retenu.
