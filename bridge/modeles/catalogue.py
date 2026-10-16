@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
+from ..tls import contexte as _tls
 
 
 @dataclass(frozen=True)
@@ -84,7 +85,7 @@ def plus_recent(identifiants: list[str], famille: Famille) -> str | None:
 
 def _get_json(url: str, entetes: dict[str, str], delai: float = 8.0) -> dict[str, Any]:
     req = urllib.request.Request(url, headers=entetes)
-    with urllib.request.urlopen(req, timeout=delai) as r:
+    with urllib.request.urlopen(req, timeout=delai, context=_tls()) as r:
         return json.loads(r.read().decode("utf-8"))
 
 

@@ -21,6 +21,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
+from ..tls import contexte as _tls
 
 STATUTS = ("à vérifier", "vérifiée", "écartée")
 MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juill.", "août", "sept.", "oct.", "nov.", "déc."]
@@ -28,7 +29,7 @@ MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juill.", "août", "se
 
 def _get(url: str, delai: float = 20.0) -> bytes:
     req = urllib.request.Request(url, headers={"User-Agent": "ROBO-SCENE-veille/1.0 (recherche universitaire)"})
-    with urllib.request.urlopen(req, timeout=delai) as r:
+    with urllib.request.urlopen(req, timeout=delai, context=_tls()) as r:
         return r.read()
 
 

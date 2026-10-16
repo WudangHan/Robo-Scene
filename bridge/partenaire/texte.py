@@ -18,6 +18,7 @@ from xml.etree import ElementTree as ET
 
 from .connaissances import RACINE, lire_docx
 from .texte_outils import mots, normaliser
+from ..tls import contexte as _tls
 
 DOSSIER_PIECES = RACINE / "partenaire" / "pieces"
 DOSSIER_REPERTOIRE = RACINE / "partenaire" / "repertoire"
@@ -287,7 +288,7 @@ CHAMPS_CATALOGUE = ("name", "title", "subtitle", "firstAuthor", "yearNormalized"
 def _http(url: str, delai: float = 40) -> bytes:
     req = urllib.request.Request(url, headers={"Accept-Encoding": "gzip", "Accept": "application/json, */*",
                                                "User-Agent": "ROBO-SCENE-partenaire/2.0"})
-    with urllib.request.urlopen(req, timeout=delai) as r:
+    with urllib.request.urlopen(req, timeout=delai, context=_tls()) as r:
         data = r.read()
         if r.headers.get("Content-Encoding") == "gzip" or data[:2] == b"\x1f\x8b":
             data = gzip.decompress(data)

@@ -1,5 +1,6 @@
 # Pont et plateforme ROBO-SCÈNE (Python 3.12 ou plus récent)
 aiohttp>=3.9
+certifi>=2024.2           # certificats HTTPS (Python de python.org sur macOS : magasin vide par défaut)
 pyserial>=3.5
 pyyaml>=6.0
 jsonschema>=4.20           # schéma d'événement v1 (N-02)

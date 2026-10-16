@@ -18,6 +18,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Any
+from ..tls import contexte as _tls
 
 
 class ErreurModele(Exception):
@@ -52,7 +53,7 @@ def _post(url: str, corps: dict, entetes: dict, delai: float) -> dict:
     req = urllib.request.Request(url, data=json.dumps(corps).encode("utf-8"),
                                  headers={"Content-Type": "application/json", **entetes}, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=delai) as r:
+        with urllib.request.urlopen(req, timeout=delai, context=_tls()) as r:
             return json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         raise ErreurModele(f"HTTP {e.code} : {e.read().decode('utf-8', 'replace')[:400]}") from e
