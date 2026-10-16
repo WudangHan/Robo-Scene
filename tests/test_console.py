@@ -202,3 +202,46 @@ def test_moteur_modele_repli_sur_regles():
     a = Agent({}, ["Base", "Épaule", "Coude", "Tête"], _Service(erreur=TimeoutError()))
     p = run(a.proposer("stop", {}, LIMS, []))
     assert p["moteur"] == "regles (repli)" and p["action"] == "propulsion"
+
+
+# ── Simulation dans le navigateur (audit du 2026-10-16, chantier 3) ─────────────────────────
+def test_simulateur_navigateur_reproduit_le_pont():
+    import shutil
+    import subprocess
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js absent")
+    script = """
+      import fs from "node:fs";
+      globalThis.window = globalThis;
+      new Function(fs.readFileSync("./web/simulateur.js", "utf8"))();
+      const recus = [];
+      const ws = new window.ROBO_SIMULATEUR.PontSimule();
+      ws.onmessage = (e) => recus.push(JSON.parse(e.data));
+      const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+      await pause(50);
+      ws.send(JSON.stringify({ op: "articulation", i: 1, deg: 400, ms: 0 }));    // borné à 160°, vitesse plafonnée
+      await pause(400);
+      const milieu = recus.filter((m) => m.type === "etat").at(-1).deg[1];
+      ws.send(JSON.stringify({ op: "estop", motif: "essai" }));
+      ws.send(JSON.stringify({ op: "propulsion", g: 1, d: 1 }));
+      await pause(120);
+      const apresArret = recus.filter((m) => m.type === "etat").at(-1);
+      ws.send(JSON.stringify({ op: "ia_demander", texte: "lève le bras" }));
+      ws.close();
+      console.log(JSON.stringify({ config: recus.find((m) => m.type === "config"), milieu, apresArret,
+        journaux: recus.filter((m) => m.type === "journal").map((m) => m.niveau + ":" + m.msg),
+        dist: window.ROBO_SIMULATEUR.distanceMur(0, 0, 0) }));
+    """
+    r = subprocess.run([node, "--input-type=module", "-e", script], capture_output=True, text=True, timeout=60,
+                       cwd=RACINE)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    cfg = charger_config(RACINE / "config.toml")
+    assert out["config"]["noms"] == cfg["robot"]["articulations"]["noms"]          # mêmes articulations que le pont
+    assert out["config"]["simulation"] is True and out["config"]["execution_auto"] is False
+    assert 90 < out["milieu"] < 160                       # 90 °/s : la cible de 160° n'est pas atteinte en 0,4 s
+    assert out["apresArret"]["arret"] is True and out["apresArret"]["drive"] == [0, 0]
+    assert any(j.startswith("refus:Commande refusée") for j in out["journaux"])
+    assert any("IA supervisée indisponible" in j for j in out["journaux"])          # aucune requête IA hors pont
+    assert out["dist"] == 2.0

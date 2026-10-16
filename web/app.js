@@ -17,27 +17,49 @@ let derniereEnvoi = {};
 const propositions = new Map();
 
 /* ── WebSocket ─────────────────────────────────────── */
+/* Servie en ligne (Netlify), la Console bascule en simulation dans le navigateur si le pont local ne répond
+   pas dans les 1,5 s (simulateur.js) ; servie par le pont, elle ne simule jamais. Un pont déjà joint puis perdu
+   (veille, redémarrage) est rappelé toutes les 1,5 s, sans bascule. */
+let simulation = false, pontJoint = false;
 function connecter() {
+  if (simulation) return;
+  if (window.ROBO_PONT.forcerSimulation && window.ROBO_SIMULATEUR) { basculerSimulation(); return; }
   ws = new WebSocket(window.ROBO_PONT.url);
-  ws.onopen = () => { window.ROBO_PONT.ouvert(); journal({ niveau: "info", msg: "Interface reliée au pont", ts: heure() }); };
+  const delai = setTimeout(() => { if (ws.readyState !== 1 && !pontJoint) basculerSimulation(); }, 1500);
+  ws.onopen = () => {
+    clearTimeout(delai); pontJoint = true;
+    window.ROBO_PONT.ouvert(); journal({ niveau: "info", msg: "Interface reliée au pont", ts: heure() });
+  };
   ws.onclose = () => {
+    clearTimeout(delai);
+    if (simulation) return;
     window.ROBO_PONT.ferme();
     majLien("interface");
+    if (!pontJoint && !window.ROBO_PONT.local && window.ROBO_SIMULATEUR) { basculerSimulation(); return; }
     setTimeout(connecter, 1500);
   };
-  ws.onmessage = (e) => {
-    const m = JSON.parse(e.data);
-    switch (m.type) {
-      case "config": appliquerConfig(m); break;
-      case "etat": surEtat(m); break;
-      case "journal": journal(m); break;
-      case "sequences": listerSequences(m.liste); break;
-      case "sequence": chargerBrouillon(m.sequence); break;
-      case "ia_proposition": propositions.set(m.id, m); rendrePropositions(); break;
-      case "ia_statut": if (propositions.has(m.id)) { propositions.get(m.id).statut = m.statut; rendrePropositions(); } break;
-    }
-    if (window.surMessagePlateforme) window.surMessagePlateforme(m);   // flotte, règles, surtitres, voix (console-plateforme.js)
-  };
+  ws.onmessage = recevoir;
+}
+function basculerSimulation() {
+  if (simulation || !window.ROBO_SIMULATEUR || (window.ROBO_PONT.local && !window.ROBO_PONT.forcerSimulation)) return;
+  simulation = true;
+  try { if (ws) { ws.onclose = null; ws.close(); } } catch (e) { /* déjà fermée */ }
+  window.ROBO_PONT.simulation();
+  ws = new window.ROBO_SIMULATEUR.PontSimule();
+  ws.onmessage = recevoir;
+}
+function recevoir(e) {
+  const m = JSON.parse(e.data);
+  switch (m.type) {
+    case "config": appliquerConfig(m); break;
+    case "etat": surEtat(m); break;
+    case "journal": journal(m); break;
+    case "sequences": listerSequences(m.liste); break;
+    case "sequence": chargerBrouillon(m.sequence); break;
+    case "ia_proposition": propositions.set(m.id, m); rendrePropositions(); break;
+    case "ia_statut": if (propositions.has(m.id)) { propositions.get(m.id).statut = m.statut; rendrePropositions(); } break;
+  }
+  if (window.surMessagePlateforme) window.surMessagePlateforme(m);   // flotte, règles, surtitres, voix (console-plateforme.js)
 }
 function envoyer(op, data = {}) {
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({ op, ...data }));

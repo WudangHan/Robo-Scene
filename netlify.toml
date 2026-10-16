@@ -2,29 +2,67 @@
 # Seul le dossier web/ est publié : ni le pont Python, ni les documents de
 # partenaire/sources, ni les données des acteurs ne quittent l'ordinateur de l'équipe.
 # La page se connecte au pont local (ws://127.0.0.1:8765/ws), qui doit autoriser
-# cette origine dans config.toml, [serveur] origines_autorisees.
+# cette origine dans config.toml, [serveur] origines_autorisees. Sans pont, la Console
+# bascule en simulation dans le navigateur (web/simulateur.js).
 
 [build]
   publish = "web"
+  command = "echo 'Interface statique ROBO-SCÈNE : aucune compilation'"
 
+# Ressources appelées /static/… par les pages (comme lorsqu'elles sont servies par le pont)
 [[redirects]]
   from = "/static/*"
   to = "/:splat"
   status = 200
 
+# Les onze pages de la plateforme intégrée, accessibles directement (sans barre oblique finale)
+[[redirects]]
+  from = "/console"
+  to = "/index.html"
+  status = 200
 [[redirects]]
   from = "/partenaire"
   to = "/partenaire.html"
   status = 200
-
+[[redirects]]
+  from = "/avatar"
+  to = "/avatar.html"
+  status = 200
+[[redirects]]
+  from = "/atelier"
+  to = "/atelier.html"
+  status = 200
+[[redirects]]
+  from = "/scene"
+  to = "/scene.html"
+  status = 200
+[[redirects]]
+  from = "/spectateur"
+  to = "/spectateur.html"
+  status = 200
+[[redirects]]
+  from = "/surtitres"
+  to = "/surtitres.html"
+  status = 200
+[[redirects]]
+  from = "/recherche"
+  to = "/recherche.html"
+  status = 200
+[[redirects]]
+  from = "/gouvernance"
+  to = "/gouvernance.html"
+  status = 200
+[[redirects]]
+  from = "/regie"
+  to = "/regie.html"
+  status = 200
 [[redirects]]
   from = "/tableau-public"
   to = "/tableau-public.html"
   status = 200
-
 [[redirects]]
-  from = "/avatar"
-  to = "/avatar.html"
+  from = "/public"
+  to = "/tableau-public.html"
   status = 200
 
 [[headers]]
@@ -33,5 +71,11 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "no-referrer"
-    Permissions-Policy = "microphone=(self), camera=(self), geolocation=()"
+    # Caméra et microphone : seulement pour cette origine (MediaPipe et Web Speech API, traitement local)
+    Permissions-Policy = "microphone=(self), camera=(self), geolocation=(), payment=(), usb=()"
     X-Robots-Tag = "noindex"
+    Cross-Origin-Opener-Policy = "same-origin"
+    # Politique de sécurité du contenu en mode « rapport seulement » : les écarts s'affichent dans la console du
+    # navigateur sans rien bloquer. À rendre contraignante (Content-Security-Policy) après une séance d'imitation
+    # MediaPipe et une connexion au pont sans aucun écart signalé. ws: couvre un pont joint sur le réseau de salle.
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self' ws: wss: http://127.0.0.1:8765 http://localhost:8765 https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"

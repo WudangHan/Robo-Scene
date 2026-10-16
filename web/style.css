@@ -165,3 +165,5 @@ table.images td.vide { color: var(--doux); padding: 14px; }
 .bandeau-pont code { background: #0f1218; padding: 1px 6px; border-radius: 4px; }
 .bandeau-pont button { margin-left: 8px; padding: 4px 10px; }
 .bandeau-pont[hidden] { display: none; }
+.bandeau-pont a { color: #ffd88a; text-decoration: underline; margin-left: 8px; }
+.bandeau-simulation { background: #14222a; border-bottom-color: #2f6f8a; color: #d6eef7; }

@@ -812,6 +812,7 @@ def creer_app(cfg: dict[str, Any]) -> web.Application:
     app.on_startup.append(demarrer)
     app.on_cleanup.append(arreter)
     app.router.add_get("/", _page("index.html"))
+    app.router.add_get("/console", _page("index.html"))      # même adresse que sur Netlify
     app.router.add_get("/partenaire", _page("partenaire.html"))
     app.router.add_get("/avatar", _page("avatar.html"))
     app.router.add_get("/ws", ws_handler)
