@@ -14,3 +14,6 @@ sdk/cpp/build/
 donnees_ett/
 sequences/externe-*/
 modules/p1/eval_si02/
+# Documents de travail et index qui en sont extraits : jamais versionnés (dépôt public, G.6)
+partenaire/sources/
+partenaire/index/
