@@ -166,4 +166,9 @@ table.images td.vide { color: var(--doux); padding: 14px; }
 .bandeau-pont button { margin-left: 8px; padding: 4px 10px; }
 .bandeau-pont[hidden] { display: none; }
 .bandeau-pont a { color: #ffd88a; text-decoration: underline; margin-left: 8px; }
+.bandeau-pont .actions { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-left: 4px; }
+.bandeau-pont a.bouton { display: inline-block; margin-left: 0; padding: 4px 10px; border-radius: 6px; background: #f2b544;
+  color: #1a1408; font-weight: 600; text-decoration: none; }
+.bandeau-pont a.bouton:hover, .bandeau-pont a.bouton:focus-visible { background: #ffd88a; }
+.bandeau-pont .petit { display: block; margin-top: 4px; opacity: .85; font-size: 12px; }
 .bandeau-simulation { background: #14222a; border-bottom-color: #2f6f8a; color: #d6eef7; }

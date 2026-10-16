@@ -8,7 +8,9 @@ et un .json (métadonnées de la séance, mis à jour à la clôture).
 from __future__ import annotations
 
 import json
+import os
 import re
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -74,7 +76,9 @@ class Seance:
         self._ecrire_meta()
 
     def _ecrire_meta(self) -> None:
-        tmp = self.chemin_meta.with_suffix(".json.tmp")
+        # Fichier temporaire propre à chaque écriture : deux écritures concurrentes (fil de l'IA, boucle du pont)
+        # ne se disputent plus le même .json.tmp (FileNotFoundError au démarrage du 15 oct. 2026).
+        tmp = self.chemin_meta.with_name(f"{self.chemin_meta.name}.{os.getpid()}.{threading.get_ident()}.tmp")
         tmp.write_text(json.dumps(self.meta, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(self.chemin_meta)
 

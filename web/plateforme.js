@@ -34,3 +34,6 @@ function tableau(lignes, colonnes) {
     + lignes.map((l) => `<tr>${colonnes.map(([k, , f]) => `<td>${f ? f(l[k], l) : esc(l[k] ?? "—")}</td>`).join("")}</tr>`).join("")
     + "</tbody></table></div>";
 }
+
+// Servie en ligne, la page n'a pas accès à l'API du pont : bandeau explicatif et lien vers sa version locale.
+document.addEventListener("DOMContentLoaded", () => window.ROBO_PONT?.pageDeDonnees?.());

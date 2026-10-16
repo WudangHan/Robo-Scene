@@ -288,3 +288,51 @@ def test_nom_de_sequence_accentue_nfd():
     for forme in ("NFC", "NFD"):
         assert b.lire(unicodedata.normalize(forme, "révérence"))["images"]
     assert all(unicodedata.is_normalized("NFC", n) for n in b.lister())
+
+
+def test_ecritures_concurrentes_du_journal(tmp_path):
+    """Plusieurs fils qui comptent en même temps : aucune erreur, aucun .tmp résiduel, compte exact."""
+    import threading
+    from bridge.journal import Seance
+    s = Seance(tmp_path, "ESP32", "S04", "", {"robot": {"transport": "sim"}}, "sim")
+    erreurs = []
+
+    def compter():
+        try:
+            for _ in range(50):
+                s.compter("commandes")
+        except Exception as exc:          # pragma: no cover - ce qui est vérifié, c'est l'absence d'erreur
+            erreurs.append(exc)
+    fils = [threading.Thread(target=compter) for _ in range(4)]
+    [f.start() for f in fils]
+    [f.join() for f in fils]
+    s.cloturer()
+    assert not erreurs and not list(s.dossier.glob("*.tmp"))
+    assert json.loads(s.chemin_meta.read_text(encoding="utf-8"))["compteurs"]["commandes"] == 200
+
+
+def test_bandeau_pont_propose_la_version_locale():
+    """Pages en ligne : lien vers la même page servie par le pont (Chrome 147 : accès au réseau local)."""
+    import shutil
+    import subprocess
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js absent")
+    script = """
+      import fs from "node:fs";
+      const essai = (chemin, recherche = "", memo = null) => {
+        globalThis.location = { protocol: "https:", hostname: "robo-scene.netlify.app", host: "robo-scene.netlify.app",
+                                pathname: chemin, search: recherche };
+        globalThis.localStorage = { getItem: () => memo, setItem() {} };
+        globalThis.window = globalThis;
+        new Function(fs.readFileSync("./web/pont.js", "utf8"))();
+        return window.ROBO_PONT.adresseLocale();
+      };
+      console.log(JSON.stringify([essai("/"), essai("/console"), essai("/partenaire"), essai("/atelier", "?x=1"),
+        essai("/public"), essai("/", "?simulation=1"), essai("/avatar", "", "ws://192.168.1.20:8765/ws")]));
+    """
+    r = subprocess.run([node, "--input-type=module", "-e", script], capture_output=True, text=True, timeout=60, cwd=RACINE)
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout) == ["http://127.0.0.1:8765/", "http://127.0.0.1:8765/", "http://127.0.0.1:8765/partenaire",
+                                    "http://127.0.0.1:8765/atelier?x=1", "http://127.0.0.1:8765/tableau-public",
+                                    "http://127.0.0.1:8765/", "http://192.168.1.20:8765/avatar"]
