@@ -245,3 +245,36 @@ def test_simulateur_navigateur_reproduit_le_pont():
     assert any(j.startswith("refus:Commande refusée") for j in out["journaux"])
     assert any("IA supervisée indisponible" in j for j in out["journaux"])          # aucune requête IA hors pont
     assert out["dist"] == 2.0
+
+
+# ── Journaux de séance : compteurs persistés et clôture a posteriori (B-010) ──────────────────
+def test_compteurs_ecrits_et_cloture_a_posteriori(tmp_path):
+    import importlib.util
+    from bridge.journal import Seance
+    s = Seance(tmp_path, "ESP32", "S04", "", {"robot": {"transport": "sim"}}, "sim")
+    s.evenement("cmd", type="articulations", origine="manuel", demande=[90], envoye=[90.0], ms=0)
+    s.compter("commandes")
+    s.evenement("journal", niveau="alerte", msg="ARRÊT D'URGENCE — essai")
+    s.compter("arrets_urgence")
+    meta = json.loads(s.chemin_meta.read_text(encoding="utf-8"))
+    assert meta["compteurs"]["commandes"] == 1 and meta["compteurs"]["arrets_urgence"] == 1   # écrits sans clôture
+    s._f.close()                                                # arrêt brutal : aucune clôture
+    spec = importlib.util.spec_from_file_location("cloture", RACINE / "outils" / "cloture_seance.py")
+    outil = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(outil)
+    r = outil.examiner(s.chemin_meta)
+    assert not r["problemes"] and r["ecarts"] == {} and r["meta"]["fin"] is None
+    brut = s.chemin_evt.read_text(encoding="utf-8")
+    assert outil.main([str(s.chemin_meta), "--appliquer", "--operateur", "OP99"]) == 0
+    apres = s.chemin_evt.read_text(encoding="utf-8")
+    assert apres.startswith(brut) and apres.count("\n") == brut.count("\n") + 1     # journal brut intact, +1 ligne
+    fin = json.loads(apres.splitlines()[-1])
+    assert fin["action"] == "cloture" and fin["a_posteriori"] and fin["sha256_journal_avant_cloture"]
+    meta = json.loads(s.chemin_meta.read_text(encoding="utf-8"))
+    assert meta["fin"] == r["derniere"] and meta["cloture"]["operateur"] == "OP99"
+    sceau = json.loads(s.chemin_meta.with_suffix(".sceau.json").read_text(encoding="utf-8"))
+    assert sceau["fichiers"][s.chemin_evt.name] == outil.sha256(s.chemin_evt)
+    assert (s.dossier / "SHA256SUMS").exists() and s.chemin_meta.with_name(s.chemin_meta.name + ".avant_cloture").exists()
+    # une seconde clôture ne modifie rien
+    outil.main([str(s.chemin_meta), "--appliquer"])
+    assert s.chemin_evt.read_text(encoding="utf-8") == apres

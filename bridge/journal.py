@@ -63,6 +63,10 @@ class Seance:
 
     def compter(self, cle: str, n: int = 1) -> None:
         self.meta["compteurs"][cle] = self.meta["compteurs"].get(cle, 0) + n
+        # Écriture immédiate (atomique) : un pont arrêté brutalement ne laisse plus de compteurs périmés
+        # (S04_001 et S04_002 du 2026-10-10, B-010 ; voir outils/cloture_seance.py pour les séances non closes).
+        if not self._f.closed:
+            self._ecrire_meta()
 
     def note(self, texte: str) -> None:
         self.meta["notes_observationnelles"].append({"ts": _horodatage(), "texte": texte})
