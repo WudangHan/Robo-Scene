@@ -159,7 +159,7 @@ class GestionAteliers:
         distant = ModeleUnifie(self.ctl.service, famille, float(c.get("temperature", 0.7)))
         sl = self.ctl.service.local
         choisi = sl.choisir() if hasattr(sl, "choisir") else None     # principal, sinon secours (toujours local)
-        local = ModeleLocal(choisi or sl.modele, sl.url)
+        local = ModeleLocal(choisi or sl.modele, sl.url, api=getattr(sl, "api", "lmstudio"))
         dossier_journal = Path(c.get("dossier_journal") or (self.ctl.donnees / "p1" / "journaux"))
         mise_en_service = Path(c.get("mise_en_service") or (self.racine_p1 / "config" / "mise_en_service.yaml"))
         from atelier_p1.routeur import charger_liste_blocage

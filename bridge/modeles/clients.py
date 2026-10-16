@@ -1,4 +1,4 @@
-"""Clients des fournisseurs : Anthropic (API Messages), OpenAI (API Responses), Ollama (local).
+"""Clients des fournisseurs : Anthropic (API Messages), OpenAI (API Responses), LM Studio ou Ollama (local).
 
 Chaque client consigne ce qui a été DEMANDÉ et ce qui a été réellement APPLIQUÉ, et signale l'écart
 (fonction A-08 du cahier) : un paramètre ignoré ou retiré par compatibilité n'est jamais passé sous silence.
@@ -144,31 +144,40 @@ class ClientOpenAI:
 
 
 class ClientLocal:
-    """SI-02 : modèle ouvert servi par Ollama sur cette machine ; refuse tout serveur ou modèle non local."""
-    fournisseur = "ollama"
+    """SI-02 : modèle ouvert servi sur cette machine par LM Studio (défaut) ou Ollama.
 
-    def __init__(self, modele: str, url: str = "http://127.0.0.1:11434", delai: float = 180.0, transport=None,
-                 secours: str | None = None, lister=None):
+    Refuse tout serveur ou modèle non local ; le choix du serveur (« api ») ne change rien à la règle D03.
+    """
+
+    def __init__(self, modele: str, url: str | None = None, delai: float = 180.0, transport=None,
+                 secours: str | None = None, lister=None, api: str = "lmstudio"):
         from .. import _modules  # noqa: F401
-        from atelier_p1.modeles import verifier_local
-        self.principal, self.url, self.delai = modele, url.rstrip("/"), delai
+        from atelier_p1.modeles import API_LOCALES, NOMS_SERVEURS, verifier_local
+        self.api = (api or "lmstudio").lower()
+        if self.api not in API_LOCALES:
+            raise ValueError(f"serveur local inconnu : {self.api} (lmstudio ou ollama)")
+        self.serveur = NOMS_SERVEURS[self.api]
+        self.principal, self.url, self.delai = modele, (url or API_LOCALES[self.api]).rstrip("/"), delai
         self.secours = secours or None
         self.modele = modele                       # modèle effectivement servi (le secours si le principal manque)
         self.refus = verifier_local(modele, self.url) if modele else ["aucun modèle local configuré"]
         # Un secours non conforme (cloud, remote, hôte distant) est écarté sans invalider le modèle principal.
         self.refus_secours = verifier_local(self.secours, self.url) if self.secours else []
         self.transport = transport or _post
-        self._lister = lister or self._tags
+        self._lister = lister or self._liste
 
-    def _tags(self) -> list[dict]:
-        with urllib.request.urlopen(self.url + "/api/tags", timeout=2) as r:
-            return json.loads(r.read()).get("models", [])
+    @property
+    def fournisseur(self) -> str:
+        return self.api
+
+    def _liste(self) -> list[dict]:
+        from atelier_p1.modeles import lister_locaux
+        return lister_locaux(self.url, self.api)
 
     def _present(self, entrees: list[dict], nom: str) -> bool:
-        from atelier_p1.modeles import entree_distante
-        cibles = {nom.lower(), f"{nom}:latest".lower()}
-        # Ollama traite les noms sans égard à la casse (« :Q4_K_M » ou « :q4_k_m ») ; une entrée distante est refusée
-        return any(e.get("name", "").lower() in cibles and not entree_distante(e) for e in entrees)
+        from atelier_p1.modeles import present_localement
+        # noms comparés sans égard à la casse ; une entrée annoncée comme distante est refusée
+        return present_localement(entrees, nom) is True
 
     def choisir(self) -> str | None:
         """Modèle local à servir : le principal s'il est installé, sinon le secours ; None si aucun (D03 : refus)."""
@@ -196,15 +205,12 @@ class ClientLocal:
             raise ErreurModele("SI-02 refusé, traitement non local : " + " ; ".join(self.refus))
         if self.modele == self.secours and self.refus_secours:
             raise ErreurModele("SI-02 (secours) refusé, traitement non local : " + " ; ".join(self.refus_secours))
-        options = {k: v for k, v in {"temperature": temperature, "top_p": top_p, "num_predict": max_tokens}.items()
-                   if v is not None}
-        corps = {"model": self.modele, "stream": False, "options": options,
-                 "messages": [{"role": "system", "content": systeme}, {"role": "user", "content": contenu}]}
-        if json_attendu:
-            corps["format"] = "json"
-        r = self.transport(self.url + "/api/chat", corps, {}, self.delai)
+        from atelier_p1.modeles import chat_local
+        # LM Studio n'accepte que « json_schema » : un objet JSON quelconque est demandé par un schéma minimal.
+        r = chat_local(self.url, self.api, self.modele, systeme, contenu, delai=self.delai, temperature=temperature,
+                       top_p=top_p, max_tokens=max_tokens, schema={"type": "object"} if json_attendu else None,
+                       transport=self.transport)
         demandes = {k: v for k, v in {"temperature": temperature, "top_p": top_p, "max_tokens": max_tokens}.items()
                     if v is not None}
-        return Reponse(r.get("message", {}).get("content", ""), "ollama", "SI-02", self.modele,
-                       r.get("model", self.modele), int(r.get("prompt_eval_count", 0)), int(r.get("eval_count", 0)),
-                       demandes, dict(demandes), [], cible="local")
+        return Reponse(r["texte"], self.api, "SI-02", self.modele, r["modele"], r["jetons_entree"],
+                       r["jetons_sortie"], demandes, dict(demandes), list(r["ecarts"]), cible="local")

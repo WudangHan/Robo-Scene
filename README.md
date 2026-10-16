@@ -238,7 +238,7 @@ robo-scene/
 │   ├── serveur.py           contrôleur, flotte, sécurité, IA supervisée, WebSocket
 │   ├── plateforme.py        montage des pages et des routes de la plateforme
 │   ├── trace/               journal unifié des cinq opérations, écart, PROV-O, saisies N-07 et N-08
-│   ├── modeles/             service des modèles (D13, D03), clients Anthropic, OpenAI, Ollama
+│   ├── modeles/             service des modèles (D13, D03), clients Anthropic, OpenAI, LM Studio ou Ollama (SI-02)
 │   ├── robots/              descriptions, pilotes, bibliothèques fermées, flotte
 │   ├── atelier/             atelier P1 relié au journal unifié
 │   ├── scene/               pont scénique P2.3 multi-robots, aperçu et simulation

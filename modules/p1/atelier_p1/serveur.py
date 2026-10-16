@@ -122,7 +122,9 @@ def main(argv=None):
     ap.add_argument("--liste-blocage", default=None, help="fichier HORS du dossier du projet (volume chiffré)")
     ap.add_argument("--journal", default="journaux", help="dossier du journal I-5 (volume chiffré recommandé)")
     ap.add_argument("--modele-distant", default="claude-opus-5-5")
-    ap.add_argument("--modele-local", default=None, help="nom du modèle Ollama (ou variable ATELIER_MODELE_LOCAL)")
+    ap.add_argument("--modele-local", default=None, help="identifiant du modèle local (ou ATELIER_MODELE_LOCAL)")
+    ap.add_argument("--api-locale", choices=["lmstudio", "ollama"], default=None,
+                    help="serveur local de SI-02 (défaut : lmstudio, ou ATELIER_API_LOCALE)")
     ap.add_argument("--simule", action="store_true", help="générateur simulé, sans réseau (mode essai seulement)")
     ap.add_argument("--plafond-jetons", type=int, default=200_000)
     ap.add_argument("--port", type=int, default=8090)
@@ -130,7 +132,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
 
     atelier = Atelier(seance=a.seance, pseudonymes=a.pseudonymes, corpus=charger_corpus(a.corpus),
-                      distant=ModeleDistant(a.modele_distant), local=ModeleLocal(a.modele_local),
+                      distant=ModeleDistant(a.modele_distant), local=ModeleLocal(a.modele_local, api=a.api_locale),
                       simule=ModeleSimule(), dossier_journal=a.journal,
                       liste_blocage=charger_liste_blocage(a.liste_blocage), mode=a.mode,
                       mise_en_service=a.mise_en_service, plafond_jetons=a.plafond_jetons, forcer_simule=a.simule)

@@ -11,13 +11,14 @@ systemes:
     mesures: "Aiguillage D03 ; plafond de jetons ; version consignée par génération"
     version_courante: claude-opus-5-5 ; claude-sonnet-5-5
   SI-02:
-    nom: "Modèle ouvert local servi par Ollama"
-    fournisseur: F-03
+    nom: "Modèle ouvert local servi par LM Studio (Ollama possible par configuration)"
+    fournisseur: F-09
     usage: "Consignes et matériaux sensibles ; codage local des entretiens"
     risque: modere
-    mesures: "verifier_local (aucun serveur hors de cette machine, aucune étiquette cloud ou remote, entrées remote_* refusées) ; refus sans repli distant"
-    version_courante: "hf.co/OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF:Q4_K_M (désigné le 2026-10-16, évaluation à l'aveugle du 2026-10-12, n = 131)"
-    secours: "apertus-8b-instruct-2509-local:q4_k_m (local ; stéréotype moyen 0,26 contre 0,09 : à surveiller)"
+    mesures: "verifier_local (aucun serveur hors de cette machine, aucune étiquette cloud ou remote, entrées remote_* ou device non local refusées) ; refus sans repli distant"
+    version_courante: "luciole-8b-instruct-1.1 (LM Studio, GGUF Q4_K_M d'OpenLLM-France ; désigné le 2026-10-16, évaluation à l'aveugle du 2026-10-12, n = 131)"
+    secours: "apertus-8b-instruct-2509 (LM Studio, GGUF Q3_K_M ; évalué en Q4_K_M : à réévaluer ou remplacer par Q4_K_M ; stéréotype moyen 0,26 contre 0,09 : à surveiller)"
+    changement_fournisseur: "2026-10-16 : Ollama (F-03) remplacé par LM Studio (F-09), Luciole 1.1 n'étant pas accessible par Ollama sur le poste ; mêmes contrôles D03"
     version_anterieure: "gemma4:12b (provisoire, essais seulement, jusqu'au 2026-10-16)"
   SI-03:
     nom: "whisper.cpp (MIT), transcription locale"
@@ -57,7 +58,8 @@ systemes:
 fournisseurs:
   F-01: Anthropic
   F-02: Pollen Robotics (Reachy Mini)
-  F-03: Ollama
+  F-03: "Ollama (fournisseur antérieur de SI-02 jusqu'au 2026-10-16 ; conservé comme option de configuration)"
   F-04: "Éditeurs des modèles candidats à SI-02 ; whisper.cpp"
   F-07: "Hiwonder (AiNex)"
+  F-09: "LM Studio (Element Labs) — serveur local de SI-02 depuis le 2026-10-16 ; fiche fournisseur à établir"
   F-08: "OpenAI — fiche v1.0 du 12 oct. 2026 (G5_Fiche_fournisseur_F-08_OpenAI_v1.0.docx)"

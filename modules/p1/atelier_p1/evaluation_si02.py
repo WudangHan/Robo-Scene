@@ -62,8 +62,8 @@ def _json_ok(brut: str) -> bool:
         return False
 
 
-def generer(modeles: list[str], sortie: str, cle: str, corpus=None, url: str = "http://127.0.0.1:11434",
-            graine: int | None = None, fabrique=ModeleLocal) -> dict:
+def generer(modeles: list[str], sortie: str, cle: str, corpus=None, url: str | None = None,
+            graine: int | None = None, fabrique=ModeleLocal, api: str | None = None) -> dict:
     """Interroge chaque candidat ; écrit le classeur aveugle et, à part, la clé (code → modèle)."""
     from openpyxl import Workbook
     graine = graine if graine is not None else random.SystemRandom().randrange(10**9)
@@ -74,9 +74,9 @@ def generer(modeles: list[str], sortie: str, cle: str, corpus=None, url: str = "
     extraits = dict(corpus or {})
     lignes, ecartes = [], {}
     for code, modele in sorted(attribution.items()):
-        m = fabrique(modele, url=url)
+        m = fabrique(modele, url=url, api=api)
         if m.refus or not m.disponible:
-            ecartes[code] = m.refus or ["modèle absent du serveur Ollama local"]
+            ecartes[code] = m.refus or [f"modèle absent du serveur local ({getattr(m, 'serveur', 'local')})"]
             continue
         for c_code, type_, texte, ext in BATTERIE:
             joints = [extraits[x] for x in ext if x in extraits]
@@ -154,15 +154,16 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Évaluation à l'aveugle des candidats SI-02")
     sp = ap.add_subparsers(dest="cmd", required=True)
     g = sp.add_parser("generer")
-    g.add_argument("--modeles", nargs="+", required=True, help="étiquettes Ollama locales des candidats")
+    g.add_argument("--modeles", nargs="+", required=True, help="identifiants locaux des candidats (LM Studio ou Ollama)")
     g.add_argument("--sortie", required=True); g.add_argument("--cle", required=True)
     g.add_argument("--corpus", default=str(Path(__file__).resolve().parents[1] / "corpus"))
-    g.add_argument("--url", default="http://127.0.0.1:11434")
+    g.add_argument("--api", choices=["lmstudio", "ollama"], default=None, help="serveur local (défaut : lmstudio)")
+    g.add_argument("--url", default=None, help="adresse du serveur local (défaut selon --api)")
     d = sp.add_parser("depouiller"); d.add_argument("classeur"); d.add_argument("--cle", required=True)
     a = ap.parse_args(argv)
     if a.cmd == "generer":
         from .corpus import charger_corpus
-        r = generer(a.modeles, a.sortie, a.cle, charger_corpus(a.corpus), a.url)
+        r = generer(a.modeles, a.sortie, a.cle, charger_corpus(a.corpus), a.url, api=a.api)
         print(f"{r['lignes']} propositions écrites dans {a.sortie} ; clé dans {a.cle}")
         for c, m in r["ecartes"].items():
             print(f"Candidat {c} écarté : {'; '.join(m)}")

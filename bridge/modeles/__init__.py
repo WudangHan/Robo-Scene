@@ -41,11 +41,12 @@ class ServiceModeles:
         self.efforts = {"ecriture": "medium", "analyse": "medium", "rapide": "none", "commande": "none",
                         **dict(cfg.get("effort") or {})}
         self.plafond = int(cfg.get("plafond_jetons_seance", 200_000))
-        self.jetons = {"anthropic": 0, "openai": 0, "ollama": 0}
+        self.jetons = {"anthropic": 0, "openai": 0, "local": 0}
         self._clients = clients or {}
-        self.local = self._clients.get("ollama") or ClientLocal(cfg.get("local", FAMILLES["local"].reference),
-                                                                cfg.get("url_local", "http://127.0.0.1:11434"),
-                                                                secours=cfg.get("local_secours") or None)
+        # SI-02 : serveur local choisi par « api_local » (lmstudio par défaut depuis le 16 oct. 2026, ou ollama)
+        self.local = self._clients.get("local") or self._clients.get("ollama") or ClientLocal(
+            cfg.get("local", FAMILLES["local"].reference), cfg.get("url_local") or None,
+            secours=cfg.get("local_secours") or None, api=cfg.get("api_local", "lmstudio"))
         self.local_provisoire = bool(cfg.get("local_provisoire", True))
 
     # ── Séance ──────────────────────────────────────────────
@@ -91,8 +92,8 @@ class ServiceModeles:
                                 "à l'aveugle")
             if getattr(self.local, "secours", None) and self.local.modele == self.local.secours:
                 r.ecarts.append(f"SI-02 servi par le modèle de secours ({self.local.modele}) : modèle principal "
-                                "absent d'Ollama")
-            self.jetons["ollama"] += r.jetons_entree + r.jetons_sortie
+                                f"absent de {getattr(self.local, 'serveur', 'serveur local')}")
+            self.jetons["local"] += r.jetons_entree + r.jetons_sortie
             return r
         familles = [famille] if famille else self.catalogue.familles_pour(role)
         dernier: Exception | None = None
@@ -126,6 +127,7 @@ class ServiceModeles:
 
     def resume(self) -> dict[str, Any]:
         return {**self.catalogue.resume(), "local": {"modele": self.local.modele, "refus": self.local.refus,
+                                                     "serveur": getattr(self.local, "serveur", None),
                                                      "provisoire": self.local_provisoire},
                 "jetons": self.jetons, "plafond": self.plafond}
 

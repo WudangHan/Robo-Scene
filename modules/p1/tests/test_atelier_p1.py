@@ -179,7 +179,10 @@ class FauxAPI(BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
-        corps = json.dumps({"models": [{"name": "modele-test:latest"}]}).encode()
+        if self.path == "/v1/models":          # LM Studio (API compatible OpenAI)
+            corps = json.dumps({"object": "list", "data": [{"id": "modele-test", "object": "model"}]}).encode()
+        else:                                  # Ollama
+            corps = json.dumps({"models": [{"name": "modele-test:latest"}]}).encode()
         self.send_response(200); self.end_headers(); self.wfile.write(corps)
 
     def do_POST(self):
@@ -188,6 +191,9 @@ class FauxAPI(BaseHTTPRequestHandler):
         if self.path == "/v1/messages":
             rep = {"model": "claude-opus-5-5", "content": [{"type": "text", "text": '{"propositions": ["Un", "Deux"]}'}],
                    "usage": {"input_tokens": 50, "output_tokens": 12}}
+        elif self.path == "/v1/chat/completions":
+            rep = {"model": "modele-test", "choices": [{"message": {"content": '{"propositions": ["Un", "Deux"]}'}}],
+                   "usage": {"prompt_tokens": 40, "completion_tokens": 11}}
         else:
             rep = {"model": "modele-test", "message": {"content": "1. Premier\n2. Second"},
                    "prompt_eval_count": 40, "eval_count": 9}
@@ -215,11 +221,22 @@ def test_client_distant_format_api_messages(faux_serveur):
 
 
 def test_client_local_ollama(faux_serveur):
-    m = ModeleLocal("modele-test", url=faux_serveur)
+    m = ModeleLocal("modele-test", url=faux_serveur, api="ollama")
     assert m.disponible
     g = m.generer("Une scène", "libre", 2)
     assert FauxAPI.recu["chemin"] == "/api/chat" and FauxAPI.recu["corps"]["stream"] is False and FauxAPI.recu["corps"]["format"] == "json"
     assert g.propositions == ["Premier", "Second"] and g.jetons_sortie == 9 and g.systeme == "SI-02"
+
+
+def test_client_local_lmstudio(faux_serveur):
+    m = ModeleLocal("Modele-Test", url=faux_serveur, api="lmstudio")
+    assert m.disponible and m.serveur == "LM Studio"
+    g = m.generer("Une scène", "libre", 2)
+    r = FauxAPI.recu
+    assert r["chemin"] == "/v1/chat/completions" and r["corps"]["stream"] is False
+    assert r["corps"]["response_format"]["type"] == "json_schema"
+    assert r["corps"]["response_format"]["json_schema"]["schema"]["required"] == ["propositions"]
+    assert g.propositions == ["Un", "Deux"] and g.jetons_entree == 40 and g.jetons_sortie == 11 and g.systeme == "SI-02"
 
 
 def test_extraction_robuste():

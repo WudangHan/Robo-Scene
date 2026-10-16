@@ -52,15 +52,15 @@ def test_controle_traitement_local():
 
 
 def test_modele_annonce_distant_refuse(ollama):
-    m = ModeleLocal("piege", url=ollama)
-    assert not m.disponible and "distant" in m.refus[0]
-    assert ModeleLocal("cand-a", url=ollama).disponible
+    m = ModeleLocal("piege", url=ollama, api="ollama")
+    assert not m.disponible and "distant" in m.refus[0] and "Ollama" in m.refus[0]
+    assert ModeleLocal("cand-a", url=ollama, api="ollama").disponible
 
 
 def test_generation_aveugle_et_depouillement(ollama, tmp_path):
     sortie, cle = tmp_path / "eval.xlsx", tmp_path / "cle.json"
     r = generer(["cand-a", "cand-b", "piege", "absent"], str(sortie), str(cle), charger_corpus(RACINE / "corpus"),
-                url=ollama, graine=7)
+                url=ollama, graine=7, api="ollama")
     k = json.loads(cle.read_text(encoding="utf-8"))
     assert set(k["codes"].values()) == {"cand-a", "cand-b", "piege", "absent"} and len(k["ecartes"]) == 2
     rangs = [x for x in load_workbook(sortie)["Cotation"].iter_rows(min_row=5, values_only=True) if x[0]]

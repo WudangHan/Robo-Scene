@@ -1,6 +1,8 @@
 # Candidats au rôle de SI-02 (fiche SI-02, G.5 v1.2). Liste révisée le 2026-10-12 : versions les plus récentes
 # publiées sur Hugging Face à cette date (vérification par l'API du site), choix confirmé par le responsable.
 # Quantification Q4_K_M ; téléchargement : ollama pull <etiquette_ollama>.
+# Depuis le 2026-10-16, SI-02 est servi par LM Studio (identifiant : etiquette_lmstudio, relevé sur le poste par
+# GET http://127.0.0.1:1234/v1/models et /api/v1/models, avec l'éditeur et la quantification du GGUF installé).
 # Ne jamais utiliser une étiquette « -cloud » : le contrôle verifier_local() la refuse.
 # Provenance du GGUF : dépôt du développeur quand il existe, sinon dépôt communautaire consigné ici.
 revision: "2026-10-12"
@@ -12,6 +14,11 @@ candidats:
     donnees_entrainement_publiques: true      # « open weights + open data + full training details »
     depot_gguf: bartowski/swiss-ai_Apertus-8B-Instruct-2509-GGUF   # communautaire (aucun GGUF du développeur)
     etiquette_ollama: apertus-8b-instruct-2509-local:q4_k_m   # créée par config/Modelfile_apertus_2509
+    etiquette_lmstudio: apertus-8b-instruct-2509
+    gguf_lmstudio: >-
+      Éditeur « Lisnsharragh », Q3_K_M (relevé le 2026-10-16) : provenance et quantification DIFFÉRENTES du GGUF
+      évalué (bartowski, Q4_K_M) ; secours admissible pour la continuité, à réévaluer ou à remplacer par le GGUF
+      bartowski Q4_K_M avant tout usage en atelier.
     gabarit: >-
       Gabarit Jinja du GGUF illisible par Ollama 0.33 (échec au chargement) ; remplacé dans une copie locale par
       config/apertus_2509_gabarit_simple.jinja (mêmes jetons de rôle, délibération et outils désactivés).
@@ -33,6 +40,8 @@ candidats:
     donnees_entrainement_publiques: partiel   # post-entraînement publié ; corpus de base « coming soon » sur la fiche
     depot_gguf: OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF          # officiel (développeur)
     etiquette_ollama: hf.co/OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF:Q4_K_M
+    etiquette_lmstudio: luciole-8b-instruct-1.1
+    gguf_lmstudio: "Éditeur OpenLLM-France, Q4_K_M (relevé le 2026-10-16) : même provenance et même quantification que le GGUF évalué"
     remplace: Lucie-7B-Instruct-v1.1
     note: post-entraînement presque exclusivement anglais selon la fiche ; base ≈ 30 % de français
   - code: T

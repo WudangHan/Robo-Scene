@@ -124,8 +124,9 @@ def test_gpt_terra_en_attente_puis_adopte(tmp_path, monkeypatch):
 
 
 # ── SI-02 désigné (audit du 2026-10-16 : A-009, A-010, VP-14) ──────────────────────────────
-LUCIOLE = "hf.co/OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF:Q4_K_M"
-APERTUS = "apertus-8b-instruct-2509-local:q4_k_m"
+LUCIOLE = "luciole-8b-instruct-1.1"            # identifiants LM Studio (serveur local depuis le 2026-10-16)
+APERTUS = "apertus-8b-instruct-2509"
+LUCIOLE_OLLAMA = "hf.co/OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF:Q4_K_M"
 
 
 def test_config_designe_luciole_et_secours_local():
@@ -133,6 +134,7 @@ def test_config_designe_luciole_et_secours_local():
     from pathlib import Path
     m = tomllib.loads(Path("config.toml").read_text(encoding="utf-8"))["modeles"]
     assert m["local"] == LUCIOLE and m["local_secours"] == APERTUS and m["local_provisoire"] is False
+    assert m["api_local"] == "lmstudio" and m["url_local"] == "http://127.0.0.1:1234"
     assert FAMILLES["local"].reference == LUCIOLE
 
 
@@ -148,16 +150,59 @@ def test_etiquettes_distantes_refusees_vp14(etiquette):
 
 def test_casse_ollama_et_entree_remote_refusee():
     from bridge.modeles.clients import ClientLocal
-    c = ClientLocal(LUCIOLE, lister=lambda: [{"name": LUCIOLE.lower()}])
-    assert c.disponible and c.modele == LUCIOLE
+    c = ClientLocal(LUCIOLE_OLLAMA, lister=lambda: [{"name": LUCIOLE_OLLAMA.lower()}], api="ollama")
+    assert c.disponible and c.modele == LUCIOLE_OLLAMA and c.url == "http://127.0.0.1:11434"
     # une entrée qui annonce un hôte distant n'est jamais retenue, même sous le bon nom
-    c2 = ClientLocal(LUCIOLE, lister=lambda: [{"name": LUCIOLE, "remote_host": "https://ollama.com:443"}])
+    c2 = ClientLocal(LUCIOLE_OLLAMA, lister=lambda: [{"name": LUCIOLE_OLLAMA, "remote_host": "https://ollama.com:443"}],
+                     api="ollama")
     assert not c2.disponible
+
+
+def test_lmstudio_casse_et_appareil_distant_refuse():
+    from bridge.modeles.clients import ClientLocal
+    c = ClientLocal(LUCIOLE, lister=lambda: [{"name": "Luciole-8B-Instruct-1.1", "id": "Luciole-8B-Instruct-1.1"}])
+    assert c.api == "lmstudio" and c.url == "http://127.0.0.1:1234" and c.disponible
+    # instance reliée d'une autre machine : jamais retenue, même sous le bon nom
+    c2 = ClientLocal(LUCIOLE, lister=lambda: [{"name": LUCIOLE, "device": "Mac-mini-du-studio"}])
+    assert not c2.disponible
+    c3 = ClientLocal(LUCIOLE, url="http://192.168.1.20:1234", lister=lambda: [{"name": LUCIOLE}])
+    assert c3.refus and not c3.disponible
+    with pytest.raises(ValueError):
+        ClientLocal(LUCIOLE, api="vllm")
+
+
+def test_lmstudio_requete_compatible_openai_et_json_schema():
+    from bridge.modeles.clients import ClientLocal
+    recu = {}
+
+    def transport(url, corps, entetes, delai):
+        recu.update(url=url, corps=corps)
+        return {"model": LUCIOLE, "choices": [{"message": {"content": '{"a": 1}', "reasoning_content": ""}}],
+                "usage": {"prompt_tokens": 26, "completion_tokens": 9}}
+    c = ClientLocal(LUCIOLE, transport=transport, lister=lambda: [{"name": LUCIOLE}])
+    r = c.generer(LUCIOLE, "système", "contenu", temperature=0.7, top_p=0.9, max_tokens=300, json_attendu=True)
+    assert recu["url"] == "http://127.0.0.1:1234/v1/chat/completions" and recu["corps"]["stream"] is False
+    # LM Studio rejette « json_object » : seul « json_schema » est envoyé
+    assert recu["corps"]["response_format"]["type"] == "json_schema"
+    assert recu["corps"]["temperature"] == 0.7 and recu["corps"]["top_p"] == 0.9 and recu["corps"]["max_tokens"] == 300
+    assert r.texte == '{"a": 1}' and r.fournisseur == "lmstudio" and r.cible == "local" and r.systeme == "SI-02"
+    assert (r.jetons_entree, r.jetons_sortie) == (26, 9) and r.appliques["temperature"] == 0.7
+    vide = ClientLocal(LUCIOLE, transport=lambda *a: {"choices": [{"message": {"content": "",
+                                                                             "reasoning_content": "…"}}]})
+    assert "reasoning_content" in vide.generer(LUCIOLE, "s", "t").ecarts[0]
+
+
+def test_service_lmstudio_par_defaut(tmp_path):
+    s = ServiceModeles({}, tmp_path)
+    assert s.local.api == "lmstudio" and s.local.url == "http://127.0.0.1:1234" and s.local.modele == LUCIOLE
+    assert s.resume()["local"]["serveur"] == "LM Studio"
+    s2 = ServiceModeles({"api_local": "ollama", "local": LUCIOLE_OLLAMA}, tmp_path)
+    assert s2.local.url == "http://127.0.0.1:11434" and s2.local.serveur == "Ollama"
 
 
 def test_secours_local_seulement_si_principal_absent():
     from bridge.modeles.clients import ClientLocal
-    tags = [{"name": "apertus-8b-instruct-2509-local:Q4_K_M"}]
+    tags = [{"name": "Apertus-8B-Instruct-2509"}]
     c = ClientLocal(LUCIOLE, secours=APERTUS, lister=lambda: tags)
     assert c.choisir() == APERTUS
     tags.append({"name": LUCIOLE})

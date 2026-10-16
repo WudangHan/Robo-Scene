@@ -42,7 +42,9 @@ python -m atelier_p1.serveur --seance ESSAI01 --pseudonymes T1 T2 --simule
 
 # 2) essai avec les vrais modèles, sans personne participante
 export ANTHROPIC_API_KEY=…                                      # SI-01
-ollama pull <modele-choisi> && export ATELIER_MODELE_LOCAL=<modele-choisi>   # SI-02
+# SI-02 : LM Studio (défaut) — modèle téléchargé dans LM Studio, serveur local démarré (lms server start)
+export ATELIER_MODELE_LOCAL=luciole-8b-instruct-1.1            # identifiant affiché par « lms ls »
+# variante Ollama : export ATELIER_API_LOCALE=ollama ; ollama pull <étiquette> ; ATELIER_MODELE_LOCAL=<étiquette>
 python -m atelier_p1.serveur --seance ESSAI02 --pseudonymes T1
 
 # 3) atelier réel : refusé tant que config/mise_en_service.yaml n'est pas rempli
@@ -85,7 +87,7 @@ Le fichier `essai_grille.xlsx` contient des propositions générées : le conser
 
 | Chemin | Rôle |
 |---|---|
-| `atelier_p1/modeles.py` | `verifier_local()` : SI-02 refuse un serveur Ollama non local (autre que 127.0.0.1, localhost, ::1) et tout modèle infonuagique d'Ollama (étiquette `-cloud`, ou entrée annoncée comme distante par `/api/tags`) |
+| `atelier_p1/modeles.py` | `verifier_local()` : SI-02 refuse un serveur de modèles non local (autre que 127.0.0.1, localhost, ::1) et tout modèle exécuté ailleurs (étiquette `cloud` ou `remote`, entrée annoncée comme distante par `/api/tags` d'Ollama ou par le champ `device` de LM Studio) ; `chat_local()` parle à LM Studio (`/v1/chat/completions`, sortie `json_schema`) ou à Ollama (`/api/chat`) |
 | `atelier_p1/evaluation_si02.py` | Évaluation à l'aveugle des candidats : 12 consignes fictives × 3 propositions, codes M1…Mn, clé séparée, mesures automatiques, dépouillement |
 | `config/candidats_si02.yaml` | Quatre candidats révisés le 2026-10-12 (Apertus-8B-2509, EuroLLM-9B-2512, Luciole-8B 1.1, témoin Mistral-Small-3.2-24B) ; étiquettes Ollama et provenance des GGUF renseignées |
 | `tests/test_evaluation_si02.py` | 3 tests (contrôle local, modèle annoncé distant, génération aveugle et dépouillement) |
@@ -93,7 +95,7 @@ Le fichier `essai_grille.xlsx` contient des propositions générées : le conser
 ```bash
 # ne PAS se connecter à un compte ollama.com sur l'ordinateur de recherche (les modèles -cloud l'exigent)
 ollama pull hf.co/<dépôt GGUF du candidat>:Q4_K_M          # pour chaque candidat de config/candidats_si02.yaml
-python -m atelier_p1.evaluation_si02 generer --modeles <étiq. A> <étiq. B> <étiq. C> <étiq. T> \
+python -m atelier_p1.evaluation_si02 generer --api lmstudio --modeles <id. A> <id. B> <id. C> <id. T> \
   --sortie eval_si02.xlsx --cle "/Volumes/<volume chiffré>/cle_si02.json"
 # coter eval_si02.xlsx sans ouvrir la clé, puis :
 python -m atelier_p1.evaluation_si02 depouiller eval_si02.xlsx --cle "/Volumes/<volume chiffré>/cle_si02.json"

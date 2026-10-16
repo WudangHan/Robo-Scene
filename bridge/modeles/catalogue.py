@@ -36,7 +36,7 @@ from ..tls import contexte as _tls
 @dataclass(frozen=True)
 class Famille:
     cle: str
-    fournisseur: str            # anthropic | openai | ollama
+    fournisseur: str            # anthropic | openai | local (LM Studio ou Ollama)
     motif: str | None           # expression régulière des identifiants de la famille (alias, sans date)
     reference: str              # version de référence si la veille est impossible
     systeme: str                # code du registre G.5
@@ -55,8 +55,8 @@ FAMILLES: dict[str, Famille] = {
                          "SI-08", "GPT Terra (OpenAI)", generation_min=6),
     "gpt-luna": Famille("gpt-luna", "openai", r"^gpt-(\d+)(?:\.(\d+))?-luna$", "gpt-6-luna",
                         "SI-08", "GPT Luna (OpenAI)"),
-    "local": Famille("local", "ollama", None, "hf.co/OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF:Q4_K_M", "SI-02",
-                     "Modèle local (Ollama)"),
+    "local": Famille("local", "local", None, "luciole-8b-instruct-1.1", "SI-02",
+                     "Modèle local (LM Studio)"),
 }
 
 # Rôles : ordre de préférence des familles ; le premier fournisseur disponible est retenu.
@@ -138,7 +138,7 @@ class Catalogue:
         tmp.replace(self.fichier)
 
     def disponible(self, fournisseur: str) -> bool:
-        if fournisseur == "ollama":
+        if fournisseur in ("local", "ollama"):
             return True
         return bool(os.environ.get(CLES_API.get(fournisseur, ""), ""))
 

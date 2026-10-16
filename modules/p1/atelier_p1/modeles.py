@@ -119,14 +119,14 @@ HOTES_LOCAUX = {"127.0.0.1", "localhost", "::1"}
 def verifier_local(modele: str, url: str) -> list[str]:
     """Motifs pour lesquels SI-02 ne serait PAS un traitement local (liste vide = conforme à D03 et G.6).
 
-    Deux fuites possibles sans que le code appelant le sache : un serveur Ollama situé sur une autre machine,
-    et les « modèles infonuagiques » d'Ollama (étiquette « -cloud »), exécutés sur les serveurs d'ollama.com
-    alors qu'ils s'appellent par la même API locale (registre G.5 v1.1, fiche SI-02).
+    Deux fuites possibles sans que le code appelant le sache : un serveur de modèles (LM Studio ou Ollama)
+    situé sur une autre machine, et les modèles exécutés ailleurs mais appelés par la même API locale (étiquette
+    « -cloud » d'Ollama, entrée annoncée comme distante ; registre G.5 v1.1, fiche SI-02).
     """
     motifs = []
     hote = (urllib.parse.urlsplit(url).hostname or "").lower()
     if hote not in HOTES_LOCAUX:
-        motifs.append(f"serveur Ollama non local ({hote or 'hôte illisible'})")
+        motifs.append(f"serveur de modèles non local ({hote or 'hôte illisible'})")
     if RE_DISTANT.search(modele or ""):
         motifs.append(f"modèle « {modele} » exécuté hors de cette machine (étiquette cloud ou remote, VP-14)")
     return motifs
@@ -137,65 +137,136 @@ RE_DISTANT = re.compile(r"cloud|remote", re.I)
 
 
 def entree_distante(entree: dict) -> bool:
-    """Vrai si une entrée de /api/tags annonce un modèle servi ailleurs (remote_host, remote_model…)."""
-    return bool(RE_DISTANT.search(entree.get("name", "") or "")) or any(
-        str(k).startswith("remote") and v for k, v in entree.items())
+    """Vrai si une entrée de la liste des modèles annonce un modèle servi ailleurs.
+
+    Ollama : remote_host, remote_model… ; LM Studio : champ « device » autre que local (instances reliées).
+    """
+    if RE_DISTANT.search(entree.get("name", "") or ""):
+        return True
+    if any(str(k).startswith("remote") and v for k, v in entree.items()):
+        return True
+    appareil = entree.get("device")
+    return bool(appareil) and str(appareil).lower() not in ("local", "this device", "cet appareil")
 
 
 NUM_CTX = 8192
 
+# ── Serveurs locaux de modèles ouverts (SI-02) ────────────────────────────────
+# LM Studio (par défaut depuis le 16 oct. 2026) : API compatible OpenAI, /v1/models et /v1/chat/completions ;
+# la sortie structurée n'accepte que response_format « json_schema » ou « text » (vérifié sur le poste :
+# « json_object » est rejeté). Ollama : /api/tags et /api/chat, conservé pour la comparabilité des essais.
+API_LOCALES = {"lmstudio": "http://127.0.0.1:1234", "ollama": "http://127.0.0.1:11434"}
+NOMS_SERVEURS = {"lmstudio": "LM Studio", "ollama": "Ollama"}
+SCHEMA_PROPOSITIONS = {"type": "object", "properties": {"propositions": {"type": "array", "items": {"type": "string"}}},
+                       "required": ["propositions"]}
+
+
+def api_par_defaut() -> str:
+    api = os.environ.get("ATELIER_API_LOCALE", "lmstudio").strip().lower()
+    return api if api in API_LOCALES else "lmstudio"
+
+
+def lister_locaux(url: str, api: str, delai: float = 2.0) -> list[dict]:
+    """Modèles offerts par le serveur local, sous une forme commune : [{"name": …, …champs d'origine}]."""
+    chemin = "/v1/models" if api == "lmstudio" else "/api/tags"
+    with urllib.request.urlopen(url.rstrip("/") + chemin, timeout=delai) as r:
+        d = json.loads(r.read())
+    if api == "lmstudio":
+        return [{**e, "name": e.get("id", "")} for e in d.get("data", [])]
+    return d.get("models", [])
+
+
+def present_localement(entrees: list[dict], nom: str) -> bool | None:
+    """True si le modèle est offert localement, False s'il est absent, None s'il est annoncé comme distant."""
+    cibles = {nom.lower(), f"{nom}:latest".lower()}       # noms comparés sans égard à la casse
+    for e in entrees:
+        if (e.get("name", "") or "").lower() in cibles:
+            return None if entree_distante(e) else True
+    return False
+
+
+def chat_local(url: str, api: str, modele: str, systeme: str, contenu: str, *, delai: float = 180.0,
+               temperature: float | None = None, top_p: float | None = None, max_tokens: int | None = None,
+               schema: dict | None = None, transport=None) -> dict:
+    """Un échange avec le serveur local ; renvoie {texte, modele, jetons_entree, jetons_sortie, ecarts}."""
+    poster = transport or _post_json
+    messages = [{"role": "system", "content": systeme}, {"role": "user", "content": contenu}]
+    ecarts: list[str] = []
+    if api == "lmstudio":
+        corps = {"model": modele, "stream": False, "messages": messages,
+                 **{k: v for k, v in {"temperature": temperature, "top_p": top_p, "max_tokens": max_tokens}.items()
+                    if v is not None}}
+        if schema is not None:
+            corps["response_format"] = {"type": "json_schema", "json_schema": {"name": "reponse", "schema": schema}}
+        r = poster(url.rstrip("/") + "/v1/chat/completions", corps, {}, delai)
+        msg = ((r.get("choices") or [{}])[0]).get("message", {}) or {}
+        texte = msg.get("content") or ""
+        if not texte and msg.get("reasoning_content"):
+            ecarts.append("réponse versée dans le seul champ de délibération (reasoning_content) : contenu vide")
+        u = r.get("usage", {}) or {}
+        return {"texte": texte, "modele": r.get("model", modele), "jetons_entree": int(u.get("prompt_tokens", 0)),
+                "jetons_sortie": int(u.get("completion_tokens", 0)), "ecarts": ecarts}
+    options = {k: v for k, v in {"temperature": temperature, "top_p": top_p, "num_predict": max_tokens}.items()
+               if v is not None}
+    # Contexte borné : un réglage global d'Ollama (OLLAMA_CONTEXT_LENGTH, p. ex. 262 144) ferait déborder
+    # un grand modèle sur le processeur ; une consigne et ses extraits tiennent dans 8 192 jetons.
+    options["num_ctx"] = NUM_CTX
+    # Sans délibération : pour un modèle « à raisonnement », Ollama verserait sinon toute la sortie dans
+    # le champ « thinking » et laisserait « content » vide.
+    corps = {"model": modele, "stream": False, "think": False, "options": options, "messages": messages}
+    if schema is not None:
+        corps["format"] = "json"
+    r = poster(url.rstrip("/") + "/api/chat", corps, {}, delai)
+    return {"texte": r.get("message", {}).get("content", ""), "modele": r.get("model", modele),
+            "jetons_entree": int(r.get("prompt_eval_count", 0)), "jetons_sortie": int(r.get("eval_count", 0)),
+            "ecarts": ecarts}
+
 
 class ModeleLocal:
-    """SI-02 : modèle ouvert servi localement par Ollama (http://127.0.0.1:11434) ; fiche SI-02 (G.5 v1.1).
+    """SI-02 : modèle ouvert servi sur cette machine par LM Studio (défaut) ou Ollama ; fiche SI-02 (G.5).
 
-    Refuse tout serveur non local et tout modèle infonuagique : une consigne sensible ne quitte jamais la machine.
+    Refuse tout serveur non local et tout modèle annoncé comme distant : une consigne sensible ne quitte
+    jamais la machine.
     """
     code = "SI-02"
 
-    def __init__(self, modele: str | None = None, url: str = "http://127.0.0.1:11434", delai: float = 180.0):
+    def __init__(self, modele: str | None = None, url: str | None = None, delai: float = 180.0,
+                 api: str | None = None):
+        self.api = (api or api_par_defaut()).lower()
+        if self.api not in API_LOCALES:
+            raise ValueError(f"serveur local inconnu : {self.api} (lmstudio ou ollama)")
         self.modele = modele or os.environ.get("ATELIER_MODELE_LOCAL", "")
-        self.url, self.delai = url.rstrip("/"), delai
+        self.url = (url or os.environ.get("ATELIER_URL_LOCALE") or API_LOCALES[self.api]).rstrip("/")
+        self.delai = delai
         self.refus = verifier_local(self.modele, self.url) if self.modele else []
+
+    @property
+    def serveur(self) -> str:
+        return NOMS_SERVEURS[self.api]
 
     @property
     def disponible(self) -> bool:
         if not self.modele or self.refus:
             return False
         try:
-            with urllib.request.urlopen(self.url + "/api/tags", timeout=2) as r:
-                entrees = json.loads(r.read()).get("models", [])
+            entrees = lister_locaux(self.url, self.api)
         except (urllib.error.URLError, OSError, ValueError):
             return False
-        for m in entrees:
-            # Ollama traite les noms sans égard à la casse (il peut afficher « :Q4_K_M » pour « :q4_k_m »)
-            if m.get("name", "").lower() in (self.modele.lower(), f"{self.modele}:latest".lower()):
-                # par prudence : une entrée qui annonce un hôte ou un modèle distant est refusée
-                if entree_distante(m):
-                    self.refus = [f"Ollama annonce « {self.modele} » comme modèle distant"]
-                    return False
-                return True
-        return False
+        etat = present_localement(entrees, self.modele)
+        if etat is None:                      # par prudence : une entrée annoncée comme distante est refusée
+            self.refus = [f"{self.serveur} annonce « {self.modele} » comme modèle distant"]
+            return False
+        return etat
 
     def generer(self, texte: str, type_: str, nb: int, extraits=()) -> Generation:
         if not self.modele:
             raise ErreurModele("Aucun modèle local configuré (ATELIER_MODELE_LOCAL).")
         if self.refus:
             raise ErreurModele("SI-02 refusé, traitement non local : " + " ; ".join(self.refus))
-        r = _post_json(self.url + "/api/chat", {
-            "model": self.modele, "stream": False, "format": "json",
-            # Contexte borné : un réglage global d'Ollama (OLLAMA_CONTEXT_LENGTH, p. ex. 262 144) ferait déborder
-            # un modèle de 24 G de paramètres sur le processeur et dépasser le délai ; une consigne et ses
-            # extraits tiennent largement dans 8 192 jetons.
-            "options": {"num_ctx": NUM_CTX},
-            # Sans délibération : pour un modèle « à raisonnement » (p. ex. Luciole), Ollama verserait sinon
-            # toute la sortie dans le champ « thinking » et laisserait « content » vide.
-            "think": False,
-            "messages": [{"role": "system", "content": SYSTEME},
-                         {"role": "user", "content": construire_consigne(texte, type_, nb, extraits)}],
-        }, {}, self.delai)
-        brut = r.get("message", {}).get("content", "")
-        return Generation(extraire_propositions(brut, nb), self.code, r.get("model", self.modele),
-                          int(r.get("prompt_eval_count", 0)), int(r.get("eval_count", 0)), brut)
+        r = chat_local(self.url, self.api, self.modele, SYSTEME, construire_consigne(texte, type_, nb, extraits),
+                       delai=self.delai, schema=SCHEMA_PROPOSITIONS)
+        return Generation(extraire_propositions(r["texte"], nb), self.code, r["modele"], r["jetons_entree"],
+                          r["jetons_sortie"], r["texte"])
 
 
 class ModeleSimule:
