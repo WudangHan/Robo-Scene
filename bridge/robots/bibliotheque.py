@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -51,7 +52,10 @@ def ralentir(images: list[dict[str, Any]], facteur: float) -> list[dict[str, Any
 
 
 def _nom_sur(nom: str) -> str:
-    sur = re.sub(r"[^\w\- ]", "", nom or "", flags=re.UNICODE).strip()
+    # Forme NFC d'abord : en NFD (fréquent sous macOS), les accents combinants ne sont pas des \w et étaient
+    # retirés, si bien que « révérence » devenait « reverence » (refus « Séquence inconnue » de S04_001).
+    nom = unicodedata.normalize("NFC", nom or "")
+    sur = re.sub(r"[^\w\- ]", "", nom, flags=re.UNICODE).strip()
     if not sur:
         raise RefusBibliotheque("Nom de séquence invalide")
     return sur
@@ -71,10 +75,14 @@ class BibliothequeJSON:
         return self.dossier / f"{_nom_sur(nom)}.json"
 
     def lister(self) -> list[str]:
-        return sorted(p.stem for p in self.dossier.glob("*.json") if not p.stem.startswith("_"))
+        return sorted(unicodedata.normalize("NFC", p.stem) for p in self.dossier.glob("*.json")
+                      if not p.stem.startswith("_"))
 
     def lire(self, nom: str) -> dict[str, Any]:
         p = self._chemin(nom)
+        if not p.exists():                     # fichier enregistré en NFD sur un système qui ne normalise pas
+            cible = p.name
+            p = next((q for q in self.dossier.glob("*.json") if unicodedata.normalize("NFC", q.name) == cible), p)
         if not p.exists():
             raise RefusBibliotheque(f"Séquence inconnue : {nom}")
         d = json.loads(p.read_text(encoding="utf-8"))

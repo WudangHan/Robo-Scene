@@ -278,3 +278,13 @@ def test_compteurs_ecrits_et_cloture_a_posteriori(tmp_path):
     # une seconde clôture ne modifie rien
     outil.main([str(s.chemin_meta), "--appliquer"])
     assert s.chemin_evt.read_text(encoding="utf-8") == apres
+
+
+def test_nom_de_sequence_accentue_nfd():
+    """S04_001 (2026-10-10) : « révérence » saisi en NFD était refusé comme « Séquence inconnue »."""
+    import unicodedata
+    from bridge.robots.bibliotheque import BibliothequeJSON
+    b = BibliothequeJSON(RACINE / "sequences", 4)
+    for forme in ("NFC", "NFD"):
+        assert b.lire(unicodedata.normalize(forme, "révérence"))["images"]
+    assert all(unicodedata.is_normalized("NFC", n) for n in b.lister())
