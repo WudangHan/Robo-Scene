@@ -105,6 +105,7 @@ export class Animateur {
       if (att > 0) await attendre(att);
       if (j !== this.jeton) return false;
       if (im.fin) {
+        if (im.regard) this.regardMode = im.regard;
         for (const n of touches) this.base[n] = avant[n];
         this.pointe = pointeAvant; this.auGeste = im.au ? { ...im.au } : {};
         if (im.au) setTimeout(() => { if (j === this.jeton) this.auGeste = {}; }, 500 / v);
@@ -137,7 +138,7 @@ export class Animateur {
       this.base[n] = p[n] ?? 0;
       this.vitesseDof[n] = vitesse || 0.8;
     }
-    this.tabouret = nom === "assis";
+    this.tabouret = nom === "assis" || nom === "penseur";
     if (nom === "repos") { this.auTenu = {}; this.pointe = { g: false, d: false }; }
     this.emettre();
   }
@@ -173,7 +174,7 @@ export class Animateur {
     const j = jeton ?? ++this.jeton;
     const cible = relatif ? this.racine.yaw + angle : angle;
     let ecart = Math.atan2(Math.sin(cible - this.racine.yaw), Math.cos(cible - this.racine.yaw));
-    if (Math.abs(Math.abs(angle) - Math.PI) < 0.01 && relatif) ecart = angle;          // demi-tour : sens demandé
+    if (relatif && Math.abs(angle) >= Math.PI - 0.01) ecart = angle;                   // demi-tour, tour complet : sens demandé
     const fin = this.racine.yaw + ecart;
     const duree = 250 + Math.abs(ecart) / Math.PI * 900 / this.vitesse;
     const debut = this.racine.yaw, t0 = performance.now();
@@ -189,19 +190,28 @@ export class Animateur {
   }
   /* ── boucle ─────────────────────────────────────────── */
   maj(dt, t, bouche) {
-    dt = Math.min(dt, 0.05);
+    dt = Math.min(dt, 0.1);       // ordinateurs lents : temps réel jusqu'à 10 images/s (pas d'intégration adaptatif)
     const [poids, temps, espace, flux] = this.effort();
     const f0 = 1.15 * Math.pow(2, 1.1 * temps) * (1 + 0.15 * Math.max(0, poids)) * this.vitesse;
     const zeta = clamp(0.8 + 0.22 * flux - 0.1 * Math.max(0, -poids), 0.5, 1.05);
-    const pas = Math.max(1, Math.ceil(dt / (1 / 120)));
-    const h = dt / pas;
     const imit = this.imitation?.pose;
     for (const n of this.noms) {
+      const d = this.S.dofs[n];
       const c = imit && n in imit ? imit[n] : this.cible(n);
-      const f = imit && n in imit ? 4 : f0 * (this.vitesseDof[n] || 1);
+      // fréquence plafonnée (8 Hz) et pas d'intégration adapté : le ressort reste stable à toute vitesse
+      const f = Math.min(8, imit && n in imit ? 4 : f0 * (this.vitesseDof[n] || 1));
       const w = 2 * Math.PI * f;
+      const pas = Math.max(1, Math.ceil(dt / (1 / 120)), Math.ceil((w * dt) / 0.25));
+      const h = dt / pas;
       let x = this.val[n], v = this.vit[n];
-      for (let i = 0; i < pas; i++) { const a = w * w * (c - x) - 2 * zeta * w * v; v += a * h; x += v * h; }
+      if (!Number.isFinite(x) || !Number.isFinite(v)) { x = c; v = 0; }
+      for (let i = 0; i < pas; i++) {
+        const a = w * w * (c - x) - 2 * zeta * w * v; v += a * h; x += v * h;
+        // butées articulaires : un léger dépassement (flux libre) est permis, jamais au-delà
+        const marge = 0.08 * (d.max - d.min);
+        if (x > d.max + marge) { x = d.max + marge; v = Math.min(v, 0); }
+        else if (x < d.min - marge) { x = d.min - marge; v = Math.max(v, 0); }
+      }
       this.val[n] = x; this.vit[n] = v;
     }
     // couches additionnelles (n'entrent pas dans les ressorts)

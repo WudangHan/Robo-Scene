@@ -181,6 +181,164 @@ export const POSES = {
                    "genou_g.flexion": 15, "genou_d.flexion": 15, "hanche_g.flexion": 10, "hanche_d.flexion": 10 },
 };
 
+/* ── Répertoire élargi (version 2.2) ─────────────────────────────────────────────
+   Gestes du quotidien, de la scène et du combat de théâtre ; « X » = côté choisi. */
+const osc = (n, pas, t0, a, b) => Array.from({ length: n }, (_, i) => ({ t: t0 + i * pas, p: i % 2 ? b : a }));
+const finDe = (t, au) => ({ t, p: {}, fin: true, ...(au ? { au } : {}) });
+Object.assign(GESTES, {
+  salut_militaire: () => [
+    { t: 0, p: { "epaule_X.abduction": 80, "epaule_X.flexion": 35, "epaule_X.rotation": 55, "coude_X.flexion": 140, "main_X.fermeture": 0, "poignet_X.flexion": -10, "tete.flexion": -4 } },
+    finDe(1.9)],
+  bras_au_ciel: () => [
+    { t: 0, p: { "epaule_g.flexion": 165, "epaule_d.flexion": 165, "epaule_g.abduction": 25, "epaule_d.abduction": 25, "coude_g.flexion": 10, "coude_d.flexion": 10,
+                 "main_g.fermeture": 0, "main_d.fermeture": 0, "tete.flexion": -15 }, au: { au6: 0.8, au12: 1, au25: 0.8, au26: 0.4 } },
+    finDe(2.2, {})],
+  mains_jointes: () => [{ t: 0, p: { "epaule_g.flexion": 45, "epaule_d.flexion": 45, "epaule_g.rotation": 65, "epaule_d.rotation": 65, "coude_g.flexion": 115,
+                                     "coude_d.flexion": 115, "main_g.fermeture": 10, "main_d.fermeture": 10, "poignet_g.flexion": -20, "poignet_d.flexion": -20, "tete.flexion": 10 },
+                          au: { au1: 0.5, au43: 0.3 } }],
+  signe_venir: (r) => [
+    { t: 0, p: { "epaule_X.flexion": 70, "epaule_X.rotation": -60, "coude_X.flexion": 30, "main_X.fermeture": 30 }, au: { au12: 0.4, au2: 0.3 } },
+    ...osc(4 * r, 0.3, 0.45, { "coude_X.flexion": 95, "main_X.fermeture": 70 }, { "coude_X.flexion": 35, "main_X.fermeture": 20 }), finDe(0.6 + 1.2 * r)],
+  chasser: (r) => [
+    { t: 0, p: { "epaule_X.flexion": 40, "epaule_X.abduction": 10, "epaule_X.rotation": 30, "coude_X.flexion": 90, "main_X.fermeture": 0, "tete.rotation": 25 }, au: { au9: 0.4, au4: 0.4 } },
+    ...osc(3 * r, 0.3, 0.4, { "epaule_X.abduction": 45, "poignet_X.flexion": -40 }, { "epaule_X.abduction": 10, "poignet_X.flexion": 20 }), finDe(0.6 + 0.9 * r, {})],
+  chut: () => [{ t: 0, p: { "epaule_d.flexion": 60, "epaule_d.rotation": 50, "coude_d.flexion": 150, "main_d.fermeture": 75, pointe_d: 1 }, au: { au18: 0.7, au2: 0.3 } }, finDe(2.0, {})],
+  mains_dos: () => [{ t: 0, p: { "epaule_g.flexion": -30, "epaule_d.flexion": -30, "epaule_g.abduction": 5, "epaule_d.abduction": 5, "epaule_g.rotation": 40, "epaule_d.rotation": 40,
+                                 "coude_g.flexion": 70, "coude_d.flexion": 70, "tete.flexion": -4 } }],
+  pouce_leve: () => [{ t: 0, p: { "epaule_X.flexion": 60, "coude_X.flexion": 80, "epaule_X.rotation": -20, "main_X.fermeture": 100 }, au: { au12: 0.7, au6: 0.4 } }, finDe(1.6, {})],
+  se_designer: () => [{ t: 0, p: { "epaule_d.flexion": 35, "epaule_d.rotation": 70, "coude_d.flexion": 120, "main_d.fermeture": 80, pointe_d: 1, "tete.flexion": 10 }, au: { au1: 0.5, au2: 0.5 } }, finDe(1.6, {})],
+  tete_mains: () => [{ t: 0, p: { "epaule_g.flexion": 105, "epaule_d.flexion": 105, "epaule_g.abduction": 35, "epaule_d.abduction": 35, "epaule_g.rotation": 20, "epaule_d.rotation": 20,
+                                  "coude_g.flexion": 145, "coude_d.flexion": 145, "tete.flexion": 22, "tronc.flexion": 15 }, au: { au1: 0.8, au4: 0.6, au15: 0.7, au43: 0.5 } }],
+  frapper_porte: (r) => [
+    { t: 0, p: { "epaule_d.flexion": 75, "epaule_d.rotation": 10, "coude_d.flexion": 100, "main_d.fermeture": 100 } },
+    ...osc(6 * r, 0.18, 0.45, { "coude_d.flexion": 80 }, { "coude_d.flexion": 100 }), finDe(0.6 + 1.1 * r)],
+  boire: () => [
+    { t: 0, p: { "epaule_d.flexion": 50, "epaule_d.rotation": 30, "coude_d.flexion": 140, "main_d.fermeture": 60, "poignet_d.flexion": -20 } },
+    { t: 0.8, p: { "tete.flexion": -22, "poignet_d.flexion": -45 }, au: { au18: 0.5 } }, finDe(2.3, {})],
+  telephoner: () => [{ t: 0, p: { "epaule_d.flexion": 30, "epaule_d.abduction": 40, "epaule_d.rotation": 30, "coude_d.flexion": 150, "main_d.fermeture": 70, "tete.inclinaison": -10 } }, finDe(3.5)],
+  ecrire: (r) => [
+    { t: 0, p: { "epaule_g.flexion": 45, "coude_g.flexion": 100, "epaule_g.rotation": 40, "main_g.fermeture": 0, "epaule_d.flexion": 50, "coude_d.flexion": 95,
+                 "epaule_d.rotation": 35, "main_d.fermeture": 80, "tete.flexion": 25 }, regard: "bas" },
+    ...osc(8 * r, 0.22, 0.6, { "poignet_d.flexion": 15 }, { "poignet_d.flexion": -15 }), { t: 0.8 + 1.8 * r, p: {}, fin: true, regard: "public" }],
+  lire: () => [{ t: 0, p: { "epaule_g.flexion": 40, "epaule_d.flexion": 40, "coude_g.flexion": 110, "coude_d.flexion": 110, "epaule_g.rotation": 30, "epaule_d.rotation": 30,
+                            "main_g.fermeture": 20, "main_d.fermeture": 20, "poignet_g.flexion": -30, "poignet_d.flexion": -30, "tete.flexion": 25 }, regard: "bas" },
+               { t: 3.5, p: {}, fin: true, regard: "public" }],
+  montre: () => [{ t: 0, p: { "epaule_g.flexion": 55, "coude_g.flexion": 120, "epaule_g.rotation": 70, "poignet_g.flexion": 10, "tete.flexion": 20, "tete.rotation": 10 }, regard: "bas" },
+                 { t: 1.8, p: {}, fin: true, regard: "public" }],
+  essuyer_front: () => [
+    { t: 0, p: { "epaule_d.flexion": 120, "epaule_d.abduction": 30, "coude_d.flexion": 145, "epaule_d.rotation": 20, "main_d.fermeture": 20 }, au: { au43: 0.3, au25: 0.3 } },
+    { t: 0.6, p: { "epaule_d.abduction": 60 } }, { t: 1.0, p: { "epaule_d.abduction": 30 } }, finDe(1.6, {})],
+  bailler: () => [{ t: 0, p: { "epaule_d.flexion": 85, "epaule_d.rotation": 40, "coude_d.flexion": 145, "tete.flexion": -12, "tronc.flexion": -5 }, au: { au26: 1, au25: 1, au43: 0.7 } },
+                  finDe(2.2, {})],
+  frotter_yeux: (r) => [
+    { t: 0, p: { "epaule_g.flexion": 85, "epaule_d.flexion": 85, "epaule_g.rotation": 30, "epaule_d.rotation": 30, "coude_g.flexion": 148, "coude_d.flexion": 148, "main_g.fermeture": 60, "main_d.fermeture": 60 }, au: { au43: 1 } },
+    ...osc(6 * r, 0.2, 0.5, { "poignet_g.flexion": 15, "poignet_d.flexion": -15 }, { "poignet_g.flexion": -15, "poignet_d.flexion": 15 }), finDe(0.7 + 1.2 * r, {})],
+  sauter: (r) => Array.from({ length: r }, (_, k) => [
+    { t: k * 1.0, p: { "bassin.abaissement": 12, "hanche_g.flexion": 35, "hanche_d.flexion": 35, "genou_g.flexion": 55, "genou_d.flexion": 55, "cheville_g.flexion": -15, "cheville_d.flexion": -15,
+                       "epaule_g.flexion": -25, "epaule_d.flexion": -25, "tronc.flexion": 12 } },
+    { t: k * 1.0 + 0.32, p: { "bassin.abaissement": 0, "bassin.elevation": 28, "hanche_g.flexion": 5, "hanche_d.flexion": 5, "genou_g.flexion": 10, "genou_d.flexion": 10,
+                              "cheville_g.flexion": 35, "cheville_d.flexion": 35, "epaule_g.flexion": 140, "epaule_d.flexion": 140, "tronc.flexion": -4 }, au: { au12: 0.6, au26: 0.3 } },
+    { t: k * 1.0 + 0.62, p: { "bassin.elevation": 0, "bassin.abaissement": 10, "genou_g.flexion": 45, "genou_d.flexion": 45, "hanche_g.flexion": 30, "hanche_d.flexion": 30,
+                              "cheville_g.flexion": -10, "cheville_d.flexion": -10, "epaule_g.flexion": 30, "epaule_d.flexion": 30 } },
+  ]).flat().concat([finDe(r * 1.0 + 0.3, {})]),
+  sautiller: (r) => [...osc(8 * r, 0.26, 0, { "bassin.elevation": 9, "cheville_g.flexion": 30, "cheville_d.flexion": 30, "genou_g.flexion": 10, "genou_d.flexion": 10 },
+                                             { "bassin.elevation": 0, "cheville_g.flexion": 0, "cheville_d.flexion": 0, "genou_g.flexion": 25, "genou_d.flexion": 25 }),
+                     finDe(8 * r * 0.26 + 0.1)],
+  serrer_main: (r) => [
+    { t: 0, p: { "epaule_d.flexion": 50, "epaule_d.abduction": 10, "coude_d.flexion": 30, "main_d.fermeture": 40 }, au: { au12: 0.6, au6: 0.3 } },
+    ...osc(4 * r, 0.22, 0.6, { "coude_d.flexion": 45 }, { "coude_d.flexion": 28 }), finDe(0.8 + 0.9 * r, {})],
+  repousser: () => [{ t: 0, p: { "epaule_g.flexion": 85, "epaule_d.flexion": 85, "coude_g.flexion": 10, "coude_d.flexion": 10, "poignet_g.flexion": -60, "poignet_d.flexion": -60,
+                                 "main_g.fermeture": 0, "main_d.fermeture": 0, "tronc.flexion": -8, "tete.flexion": 6 }, au: { au4: 0.5, au7: 0.4 } }, finDe(1.6, {})],
+  trembler: (r) => [...osc(20 * r, 0.07, 0, { "epaule_g.haussement": 12, "epaule_d.haussement": 12, "coude_g.flexion": 40, "coude_d.flexion": 40, "tete.inclinaison": 2, "genou_g.flexion": 8 },
+                                            { "epaule_g.haussement": 6, "epaule_d.haussement": 6, "coude_g.flexion": 34, "coude_d.flexion": 34, "tete.inclinaison": -2, "genou_g.flexion": 4 })
+                      .map((im, i) => (i === 0 ? { ...im, au: { au1: 0.6, au20: 0.5, au25: 0.3 } } : im)), finDe(20 * r * 0.07 + 0.1, {})],
+  frotter_mains: (r) => [
+    { t: 0, p: { "epaule_g.flexion": 40, "epaule_d.flexion": 40, "epaule_g.rotation": 60, "epaule_d.rotation": 60, "coude_g.flexion": 95, "coude_d.flexion": 95, "main_g.fermeture": 10, "main_d.fermeture": 10 }, au: { au12: 0.6, au6: 0.3 } },
+    ...osc(8 * r, 0.15, 0.5, { "epaule_g.abduction": 4, "epaule_d.abduction": 12 }, { "epaule_g.abduction": 12, "epaule_d.abduction": 4 }), finDe(0.6 + 1.2 * r, {})],
+  muscles: () => [{ t: 0, p: { "epaule_g.abduction": 90, "epaule_d.abduction": 90, "epaule_g.rotation": -80, "epaule_d.rotation": -80, "coude_g.flexion": 120, "coude_d.flexion": 120,
+                               "main_g.fermeture": 100, "main_d.fermeture": 100 }, au: { au4: 0.3, au12: 0.5, au24: 0.4 } }, finDe(2.2, {})],
+  accolade: () => [
+    { t: 0, p: { "epaule_g.abduction": 60, "epaule_d.abduction": 60, "epaule_g.flexion": 50, "epaule_d.flexion": 50, "coude_g.flexion": 40, "coude_d.flexion": 40 }, au: { au12: 0.7, au6: 0.5 } },
+    { t: 0.7, p: { "epaule_g.abduction": 20, "epaule_d.abduction": 20, "epaule_g.flexion": 70, "epaule_d.flexion": 70, "epaule_g.rotation": 50, "epaule_d.rotation": 50,
+                   "coude_g.flexion": 100, "coude_d.flexion": 100, "tete.inclinaison": 10 } }, finDe(2.2, {})],
+  lancer: () => [
+    { t: 0, p: { "epaule_d.flexion": -40, "epaule_d.abduction": 30, "coude_d.flexion": 90, "epaule_d.rotation": -40, "tronc.rotation": 25, "main_d.fermeture": 80 } },
+    { t: 0.45, p: { "epaule_d.flexion": 150, "coude_d.flexion": 10, "epaule_d.rotation": 0, "tronc.rotation": -20, "main_d.fermeture": 0, "hanche_g.flexion": 15 } }, finDe(1.3)],
+  ramasser: () => [
+    { t: 0, p: { "tronc.flexion": 60, "bassin.abaissement": 14, "genou_g.flexion": 40, "genou_d.flexion": 40, "hanche_g.flexion": 40, "hanche_d.flexion": 40,
+                 "epaule_d.flexion": 80, "coude_d.flexion": 10, "main_d.fermeture": 0, "tete.flexion": 20 }, regard: "bas" },
+    { t: 1.0, p: { "main_d.fermeture": 85 } }, { t: 1.6, p: {}, fin: true, regard: "public" }],
+  pousser: () => [
+    { t: 0, p: { "epaule_g.flexion": 85, "epaule_d.flexion": 85, "coude_g.flexion": 70, "coude_d.flexion": 70, "poignet_g.flexion": -50, "poignet_d.flexion": -50, "main_g.fermeture": 0, "main_d.fermeture": 0 } },
+    { t: 0.5, p: { "coude_g.flexion": 10, "coude_d.flexion": 10, "tronc.flexion": 15, "hanche_d.flexion": -15, "hanche_g.flexion": 25, "genou_g.flexion": 25 }, au: { au4: 0.4, au24: 0.6 } }, finDe(1.8, {})],
+  tirer: () => [
+    { t: 0, p: { "epaule_g.flexion": 75, "epaule_d.flexion": 75, "coude_g.flexion": 10, "coude_d.flexion": 10, "main_g.fermeture": 100, "main_d.fermeture": 100 } },
+    { t: 0.5, p: { "coude_g.flexion": 100, "coude_d.flexion": 100, "tronc.flexion": -15, "hanche_g.flexion": 25, "genou_g.flexion": 30 }, au: { au4: 0.4, au24: 0.6 } }, finDe(1.8, {})],
+  boxer: (r) => [
+    { t: 0, p: { "epaule_g.flexion": 60, "epaule_d.flexion": 60, "epaule_g.rotation": 40, "epaule_d.rotation": 40, "coude_g.flexion": 130, "coude_d.flexion": 130,
+                 "main_g.fermeture": 100, "main_d.fermeture": 100, "tete.flexion": 10 }, au: { au4: 0.7, au24: 0.6 } },
+    ...Array.from({ length: 2 * r }, (_, i) => {
+      const s = i % 2 ? "g" : "d";
+      return [{ t: 0.4 + i * 0.6, p: { [`epaule_${s}.flexion`]: 90, [`coude_${s}.flexion`]: 5, [`epaule_${s}.rotation`]: 0, "tronc.rotation": s === "d" ? -20 : 20 } },
+              { t: 0.65 + i * 0.6, p: { [`epaule_${s}.flexion`]: 60, [`coude_${s}.flexion`]: 130, [`epaule_${s}.rotation`]: 40, "tronc.rotation": 0 } }];
+    }).flat(), finDe(0.5 + 1.2 * r, {})],
+  coup_de_pied: () => [
+    { t: 0, p: { "hanche_d.flexion": 70, "genou_d.flexion": 70, "epaule_g.abduction": 30, "epaule_d.abduction": 30, "tronc.flexion": -6 } },
+    { t: 0.3, p: { "genou_d.flexion": 5, "cheville_d.flexion": 30 } }, finDe(0.9)],
+  pointes_pieds: () => [{ t: 0, p: { "cheville_g.flexion": 35, "cheville_d.flexion": 35, "bassin.elevation": 8, "epaule_g.abduction": 20, "epaule_d.abduction": 20, "tete.flexion": -5 } }],
+  tituber: (r) => [...Array.from({ length: 4 * r }, (_, i) => ({
+    t: i * 0.55, p: { "tronc.inclinaison": i % 2 ? 14 : -14, "tete.inclinaison": i % 2 ? -10 : 10, "hanche_g.abduction": i % 2 ? 10 : 0, "hanche_d.abduction": i % 2 ? 0 : 10,
+                      "epaule_g.abduction": i % 2 ? 35 : 15, "epaule_d.abduction": i % 2 ? 15 : 35, "genou_g.flexion": i % 2 ? 15 : 0 },
+    ...(i === 0 ? { au: { au43: 0.4, au12_g: 0.3 } } : {}) })), finDe(4 * r * 0.55 + 0.2, {})],
+  regarder_loin: () => [{ t: 0, p: { "epaule_d.flexion": 120, "epaule_d.abduction": 30, "epaule_d.rotation": 40, "coude_d.flexion": 140, "main_d.fermeture": 0, "poignet_d.flexion": 20, "tete.flexion": -5 },
+                          au: { au7: 0.5 }, regard: "loin" }, { t: 2.6, p: {}, fin: true, regard: "public" }],
+  eternuer: () => [
+    { t: 0, p: { "tete.flexion": -20, "tronc.flexion": -8 }, au: { au43: 0.5, au25: 0.6, au9: 0.5, au1: 0.4 } },
+    { t: 0.8, p: { "tete.flexion": 30, "tronc.flexion": 20, "epaule_d.flexion": 80, "epaule_d.rotation": 40, "coude_d.flexion": 145 }, au: { au43: 1, au26: 0.6, au9: 0.6 } }, finDe(1.6, {})],
+  tousser: (r) => [
+    { t: 0, p: { "epaule_d.flexion": 75, "epaule_d.rotation": 45, "coude_d.flexion": 140, "main_d.fermeture": 80, "tete.flexion": 15 }, au: { au43: 0.5, au4: 0.3 } },
+    ...osc(3 * r, 0.28, 0.3, { "tronc.flexion": 12 }, { "tronc.flexion": 2 }), finDe(0.5 + 0.9 * r, {})],
+  mains_poches: () => [{ t: 0, p: { "epaule_g.flexion": -10, "epaule_d.flexion": -10, "epaule_g.abduction": 12, "epaule_d.abduction": 12, "epaule_g.rotation": 20, "epaule_d.rotation": 20,
+                                    "coude_g.flexion": 25, "coude_d.flexion": 25, "main_g.fermeture": 70, "main_d.fermeture": 70, "poignet_g.flexion": 20, "poignet_d.flexion": 20 } }],
+  compter: (r) => [
+    { t: 0, p: { "epaule_g.flexion": 55, "coude_g.flexion": 110, "epaule_g.rotation": 40, "main_g.fermeture": 50, "epaule_d.flexion": 55, "coude_d.flexion": 105, "epaule_d.rotation": 40,
+                 "main_d.fermeture": 80, pointe_d: 1, "tete.flexion": 15 }, regard: "bas" },
+    ...osc(5 * r, 0.4, 0.5, { "poignet_d.flexion": 15 }, { "poignet_d.flexion": -10 }), { t: 0.7 + 2 * r, p: {}, fin: true, regard: "public" }],
+  menacer: (r) => [
+    { t: 0, p: { "epaule_d.flexion": 95, "coude_d.flexion": 40, "main_d.fermeture": 85, pointe_d: 1, "tete.flexion": 8 }, au: { au4: 0.8, au24: 0.5, au7: 0.4 } },
+    ...osc(4 * r, 0.25, 0.4, { "poignet_d.flexion": 25 }, { "poignet_d.flexion": -15 }), finDe(0.6 + r, {})],
+  hesiter: () => [
+    { t: 0, p: { "tronc.inclinaison": 8, "tete.inclinaison": 10, "epaule_d.flexion": 40, "epaule_d.rotation": 45, "coude_d.flexion": 140, "main_d.fermeture": 60 }, au: { au20: 0.3, au1: 0.4, au24: 0.3 } },
+    { t: 0.9, p: { "tronc.inclinaison": -8, "tete.inclinaison": -10, "epaule_d.flexion": 20, "coude_d.flexion": 60 } },
+    { t: 1.8, p: { "tronc.inclinaison": 6, "tete.inclinaison": 8, "epaule_g.haussement": 12, "epaule_d.haussement": 12 } }, finDe(2.6, {})],
+  ecouter: () => [{ t: 0, p: { "epaule_d.flexion": 60, "epaule_d.abduction": 70, "epaule_d.rotation": 10, "coude_d.flexion": 150, "main_d.fermeture": 10, "tete.inclinaison": -15, "tete.rotation": 20 },
+                    au: { au1: 0.4, au2: 0.4 }, regard: "loin" }, { t: 2.6, p: {}, fin: true, regard: "public" }],
+  bercer: (r) => [
+    { t: 0, p: { "epaule_g.flexion": 45, "epaule_d.flexion": 45, "epaule_g.rotation": 65, "epaule_d.rotation": 65, "coude_g.flexion": 100, "coude_d.flexion": 100,
+                 "epaule_g.abduction": 10, "epaule_d.abduction": 10, "tete.flexion": 15, "tete.inclinaison": 10 }, au: { au12: 0.5, au6: 0.3 }, regard: "bas" },
+    ...osc(4 * r, 0.7, 0.4, { "tronc.rotation": 10 }, { "tronc.rotation": -10 }), { t: 0.6 + 2.8 * r, p: {}, fin: true, regard: "public" }],
+  dormir: () => [{ t: 0, p: { "tete.inclinaison": 25, "tete.flexion": 15, "epaule_g.flexion": 60, "epaule_d.flexion": 60, "epaule_g.rotation": 60, "epaule_d.rotation": 60,
+                               "coude_g.flexion": 140, "coude_d.flexion": 140, "main_g.fermeture": 10, "main_d.fermeture": 10, "tronc.inclinaison": 6 }, au: { au43: 1 }, souffle: 1 }],
+  mimer_mur: (r) => [
+    { t: 0, p: { "epaule_g.flexion": 90, "epaule_d.flexion": 90, "coude_g.flexion": 25, "coude_d.flexion": 25, "poignet_g.flexion": -70, "poignet_d.flexion": -70,
+                 "main_g.fermeture": 0, "main_d.fermeture": 0, "epaule_g.abduction": 20, "epaule_d.abduction": 20 } },
+    ...osc(4 * r, 0.6, 0.6, { "epaule_g.abduction": 40, "epaule_d.flexion": 110 }, { "epaule_g.abduction": 20, "epaule_d.flexion": 85, "epaule_d.abduction": 40 }), finDe(0.8 + 2.4 * r)],
+});
+
+Object.assign(POSES, {
+  effondre: { "bassin.abaissement": 49, "hanche_g.flexion": 10, "hanche_d.flexion": 10, "genou_g.flexion": 90, "genou_d.flexion": 90, "cheville_g.flexion": 40, "cheville_d.flexion": 40,
+              "tronc.flexion": 55, "tete.flexion": 40, "epaule_g.flexion": 10, "epaule_d.flexion": 10, "epaule_g.rotation": 20, "epaule_d.rotation": 20, "coude_g.flexion": 20,
+              "coude_d.flexion": 20, "main_g.fermeture": 30, "main_d.fermeture": 30 },
+  en_garde: { "hanche_g.flexion": 15, "genou_g.flexion": 20, "hanche_d.flexion": -10, "genou_d.flexion": 15, "bassin.abaissement": 6, "tronc.rotation": -20, "tronc.flexion": 5,
+              "epaule_g.flexion": 60, "epaule_d.flexion": 60, "epaule_g.rotation": 40, "epaule_d.rotation": 40, "coude_g.flexion": 130, "coude_d.flexion": 130,
+              "main_g.fermeture": 100, "main_d.fermeture": 100, "tete.flexion": 10 },
+  penseur: { "bassin.abaissement": 46, "hanche_g.flexion": 88, "hanche_d.flexion": 88, "genou_g.flexion": 88, "genou_d.flexion": 88, "hanche_g.abduction": 8, "hanche_d.abduction": 8,
+             "tronc.flexion": 30, "tete.flexion": 10, "epaule_d.flexion": 60, "epaule_d.rotation": 50, "coude_d.flexion": 145, "main_d.fermeture": 70,
+             "epaule_g.flexion": 30, "epaule_g.rotation": 50, "coude_g.flexion": 70 },
+  statue: { "epaule_d.flexion": 170, "epaule_d.abduction": 10, "coude_d.flexion": 5, "main_d.fermeture": 90, "epaule_g.flexion": 30, "epaule_g.rotation": 60, "coude_g.flexion": 100,
+            "tete.flexion": -8, "hanche_g.flexion": 8, "genou_g.flexion": 6 },
+});
+
 /* Voix : même arithmétique que rendu_voix (régime humain, style réaliste) pour l'intensité k = i/10. */
 export function prosodie(nom, intensite) {
   const e = EMOTIONS[nom] || EMOTIONS.neutre;

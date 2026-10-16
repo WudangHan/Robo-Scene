@@ -8,7 +8,7 @@ import { Scene, LIBELLES_ZONES, DOFS_ZONE } from "./scene.js";
 import { Parole } from "./parole.js";
 import { Imitation, lireEmotion } from "./imitation.js";
 import { EMOTIONS, prosodie } from "./emotions.js";
-import { interpreter, valider } from "./directives.js";
+import { interpreter, valider, EXEMPLES } from "./directives.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -154,6 +154,7 @@ async function executer(actions, { source = "règles", clauseLog = null } = {}) 
       case "arret": toutArreter("directive"); return;
       case "annuler": pile.pop(); annuler(); return;
       case "repeter": if (derniere.length) { await executer(derniere, { source }); } return;
+      case "aide": montrerAide(); break;
       default: break;
     }
   }
@@ -167,15 +168,38 @@ async function executerTexte(texte, origine = "écrit") {
   texte = String(texte || "").trim();
   if (!texte) return;
   const r = interpreter(texte, SCHEMA);
-  const li = journal({ html: `<b>${echapper(texte)}</b> <small>(${origine})</small><div class="actions">${r.actions.map((a) => `<code>${echapper(resume(a))}</code>`).join(" ")}</div>${r.ignores.length ? `<div class="ignore">Non compris : ${r.ignores.map(echapper).join(" · ")}</div>` : ""}` });
+  const notes = [...new Set(r.actions.filter((a) => a.corrige || a.approx).map((a) => (a.corrige ? `lu « ${a.corrige} »` : `compris comme « ${a.approx} »`)))];
+  const sugg = (c) => (r.suggestions?.[c]?.length ? r.suggestions[c] : EXEMPLES.slice(0, 0)).slice(0, 3);
+  const li = journal({ html: `<b>${echapper(texte)}</b> <small>(${origine})</small><div class="actions">${r.actions.map((a) => `<code>${echapper(resume(a))}</code>`).join(" ")}</div>`
+    + (notes.length ? `<div class="petit">${notes.map(echapper).join(" · ")}</div>` : "")
+    + (r.ignores.length ? `<div class="ignore">Non compris : ${r.ignores.map((c) => `« ${echapper(c)} »${sugg(c).length ? ` — essayez : ${sugg(c).map((x) => `<button type="button" class="lien-essai">${echapper(x)}</button>`).join(" ")}` : ""}`).join(" · ")}</div>` : "") });
+  li.querySelectorAll(".lien-essai").forEach((b) => (b.onclick = () => executerTexte(b.textContent, "suggestion")));
   pont.journaliser({ texte, origine, source: "règles", actions: r.actions, ignores: r.ignores });
   const promesse = r.actions.length ? executer(r.actions) : Promise.resolve();
   if (r.ignores.length && $("#recours-claude").checked && pont.ia) {
     li.querySelector(".ignore")?.insertAdjacentHTML("beforeend", " — <i>interprétation demandée au pont…</i>");
     const rep = await pont.demander("p_avatar_interpreter", { texte: r.ignores.join(". "), etat: etatPourIA() });
     proposerClaude(rep, li);
+    if (rep && rep.actions?.length) return promesse;
   }
+  if (r.ignores.length) repondreIncompris(r.ignores, r.actions.length > 0);
   return promesse;
+}
+/* Le robot répond toujours : s'il n'a pas compris, il le dit et le montre (haussement d'épaules, sous-titre). */
+function repondreIncompris(ignores, enPartie) {
+  if (!$("#repondre-incompris").checked) return;
+  const phrase = enPartie ? `Je n'ai pas compris : ${ignores.join(", ")}.` : "Pardon, je n'ai pas compris. Dites « aide » pour connaître mes commandes.";
+  setTimeout(async () => {
+    if (!enPartie) anim.jouerGeste("hausser_epaules");
+    await parler(phrase, { emotion: { nom: "neutre", intensite: 0 } });
+  }, enPartie ? 400 : 0);
+}
+function montrerAide() {
+  ouvrirOnglet("directives");
+  const d = document.querySelector(".aide-directives"); if (d) d.open = true;
+  journal({ html: `<b>Commandes</b> (${EXEMPLES.length} exemples ; cliquez pour essayer) :<div class="actions">${EXEMPLES.map((e) => `<button type="button" class="lien-essai">${echapper(e)}</button>`).join(" ")}</div>` })
+    .querySelectorAll(".lien-essai").forEach((b) => (b.onclick = () => executerTexte(b.textContent, "aide")));
+  parler("Voici ce que je sais faire. Cliquez sur un exemple, ou donnez-moi une directive.", { emotion: { nom: "neutre", intensite: 0 } });
 }
 function etatPourIA() {
   const v = {}; for (const [k, x] of Object.entries(anim.base)) if (Math.abs(x) > 0.5) v[k] = Math.round(x);
@@ -308,10 +332,20 @@ brancherCurseurs($("#tous-curseurs"));
 const NOMS_GESTES = { saluer: "saluer (main)", reverence: "révérence", hocher: "oui de la tête", non: "non de la tête", hausser_epaules: "hausser les épaules", croiser_bras: "croiser les bras",
   mains_hanches: "mains sur les hanches", reflechir: "réfléchir", applaudir: "applaudir", bras_ouverts: "bras ouverts", pointer: "pointer", poing_leve: "poing levé", main_coeur: "main sur le cœur",
   gratter_tete: "se gratter la tête", rire: "rire", pleurer: "pleurer", soupirer: "soupirer", clin_oeil: "clin d'œil", danser: "danser", taper_pied: "taper du pied",
-  cacher_visage: "se cacher le visage", etirer: "s'étirer", respirer: "respirer", marcher_sur_place: "marcher sur place" };
+  cacher_visage: "se cacher le visage", etirer: "s'étirer", respirer: "respirer", marcher_sur_place: "marcher sur place",
+  salut_militaire: "salut militaire", bras_au_ciel: "bras au ciel", mains_jointes: "mains jointes", signe_venir: "signe de venir", chasser: "chasser",
+  chut: "chut", mains_dos: "mains dans le dos", mains_poches: "mains dans les poches", pouce_leve: "pouce levé", se_designer: "se désigner",
+  tete_mains: "tête dans les mains", frapper_porte: "frapper à la porte", boire: "boire", telephoner: "téléphoner", ecrire: "écrire", lire: "lire",
+  montre: "regarder sa montre", essuyer_front: "s'essuyer le front", bailler: "bâiller", frotter_yeux: "se frotter les yeux", sauter: "sauter",
+  sautiller: "sautiller", serrer_main: "serrer la main", repousser: "repousser", trembler: "trembler", frotter_mains: "se frotter les mains",
+  muscles: "montrer ses muscles", accolade: "accolade", lancer: "lancer", ramasser: "ramasser", pousser: "pousser", tirer: "tirer", boxer: "boxer",
+  coup_de_pied: "coup de pied", pointes_pieds: "pointes des pieds", tituber: "tituber", regarder_loin: "scruter au loin", eternuer: "éternuer",
+  tousser: "tousser", compter: "compter sur ses doigts", menacer: "menacer", hesiter: "hésiter", ecouter: "tendre l'oreille", bercer: "bercer",
+  mimer_mur: "mur invisible (mime)", dormir: "dormir" };
 $("#gestes").innerHTML = SCHEMA.gestes.map((g) => `<button data-g="${g}">${NOMS_GESTES[g] || g}</button>`).join("");
 $$("#gestes [data-g]").forEach((b) => (b.onclick = () => { memoriserEtat(); anim.jouerGeste(b.dataset.g, { cote: $("#cote-geste").value }); }));
-const NOMS_POSES = { repos: "repos", debout: "debout", assis: "assis", accroupi: "accroupi", a_genoux: "à genoux", garde_a_vous: "garde-à-vous", recroqueville: "recroquevillé" };
+const NOMS_POSES = { repos: "repos", debout: "debout", assis: "assis", accroupi: "accroupi", a_genoux: "à genoux", garde_a_vous: "garde-à-vous", recroqueville: "recroquevillé",
+  effondre: "effondré", en_garde: "en garde", penseur: "le penseur", statue: "statue" };
 $("#poses").innerHTML = SCHEMA.poses.map((p) => `<button data-p="${p}">${NOMS_POSES[p] || p}</button>`).join("");
 $$("#poses [data-p]").forEach((b) => (b.onclick = () => { memoriserEtat(); anim.prendrePose(b.dataset.p); setTimeout(majCurseurs, 50); }));
 $("#btn-annuler").onclick = () => { if (!annuler()) journal({ html: "Rien à annuler." }); };

@@ -232,3 +232,31 @@ def test_emotions_js_alignees_sur_le_partenaire():
             for cle in (im.get("p") or {}):
                 n = cle.replace("_X", "_d").replace("_Y", "_g")
                 assert n in dofs or n.startswith("pointe_"), (nom, cle)
+
+
+@pytest.mark.skipif(not NODE, reason="Node.js absent")
+def test_toutes_les_commandes_repondent():
+    """Chaque exemple du vocabulaire produit des actions valides ; fautes de frappe et formulations voisines
+    sont reconnues ; une directive incomprise reçoit des suggestions au lieu d'être ignorée en silence."""
+    out = node("""
+      import { interpreter, EXEMPLES } from "./web/avatar/directives.js";
+      import fs from "node:fs";
+      const S = JSON.parse(fs.readFileSync("./web/avatar/schema.json", "utf8"));
+      const essais = ["lève le brass droit", "sautte", "fais la reverance", "marche vers le jardain", "fais semblant de dormir",
+                      "fais le tour de la scène", "tourne sur toi-même", "fais les cent pas", "frappe à la porte", "pointe le pied droit"];
+      const r = (t) => interpreter(t, S);
+      console.log(JSON.stringify({
+        n: EXEMPLES.length,
+        echecs: EXEMPLES.filter((e) => { const x = r(e); return !x.actions.length || x.ignores.length; }),
+        essais: Object.fromEntries(essais.map((t) => [t, r(t).actions.map((a) => a.nom || a.dof || a.type)])),
+        incompris: r("fais une roue arrière en équilibre"),
+      }));
+    """)
+    assert out["n"] >= 180 and out["echecs"] == []
+    e = out["essais"]
+    assert e["lève le brass droit"][0] == "epaule_d.flexion" and e["sautte"] == ["sauter"]
+    assert e["fais la reverance"] == ["reverence"] and e["marche vers le jardain"] == ["deplacer"]
+    assert e["fais semblant de dormir"] == ["dormir"] and len(e["fais le tour de la scène"]) == 5
+    assert e["tourne sur toi-même"] == ["orienter"] and e["frappe à la porte"] == ["frapper_porte"]
+    assert e["pointe le pied droit"] == ["cheville_d.flexion"]
+    assert out["incompris"]["actions"] == [] and out["incompris"]["ignores"]

@@ -16,7 +16,7 @@ SCHEMA_CHEMIN = Path(__file__).resolve().parents[2] / "web" / "avatar" / "schema
 _SCHEMA: dict[str, Any] | None = None
 
 TYPES = {"articulation", "emotion", "visage", "geste", "pose", "deplacer", "orienter", "regard", "dire",
-         "apparence", "camera", "lumiere", "vitesse", "memoriser", "rappeler", "arret", "repeter", "annuler"}
+         "apparence", "camera", "lumiere", "vitesse", "memoriser", "rappeler", "arret", "repeter", "annuler", "aide"}
 APPARENCE_CLES = {"taille", "carrure", "corpulence", "age", "cheveux", "barbe", "manches", "peau", "haut", "bas",
                   "chaussures", "couleur_cheveux", "moustache", "yeux"}
 

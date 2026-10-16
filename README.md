@@ -192,13 +192,13 @@ La base de connaissances indexe les fichiers de `partenaire/sources/`. Pour en a
 
 Ouvrir <http://127.0.0.1:8765/avatar> (lien « Robot virtuel » dans l'en-tête), ou <https://robo-scene.netlify.app/avatar> : le robot virtuel fonctionne entièrement dans le navigateur ; le pont n'est requis que pour le journal de séance, l'interprète par modèle (service unique des modèles, rôle « commande ») et le jumeau du robot physique. Guide complet : `docs/Guide_robot_virtuel_ROBO-SCENE.docx`.
 
-Personnage masculin procédural en 3D (three.js 0.169, licence MIT, servi localement depuis `web/vendor/`) : 31 degrés de liberté bornés (tête, tronc, bassin, épaules, coudes, poignets, doigts, hanches, genoux, chevilles), visage animé par unités d'action FACS (sourcils, paupières, regard, lèvres, mâchoire), présence vivante (respiration, transfert de poids, saccades, clignements), marche sur un plateau figuré (cour, jardin, lointain, avant-scène).
+Personnage masculin procédural en 3D (three.js 0.169, licence MIT, servi localement depuis `web/vendor/`) : 32 degrés de liberté bornés (tête, tronc, bassin, épaules, coudes, poignets, doigts, hanches, genoux, chevilles), visage animé par unités d'action FACS (sourcils, paupières, regard, lèvres, mâchoire), présence vivante (respiration, transfert de poids, saccades, clignements), marche sur un plateau figuré (cour, jardin, lointain, avant-scène).
 
 | Onglet | Rôle |
 |---|---|
-| **Directives** | Consignes écrites ou dictées en français (« lève le bras droit lentement puis souris », « va côté cour et salue le public », « deviens triste, puis dis « Je ne reviendrai pas. » »). Interprète de règles hors ligne ; ce qu'il ne comprend pas peut être soumis par le pont au service des modèles (routeur de sensibilité compris), puis revalidé et présenté pour validation humaine. *Annule*, *répète*, *stop*, mémoire de poses. |
+| **Directives** | Consignes écrites ou dictées en français (« lève le bras droit lentement puis souris », « va côté cour et salue le public », « deviens triste, puis dis « Je ne reviendrai pas. » »). Interprète de règles hors ligne (188 exemples de référence, tous vérifiés par les tests), qui corrige les fautes de frappe et rapproche les formulations voisines ; s'il ne comprend pas, le robot le dit à voix haute et propose des commandes proches ; « aide » affiche la liste. Ce qu'il ne comprend pas peut être soumis par le pont au service des modèles (routeur de sensibilité compris), puis revalidé et présenté pour validation humaine. *Annule*, *répète*, *stop*, mémoire de poses. |
 | **Émotions et parole** | Douze émotions (les onze du partenaire et le dégoût) à intensité réglable : visage, posture, qualité d'effort de Laban et prosodie. Expressions isolées. Parole par synthèse vocale avec synchronisation labiale par visèmes et battements de tête et de sourcils. |
-| **Corps** | Clic et glisser sur une partie du corps ; curseurs de tous les degrés de liberté ; 24 gestes, 7 poses, poses mémorisées, chorégraphie d'images clés, export et import JSON. |
+| **Corps** | Clic et glisser sur une partie du corps ; curseurs de tous les degrés de liberté ; 70 gestes (quotidien, scène, combat de théâtre : saluer, bras au ciel, frapper à la porte, boire, téléphoner, sauter, boxer, tituber, dormir…), 11 poses (dont effondré, en garde, le penseur, statue), mouvements de scène (tour de la scène, cent pas, pirouette, sortie, entrée, pas chassé), poses mémorisées, chorégraphie d'images clés, export et import JSON. |
 | **Apparence** | Taille, carrure, corpulence, âge, coiffure, barbe, moustache, peau, yeux, vêtements et couleurs (aussi par directive). |
 | **Imitation** | Reproduction en direct du visage, de la tête et de la posture d'une personne filmée (MediaPipe, traitement local, accord explicite, mode miroir) ; « figer l'expression » ; lecture émotionnelle indicative. |
 | **Liaisons** | Voix et visage pour les répliques de la page Partenaire (case « Robot virtuel » dans son en-tête) ; journalisation dans la séance ; jumeau du robot physique en lecture ou en pilotage, via la couche de sécurité. |
@@ -212,9 +212,9 @@ pip install -r requirements.txt -r requirements-dev.txt
 python -m pytest -q
 ```
 
-158 tests réussis et 1 ignoré (classeur de la grille de biais absent du dépôt), tous sans appel réseau ni matériel :
+162 tests réussis et 1 ignoré (classeur de la grille de biais absent du dépôt), tous sans appel réseau ni matériel :
 prototypes P1, P2, P3, T.6 et X.2 (60) ; console (7) ; partenaire (22) ; robots et pilotes (16) ; modèles D13 (7) ;
-traçabilité (6) ; spectateur (10) ; analyse (11) ; extensions (8) ; plateforme (3) ; robot virtuel (8, dont 3 en JavaScript exécutés par Node.js s'il est présent). L'intégration continue
+traçabilité (6) ; spectateur (10) ; analyse (11) ; extensions (8) ; plateforme (3) ; certificats HTTPS (3) ; robot virtuel (9, dont 4 en JavaScript exécutés par Node.js s'il est présent). L'intégration continue
 (`.github/workflows/tests.yml`) les exécute à chaque dépôt.
 
 ## Arborescence

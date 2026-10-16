@@ -68,3 +68,5 @@ body.mode-scene .barre-vue:hover { opacity: 1; }
 .ligne label { display: inline-flex; align-items: center; gap: 4px; }
 .ligne input#seuil { flex: 0 0 64px; min-width: 0; }
 .ligne select { min-width: 0; max-width: 100%; }
+
+.lien-essai { background: none; border: 0; padding: 0 2px; color: var(--info); text-decoration: underline; cursor: pointer; font: inherit; }

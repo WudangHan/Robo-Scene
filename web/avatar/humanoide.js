@@ -266,7 +266,7 @@ export class Humanoide {
   /* Pose : {dof: degrés}, plus déplacement de la racine. Les angles sont ceux de schema.json. */
   appliquer(P, extra = {}) {
     const O = this.os, v = (k) => P[k] || 0;
-    O.bassin.position.y = 0.98 - v("bassin.abaissement") / 100 + (extra.bassinY || 0);
+    O.bassin.position.y = 0.98 - v("bassin.abaissement") / 100 + v("bassin.elevation") / 100 + (extra.bassinY || 0);
     O.bassin.position.x = extra.bassinX || 0;
     O.bassin.rotation.set(0, R(extra.bassinRot || 0), 0);
     const tf = v("tronc.flexion") + (extra.voussure || 0), tr = v("tronc.rotation"), ti = v("tronc.inclinaison");

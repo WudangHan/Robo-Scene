@@ -53,7 +53,7 @@ const GESTES = [
   ["reflechir", /\b(reflechi|pense\b|penses|medite|songeur|main (au|sous le) menton)/],
   ["applaudir", /\b(applaudi|applaudissement|bravo|tape des mains)/],
   ["bras_ouverts", /\b(ouvre (grand )?(les |tes )?bras|bras ouverts|accueill)/],
-  ["pointer", /\b(pointe\b|pointe du doigt|montre du doigt|designe|indique)/],
+  ["pointer", /\b(pointe\b(?! (le |les |des |du |ton |tes |sur )?(pied|pieds|orteils?|pointes))|pointe du doigt|montre du doigt|designe|indique)/],
   ["poing_leve", /\b(leve (le |ton )?poing|poing leve|brandi)/],
   ["main_coeur", /\bmains? sur (le |ton )?coeur/],
   ["gratter_tete", /\b(gratte[- ]toi la tete|gratte la tete|se gratter)/],
@@ -72,7 +72,7 @@ const GESTES = [
 const POSES = [
   ["assis", /\b(assieds?[- ]toi|assoi[s-]|assis\b|asseoir|prends? (un )?siege)/],
   ["accroupi", /\b(accroupi|accroupis|accroupir)/],
-  ["a_genoux", /\b(a genoux|agenouille|genou a terre)/],
+  ["a_genoux", /\b(a genoux|a genou\b|agenouille|genou a terre)/],
   ["garde_a_vous", /\b(garde[- ]a[- ]vous|tiens[- ]toi droit)/],
   ["recroqueville", /\b(recroqueville|replie[- ]toi|voute[- ]toi)/],
   ["debout", /\b(leve[- ]toi|releve[- ]toi|debout|redresse[- ]toi)\b/],
@@ -397,6 +397,170 @@ function lumiere(c) {
   return null;
 }
 
+/* ── Répertoire élargi (version 2.2) : gestes, poses et mouvements de scène supplémentaires ── */
+const GESTES_PLUS = [
+  ["salut_militaire", /\b(salut militaire|salue militairement|salue comme un soldat|salue au garde[- ]a[- ]vous)/],
+  ["bras_au_ciel", /\b(bras au ciel|leve les bras au ciel|victoire|hourra|youpi|triomphe|lance les bras en l'air)/],
+  ["mains_jointes", /\b(mains jointes|joins les mains|prie\b|prier|priere|supplie|implore)/],
+  ["signe_venir", /\b(signe de venir|signe d'approcher|invite[- ]le a venir|fais[- ]le venir|appelle[- ]le de la main)/],
+  ["chasser", /\b(signe de partir|(?<!pas )chasse\b|chasser|congedie|revers de (la )?main|fais[- ]le partir)/],
+  ["chut", /\b(chut|doigt sur la bouche|demande le silence|fais taire)/],
+  ["mains_dos", /\bmains? (dans|derriere) (le |ton )?dos/],
+  ["mains_poches", /\bmains? (dans|aux) (les |tes )?poches/],
+  ["pouce_leve", /\b(pouce leve|leve le pouce|pouce en l'air|fais ok|fais signe que c'est bon)/],
+  ["se_designer", /\b(montre[- ]toi du doigt|designe[- ]toi|pointe[- ]toi|qui\? moi|moi\?)/],
+  ["tete_mains", /\b(tete dans (les|tes) mains|prends ta tete|prends[- ]toi la tete|desespoir)/],
+  ["frapper_porte", /\b(frappe a la porte|toque|cogne a la porte|frappe trois coups)/],
+  ["boire", /\b(bois\b|boire|bois un verre|trinque|prends un verre)/],
+  ["telephoner", /\b(telephone|au telephone|decroche|appelle quelqu'un|passe un coup de fil)/],
+  ["ecrire", /\b(ecris|ecrire|prends des notes|note quelque chose|signe le papier|redige)/],
+  ["lire", /\b(lis un livre|lire un livre|lit un livre|feuillette|lis une lettre|lis le journal|lecture)/],
+  ["montre", /\b(regarde (ta|sa|la) montre|regarde l'heure|quelle heure|consulte ta montre)/],
+  ["essuyer_front", /\b(essuie[- ]toi le front|essuie le front|essuie la sueur|il fait chaud|eponge[- ]toi)/],
+  ["bailler", /\b(baille|bailler|baillement)/],
+  ["frotter_yeux", /\b(frotte[- ]toi les yeux|frotte les yeux|reveille[- ]toi|tu te reveilles)/],
+  ["sautiller", /\b(sautille|sautiller|trepigne|petits sauts)/],
+  ["sauter", /\b(saute|sauter|bondis|bondir|fais un saut|saut)\b/],
+  ["serrer_main", /\b(serre la main|serre[- ]lui la main|poignee de main|tends la main pour saluer|serrer la main)/],
+  ["repousser", /\b(repousse|repousser|tiens[- ]le a distance|garde tes distances|recule de la main)/],
+  ["trembler", /\b(tremble|trembler|frissonne|grelotte|frisson|tu as froid)/],
+  ["frotter_mains", /\b(frotte[- ]toi les mains|frotte les mains|se frotter les mains)/],
+  ["muscles", /\b(montre tes muscles|fais le fort|biceps|fais le costaud|bombe le torse)/],
+  ["accolade", /\b(prends[- ]le dans tes bras|accolade|enlace|etreins|serre[- ]le dans tes bras|embrasse)/],
+  ["lancer", /\b(lance|jette|lancer|jeter)\b/],
+  ["ramasser", /\b(ramasse|ramasser|cueille|prends quelque chose par terre)/],
+  ["coup_de_pied", /\b(coup de pied|shoote|frappe du pied|botte)/],
+  ["boxer", /\b(boxe|boxer|coup de poing|coups de poing|uppercut|frappe\b|cogne\b|bats[- ]toi)/],
+  ["pousser", /\b(pousse|pousser)\b/],
+  ["tirer", /\b(tire\b|tirer|hale|tire la corde)/],
+  ["pointes_pieds", /\b(pointe des pieds|pointes des pieds|sur les pointes|demi[- ]pointes)/],
+  ["tituber", /\b(titube|tituber|chancelle|ivre|vacille|tu es saoul)/],
+  ["regarder_loin", /\b(main en visiere|scrute|cherche au loin|guette)/],
+  ["eternuer", /\b(eternue|eternuer|atchoum)/],
+  ["tousser", /\b(tousse|tousser|toux|racle[- ]toi la gorge)/],
+  ["compter", /\b(compte sur (tes|les) doigts|compte jusqu|compte\b)/],
+  ["menacer", /\b(menace|menacer|doigt menacant|sermonne|gronde|fais la morale)/],
+  ["hesiter", /\b(hesite|hesiter|indecis|tu ne sais pas quoi faire|tergiverse)/],
+  ["ecouter", /\b(tends l'oreille|main a l'oreille|ecoute bien|ecoute\b|tu entends)/],
+  ["bercer", /\b(berce|bercer|un bebe|nourrisson)/],
+  ["mimer_mur", /\b(mur invisible|mime un mur|fais le mime)/],
+  ["dormir", /\b(dors\b|dormir|endors|sommeil|fais dodo|sieste|assoupis)/],
+];
+POSES.unshift(
+  ["effondre", /\b(effondre|ecroule|evanouis|s'evanouir|tombe\b|tombe par terre|fais le mort|allonge|couche[- ]toi|etends[- ]toi par terre)/],
+  ["en_garde", /\b(en garde|garde de boxe|position de combat|pret a te battre|pret au combat)/],
+  ["penseur", /\b(penseur|pose du penseur)/],
+  ["statue", /\b(statue|fais la statue|liberte eclairant)/],
+);
+
+/* Mouvements de scène composés (plusieurs déplacements) */
+function mouvementsScene(c, schema) {
+  const L = schema.lieux, d = (x, z, extra = {}) => ({ type: "deplacer", ...(x !== null ? { x } : {}), ...(z !== null ? { z } : {}), ...extra });
+  if (/\b(tourne sur toi[- ]meme|pirouette|virevolte|tour sur toi|tour complet|tourbillonne)/.test(c)) return [{ type: "orienter", angle: 360, relatif: true }];
+  if (/\b(fais le tour|tour du plateau|tour de (la )?scene|fais un tour|parcours (la scene|le plateau))/.test(c))
+    return [d(1.5, -1.0), d(-1.5, -1.0), d(-1.5, 1.0), d(1.5, 1.0), d(0, 0)];
+  if (/\b(cent pas|100 pas|va[- ]et[- ]vient|vas et viens|aller[- ]retour|arpente)/.test(c)) return [d(1.2, null), d(-1.2, null), d(1.2, null), d(0, null)];
+  if (/\b(sors|sortie|quitte la scene|quitte le plateau|va[- ]t'en de la scene|disparais)/.test(c)) {
+    const x = /\bjardin\b/.test(c) ? schema.plateau.x[0] : schema.plateau.x[1];
+    return [d(x, null, { course: /\b(vite|cours|en courant)/.test(c) })];
+  }
+  if (/\b(entre en scene|fais ton entree|reviens en scene|reviens au centre|va au centre|place[- ]toi au centre)/.test(c)) return [d(L.centre[0], L.centre[1])];
+  if (/^(re)?monte\b/.test(c)) return [d(null, L.lointain[1])];
+  if (/^(re)?descends\b/.test(c)) return [d(null, L.avant_scene[1])];
+  if (/\b(pas chasses?|chasse[- ]croise|decale[- ]toi|glisse sur le cote)/.test(c) || (/\b(va|vas|marche|deplace[- ]toi)\b/.test(c) && /\b(a|vers) (ta |ma |sa |la )?(gauche|droite)\b/.test(c))) {
+    const s = sens(c) || 1;
+    const m = c.match(/(\d+(?:[.,]\d+)?)\s*(pas|metres?|m\b)/);
+    const metres = m ? (m[2] === "pas" ? Number(m[1].replace(",", ".")) * 0.6 : Number(m[1].replace(",", "."))) : 1.0;
+    return [{ type: "deplacer", lateral: metres * s }];
+  }
+  return null;
+}
+
+/* ── Exemples : vocabulaire de référence (aide, correction orthographique, rapprochement, tests) ── */
+export const EXEMPLES = [
+  "lève le bras droit", "lève le bras gauche", "lève les deux bras", "baisse les bras", "tends le bras droit devant toi", "écarte les bras sur le côté",
+  "plie le coude", "tends le bras", "ouvre la main", "ferme le poing", "lève la main", "tourne la tête à gauche", "tourne la tête à droite",
+  "baisse la tête", "lève la tête", "penche la tête sur le côté", "redresse la tête", "penche-toi en avant", "penche-toi en arrière",
+  "penche le buste à gauche", "tourne le buste à droite", "hausse les épaules", "lève les épaules", "plie les genoux", "plie le genou droit",
+  "lève la jambe droite", "lève le pied gauche", "tends la jambe", "écarte les jambes", "pointe le pied", "baisse le bassin",
+  "souris", "fronce les sourcils", "lève les sourcils", "ferme les yeux", "ouvre les yeux", "ouvre la bouche", "fais la moue", "grimace",
+  "sois en colère", "sois joyeux", "sois triste", "aie peur", "sois surpris", "sois tendre", "sois méprisant", "sois ironique", "sois las",
+  "sois sûr de toi", "sois dégoûté", "reste neutre", "plus joyeux", "moins triste",
+  "salue", "salue le public", "fais une révérence", "hoche la tête", "fais non de la tête", "croise les bras", "mains sur les hanches",
+  "réfléchis", "applaudis", "ouvre les bras", "pointe vers la gauche", "lève le poing", "main sur le cœur", "gratte-toi la tête",
+  "ris", "pleure", "soupire", "fais un clin d'œil", "danse", "tape du pied", "cache ton visage", "étire-toi", "respire profondément",
+  "marche sur place", "fais un salut militaire", "lève les bras au ciel", "joins les mains", "fais signe de venir", "fais signe de partir",
+  "chut", "mains dans le dos", "mains dans les poches", "lève le pouce", "désigne-toi", "prends ta tête dans tes mains",
+  "frappe à la porte", "bois un verre", "téléphone", "écris", "lis un livre", "regarde ta montre", "essuie-toi le front", "bâille",
+  "frotte-toi les yeux", "saute", "sautille", "serre la main", "repousse", "tremble", "frotte-toi les mains", "montre tes muscles",
+  "prends-le dans tes bras", "lance", "ramasse quelque chose", "pousse", "tire", "boxe", "donne un coup de pied", "mets-toi sur la pointe des pieds",
+  "titube", "scrute l'horizon", "éternue", "tousse", "compte sur tes doigts", "menace", "hésite", "tends l'oreille", "berce un bébé", "mime un mur invisible", "fais semblant de dormir",
+  "assieds-toi", "lève-toi", "accroupis-toi", "mets-toi à genoux", "garde-à-vous", "recroqueville-toi", "effondre-toi", "mets-toi en garde",
+  "prends la pose du penseur", "fais la statue", "repos",
+  "avance", "avance de trois pas", "recule", "va côté cour", "va côté jardin", "va au lointain", "va à l'avant-scène", "approche-toi", "éloigne-toi",
+  "cours vers le jardin", "tourne-toi vers la droite", "fais demi-tour", "tourne sur toi-même", "fais le tour de la scène", "fais les cent pas",
+  "sors côté cour", "entre en scène", "va au centre", "fais un pas chassé à gauche", "monte", "descends", "de profil", "de dos", "fais face au public",
+  "regarde-moi", "regarde en haut", "regarde en bas", "regarde au loin", "regarde à gauche",
+  "dis bonjour", "chuchote je suis là", "crie au secours",
+  "gros plan", "vue de face", "vue de profil", "plan large", "lumière douche", "contre-jour", "lumière chaude",
+  "plus vite", "plus lentement", "mémorise cette pose sous le nom attente", "reprends la pose attente", "annule", "répète", "stop", "aide",
+  "mets une chemise rouge", "barbe pleine", "cheveux gris", "plus grand", "plus costaud", "tu as 60 ans", "rase-toi",
+];
+
+const VIDES = new Set(["le", "la", "les", "un", "une", "des", "de", "du", "d", "l", "a", "au", "aux", "et", "ou", "ton", "ta", "tes", "te", "toi", "moi",
+  "me", "mon", "ma", "mes", "son", "sa", "ses", "sur", "dans", "en", "pour", "avec", "par", "vers", "stp", "svp", "s'il", "plait", "fais", "fait", "faire",
+  "peu", "tres", "une", "maintenant", "quelque", "chose", "truc", "machin", "comme", "ca", "cela", "ceci", "genre", "alors", "donc", "encore", "bien", "tu", "vous", "il", "elle", "on", "je", "j", "y", "qu", "que", "qui", "ce", "cet", "cette"]);
+let _lex = null;
+function lexique() {
+  if (_lex) return _lex;
+  _lex = new Set();
+  const extra = "lever baisser tourner pencher plier tendre ouvrir fermer marcher courir avancer reculer sauter danser saluer regarder bras main mains jambe jambes tete pied pieds genou genoux epaule epaules coude poignet doigt doigts dos ventre buste tronc bassin hanche hanches visage yeux bouche sourcils gauche droite droit devant derriere haut bas cote lentement doucement vite rapidement beaucoup completement legerement cour jardin lointain public scene plateau centre pirouette virevolte tourbillonne arpente chasse chasses decale glisse entree sors sortie quitte disparais monte descends dormir dors sieste semblant genou";
+  // mots des exemples et de toutes les expressions reconnues (gestes, poses, émotions, verbes, parties du corps)
+  const sources = [...GESTES_PLUS, ...GESTES, ...POSES, ...EMO, ...PARTIES].map(([, re]) => re.source).concat(Object.values(V).map((re) => re.source));
+  const mots = sources.join(" ").replace(/\\[bdsw]/g, " ").replace(/[^a-z' -]+/g, " ");
+  for (const e of [...EXEMPLES, extra, mots]) for (const w of chiffres(normaliser(e)).split(/\s+/)) if (w.length >= 3 && !/['-]$|^['-]/.test(w)) _lex.add(w);
+  return _lex;
+}
+function distance(a, b) {
+  const m = a.length, n = b.length, d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+  for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
+    const c = a[i - 1] === b[j - 1] ? 0 : 1;
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[m][n];
+}
+/* Correction des fautes de frappe : chaque mot inconnu de 4 lettres ou plus est remplacé par le mot connu le plus proche
+   (1 erreur jusqu'à 7 lettres, 2 au-delà), à condition que la première lettre concorde. */
+export function corriger(c) {
+  const L = lexique();
+  return c.split(/\s+/).map((w) => {
+    if (w.length < 4 || L.has(w) || /\d/.test(w) || VIDES.has(w)) return w;
+    const tol = w.length >= 8 ? 2 : 1;
+    let meilleur = null, dmin = tol + 1;
+    for (const x of L) {
+      if (x[0] !== w[0] || Math.abs(x.length - w.length) > tol) continue;
+      const dd = distance(w, x);
+      if (dd < dmin) { dmin = dd; meilleur = x; }
+    }
+    return meilleur || w;
+  }).join(" ");
+}
+function racines(c) {
+  return new Set(c.split(/[\s'’-]+/).filter((w) => w.length > 1 && !VIDES.has(w)).map((w) => w.slice(0, 5)));
+}
+/* Rapprochement : exemple le plus proche par recouvrement des racines (coefficient de Dice). */
+export function rapprocher(c, n = 1) {
+  const A = racines(c);
+  if (!A.size) return [];
+  return EXEMPLES.map((e) => {
+    const B = racines(chiffres(normaliser(e)));
+    let k = 0; for (const x of A) if (B.has(x)) k++;
+    return { exemple: e, score: B.size ? (2 * k) / (A.size + B.size) : 0 };
+  }).sort((a, b) => b.score - a.score).slice(0, n);
+}
+
 /* ── Analyse d'une proposition (clause) ────────────────── */
 function analyserClause(c, original, schema) {
   const f = facteur(c);
@@ -407,6 +571,8 @@ function analyserClause(c, original, schema) {
   if (/^(stop|arrete|arrete[- ]toi|arret|fige[- ]toi|ne bouge plus|immobile|on arrete|halte)\b/.test(c)) return [{ type: "arret" }];
   if (/^(repete|encore une fois|recommence|refais|une autre fois|bis)\b/.test(c)) return [{ type: "repeter" }];
   if (/^(annule|defais|reviens en arriere|retour arriere)\b/.test(c)) return [{ type: "annuler" }];
+  if (/^(aide|help|que sais[- ]tu faire|qu'est[- ]ce que tu sais faire|que peux[- ]tu faire|quelles commandes|liste des commandes|commandes)\b/.test(c)) return [{ type: "aide" }];
+  if (/^(lis|lit|lire) (un livre|une lettre|le journal|ce livre)/.test(c)) return [{ type: "geste", nom: "lire", intensite: 1 }];
   const dire = original.match(/^\s*(dis|dit|dire|prononce|recite|declame|déclame|récite|reponds|réponds|chuchote|murmure|crie|hurle|parle|annonce|lis)\b\s*:?\s*(.*)$/i);
   if (dire && dire[2].trim()) {
     const verbe = normaliser(dire[1]);
@@ -418,17 +584,17 @@ function analyserClause(c, original, schema) {
   if (mem) return [{ type: "memoriser", nom: (mem[4] || "").trim() || "pose" }];
   const rap = c.match(/\b(reprends|rappelle|retrouve|reviens a|reviens en|prends|fais|adopte) (la |ta )?(pose|position|posture) ([a-z0-9' -]+)$/);
   if (rap) {
-    const nom = rap[4].trim();
-    const interne = POSES.find(([n]) => n === nom.replace(/[ -]/g, "_") || normaliser(n.replace(/_/g, " ")) === nom);
+    const nom = rap[4].trim().replace(/^(du|de la|de l'|des|de|d')\s*/, "");
+    const interne = POSES.find(([n, re]) => n === nom.replace(/[ -]/g, "_") || normaliser(n.replace(/_/g, " ")) === nom || re.test(nom));
     return [interne ? avec({ type: "pose", nom: interne[0] }) : { type: "rappeler", nom }];
   }
   const cam = camera(c); if (cam) return [cam];
   const lum = lumiere(c); if (lum) return [lum];
 
-  for (const [nom, re] of GESTES) {
+  for (const [nom, re] of [...GESTES_PLUS, ...GESTES]) {
     if (re.test(c)) {
       const g = { type: "geste", nom, intensite: f };
-      if (["saluer", "pointer", "poing_leve", "main_coeur", "gratter_tete", "taper_pied"].includes(nom) && /\b(gauche|droite?)\b/.test(c) && !/\b(vers|a) (la |ta |ma )?(gauche|droite)\b/.test(c)) g.cote = cotes(c)[0];
+      if (["saluer", "pointer", "poing_leve", "main_coeur", "gratter_tete", "taper_pied", "salut_militaire", "signe_venir", "chasser", "pouce_leve"].includes(nom) && /\b(gauche|droite?)\b/.test(c) && !/\b(vers|a) (la |ta |ma )?(gauche|droite)\b/.test(c)) g.cote = cotes(c)[0];
       if (nom === "pointer") { const s = sens(c); g.direction = /\b(haut|ciel)\b/.test(c) ? "haut" : /\b(bas|sol)\b/.test(c) ? "bas" : s > 0 ? "gauche" : s < 0 ? "droite" : "devant"; }
       const rep = c.match(/\b(\d+) fois\b/); if (rep) g.repetitions = Math.min(8, Number(rep[1]));
       out.push(avec(g));
@@ -459,6 +625,8 @@ function analyserClause(c, original, schema) {
     }
   }
   if (reg) return [reg];
+  const mvt = mouvementsScene(c, schema);
+  if (mvt) return mvt.map(avec);
   const dep = deplacement(c, schema);
   if (dep) return [avec(dep)];
 
@@ -507,22 +675,40 @@ export function decouper(texte) {
 
 /* Point d'entrée : renvoie {actions, ignores, clauses}. */
 export function interpreter(texte, schema) {
-  const actions = [], ignores = [], clauses = decouper(texte);
+  const actions = [], ignores = [], suggestions = {}, clauses = decouper(texte);
   let partiePrecedente = null;
   for (const brut of clauses) {
     const c = chiffres(normaliser(brut));
-    let a = analyserClause(c, brut, schema);
+    let a = [], note = null;
+    // fautes de frappe corrigées d'abord (« marche vers le jardain »), sauf dans une parole
+    const cc = VERBES_DIRE.test(c) || /[«"“]/.test(brut) ? c : corriger(c);
+    if (cc !== c) { a = analyserClause(cc, cc, schema); if (a.length) note = { corrige: cc }; }
+    if (!a.length) a = analyserClause(c, brut, schema);
+    // « fais semblant de dormir », « mime la peur », « imite un boxeur »
+    const sem = c.match(/^(fais semblant de|fais comme si tu|mime|imite|joue a|joue)\s+(.+)$/);
+    if (!a.length && sem) { a = analyserClause(corriger(sem[2]), sem[2], schema); if (a.length) note = { approx: sem[2] }; }
     // « lève le bras droit et le gauche » : le fragment reprend la partie du corps précédente
     if (!a.length && partiePrecedente && /\b(gauche|droite?)\b/.test(c)) {
       const c2 = c.replace(/\b(le|la|l')\s*(gauche|droite?)\b/, `$1 ${partiePrecedente} $2`);
       if (c2 !== c) a = analyserClause(c2, brut, schema);
     }
+    // fautes de frappe (« lève le brass droit », « assied-toi »)
+    if (!a.length) {
+      const c3 = corriger(c);
+      if (c3 !== c) { a = analyserClause(c3, c3, schema); if (a.length) note = { corrige: c3 }; }
+    }
+    // formulation voisine d'une commande connue
+    if (!a.length) {
+      const [r] = rapprocher(corriger(c));
+      if (r && r.score >= 0.6) { const e = chiffres(normaliser(r.exemple)); a = analyserClause(e, r.exemple, schema); if (a.length) note = { approx: r.exemple }; }
+    }
+    if (/\b(allonge|couche[- ]toi|etends[- ]toi par terre)/.test(c) && a.length) note = { approx: "effondre-toi (la position allongée n'est pas modélisée)" };
     const p = PARTIES.find(([, re]) => re.test(c));
     if (p) partiePrecedente = c.match(p[1])[0];
-    if (a.length) actions.push(...a.map((x) => ({ ...x, clause: brut })));
-    else ignores.push(brut);
+    if (a.length) actions.push(...a.map((x) => ({ ...x, clause: brut, ...(note || {}) })));
+    else { ignores.push(brut); suggestions[brut] = rapprocher(corriger(c), 3).filter((x) => x.score > 0).map((x) => x.exemple); }
   }
-  return { actions: valider(actions, schema).actions, ignores, clauses };
+  return { actions: valider(actions, schema).actions, ignores, suggestions, clauses };
 }
 
 /* Validation stricte (même règle que bridge/partenaire/avatar.py) : type connu, valeurs bornées. */
@@ -577,7 +763,7 @@ export function valider(actions, schema) {
         break;
       }
       case "memoriser": case "rappeler": x.nom = String(x.nom || "pose").slice(0, 40); break;
-      case "arret": case "repeter": case "annuler": break;
+      case "arret": case "repeter": case "annuler": case "aide": break;
       default: rejets.push({ action: a, motif: "type d'action inconnu" }); continue;
     }
     if ("vitesse" in x && x.type !== "vitesse") x.vitesse = borne(x.vitesse, 0.2, 3);
