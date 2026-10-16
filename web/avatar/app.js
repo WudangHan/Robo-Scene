@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { Humanoide, APPARENCE_DEFAUT, PEAUX, YEUX } from "./humanoide.js";
 import { Animateur } from "./animation.js";
 import { Scene, LIBELLES_ZONES, DOFS_ZONE } from "./scene.js";
-import { Parole } from "./parole.js";
+import { Parole, estEcho } from "./parole.js";
 import { Imitation, lireEmotion } from "./imitation.js";
 import { EMOTIONS, prosodie } from "./emotions.js";
 import { interpreter, valider, EXEMPLES } from "./directives.js";
@@ -22,6 +22,8 @@ const humain = new Humanoide(SCHEMA);
 const anim = new Animateur(humain, SCHEMA);
 const scene = new Scene($("#vue3d"), humain, anim);
 const parole = new Parole();
+const ditsRecemment = [];          // {texte, t} : phrases dites par le robot depuis 15 s (anti-écho de la dictée)
+let dicteeRef = null;              // renseigné plus bas (Dictee), avant toute parole
 const imitation = new Imitation();
 humain.appliquerApparence(lireLS("robo-scene-avatar-apparence", {}));
 
@@ -102,6 +104,7 @@ function annuler() {
 }
 function toutArreter(motif) {
   enCours++; anim.arreter(); parole.annuler(); sousTitre("");
+  if (typeof viderBascules === "function") viderBascules();
   journal({ html: `<b>Arrêt</b> — ${echapper(motif)}`, classe: "alerte" });
 }
 function appliquerApparence(cle, valeur, relatif) {
@@ -123,7 +126,12 @@ async function parler(texte, { maniere = null, emotion = null, prosodieImposee =
     texte: s, pause_apres_ms: /[.!?…]$/.test(s) ? Math.max(120, 320 * (1 + (p.pause || 0))) : /[,;:]$/.test(s) ? Math.max(60, 140 * (1 + (p.pause || 0))) : 0,
   }));
   sousTitre(segs.map((s) => s.texte).join(" "));
-  const ok = await parole.dire(segs, { debit, hauteur, volume, parler: true });
+  // Anti-écho : la dictée ne doit pas entendre le robot (voir Dictee) ; on mémorise ce qu'il dit
+  ditsRecemment.push({ texte, t: Date.now() }); if (ditsRecemment.length > 6) ditsRecemment.shift();
+  dicteeRef?.suspendre();
+  let ok;
+  try { ok = await parole.dire(segs, { debit, hauteur, volume, parler: true }); }
+  finally { dicteeRef?.reprendre(); }
   if (ok) setTimeout(() => { if (!parole.actif) sousTitre(""); }, 900);
   return ok;
 }
@@ -185,12 +193,19 @@ async function executerTexte(texte, origine = "écrit") {
   if (r.ignores.length) repondreIncompris(r.ignores, r.actions.length > 0);
   return promesse;
 }
-/* Le robot répond toujours : s'il n'a pas compris, il le dit et le montre (haussement d'épaules, sous-titre). */
+/* Le robot répond toujours : s'il n'a pas compris, il le dit et le montre (haussement d'épaules, sous-titre).
+   Garde-fou : la même réponse parlée n'est jamais redite à moins de 10 s ; entre-temps, il se contente du
+   geste et du sous-titre (plus de boucle « Pardon, je n'ai pas compris » si le micro capte sa propre voix). */
+let dernierIncompris = { phrase: "", t: 0 };
 function repondreIncompris(ignores, enPartie) {
   if (!$("#repondre-incompris").checked) return;
   const phrase = enPartie ? `Je n'ai pas compris : ${ignores.join(", ")}.` : "Pardon, je n'ai pas compris. Dites « aide » pour connaître mes commandes.";
+  const maintenant = Date.now();
+  const deja = phrase === dernierIncompris.phrase && maintenant - dernierIncompris.t < 10000;
+  dernierIncompris = { phrase, t: maintenant };
   setTimeout(async () => {
     if (!enPartie) anim.jouerGeste("hausser_epaules");
+    if (deja) { sousTitre(phrase); setTimeout(() => { if (!parole.actif) sousTitre(""); }, 2500); return; }
     await parler(phrase, { emotion: { nom: "neutre", intensite: 0 } });
   }, enPartie ? 400 : 0);
 }
@@ -228,9 +243,29 @@ function proposerClaude(rep, li) {
 $("#form-directive").onsubmit = (e) => { e.preventDefault(); const t = $("#directive").value; $("#directive").value = ""; executerTexte(t); };
 $$("#exemples button").forEach((b) => (b.onclick = () => executerTexte(b.textContent, "exemple")));
 
-/* Dictée (reconnaissance vocale du navigateur, fr-CA) */
+/* Dictée (reconnaissance vocale du navigateur, fr-CA).
+   Anti-écho, trois verrous : (1) la reconnaissance est suspendue pendant que le robot parle, puis 1,2 s après ;
+   (2) un résultat qui reprend une phrase dite récemment par le robot est écarté (estEcho) ; (3) la réponse
+   « je n'ai pas compris » n'est pas redite à moins de 10 s (repondreIncompris). */
 const Dictee = {
-  rec: null, continu: false, actif: false,
+  rec: null, continu: false, actif: false, suspendu: false, sourdineJusque: 0, reprise: null,
+  suspendre() {
+    if (!this.actif) return;
+    this.suspendu = true; clearTimeout(this.reprise);
+    try { this.rec?.abort(); } catch (e) { /* déjà arrêtée */ }
+  },
+  reprendre() {
+    if (!this.actif || !this.suspendu) return;
+    this.sourdineJusque = Date.now() + 1200;            // queue de réverbération des haut-parleurs
+    clearTimeout(this.reprise);
+    const relancer = () => {
+      if (!this.actif) return;
+      if (parole.actif) { this.reprise = setTimeout(relancer, 400); return; }   // le robot parle encore
+      this.suspendu = false;
+      try { this.rec?.start(); } catch (e) { /* déjà démarrée */ }
+    };
+    this.reprise = setTimeout(relancer, 1200);
+  },
   dispo() { return "SpeechRecognition" in window || "webkitSpeechRecognition" in window; },
   demarrer(continu) {
     if (!this.dispo()) { journal({ html: "La reconnaissance vocale n'est pas offerte par ce navigateur (essayez Chrome, Edge ou Safari récent).", classe: "avert" }); return; }
@@ -239,22 +274,30 @@ const Dictee = {
     r.lang = "fr-CA"; r.interimResults = true; r.continuous = !!continu; this.continu = !!continu;
     try { if ("processLocally" in r) r.processLocally = true; } catch (e) {}
     r.onresult = (e) => {
+      if (this.suspendu || parole.actif || Date.now() < this.sourdineJusque) { $("#dictee-interim").textContent = ""; return; }
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const x = e.results[i];
-        if (x.isFinal) { const t = x[0].transcript.trim(); $("#dictee-interim").textContent = ""; if (t) executerTexte(t, "vocal"); }
-        else interim += x[0].transcript;
+        if (x.isFinal) {
+          const t = x[0].transcript.trim(); $("#dictee-interim").textContent = "";
+          if (t && estEcho(t, ditsRecemment.filter((d) => Date.now() - d.t < 15000).map((d) => d.texte))) { journal({ html: `<small>Écho de la voix du robot ignoré : « ${echapper(t)} »</small>` }); continue; }
+          if (t) executerTexte(t, "vocal");
+        } else interim += x[0].transcript;
       }
       $("#dictee-interim").textContent = interim;
     };
-    r.onerror = (e) => { if (e.error !== "no-speech") journal({ html: `Dictée : ${echapper(e.error)}`, classe: "avert" }); };
-    r.onend = () => { if (this.actif && this.continu) { try { r.start(); } catch (e) {} } else this.fin(); };
+    r.onerror = (e) => { if (!["no-speech", "aborted"].includes(e.error)) journal({ html: `Dictée : ${echapper(e.error)}`, classe: "avert" }); };
+    r.onend = () => {
+      if (this.suspendu) return;                              // reprise gérée par reprendre()
+      if (this.actif && this.continu) { try { r.start(); } catch (e) {} } else this.fin();
+    };
     this.actif = true; r.start();
     $("#btn-micro").classList.add("actif"); $("#btn-micro").setAttribute("aria-pressed", "true");
   },
-  arreter() { this.actif = false; try { this.rec?.stop(); } catch (e) {} this.fin(); },
+  arreter() { this.actif = false; this.suspendu = false; clearTimeout(this.reprise); try { this.rec?.stop(); } catch (e) {} this.fin(); },
   fin() { this.actif = false; $("#btn-micro").classList.remove("actif"); $("#btn-micro").setAttribute("aria-pressed", "false"); $("#dictee-interim").textContent = ""; },
 };
+dicteeRef = Dictee;
 $("#btn-micro").onclick = () => (Dictee.actif ? Dictee.arreter() : Dictee.demarrer($("#ecoute-continue").checked));
 if (!Dictee.dispo()) { $("#btn-micro").disabled = true; $("#btn-micro").title = "Reconnaissance vocale indisponible dans ce navigateur"; }
 
@@ -342,13 +385,53 @@ const NOMS_GESTES = { saluer: "saluer (main)", reverence: "révérence", hocher:
   coup_de_pied: "coup de pied", pointes_pieds: "pointes des pieds", tituber: "tituber", regarder_loin: "scruter au loin", eternuer: "éternuer",
   tousser: "tousser", compter: "compter sur ses doigts", menacer: "menacer", hesiter: "hésiter", ecouter: "tendre l'oreille", bercer: "bercer",
   mimer_mur: "mur invisible (mime)", dormir: "dormir" };
-$("#gestes").innerHTML = SCHEMA.gestes.map((g) => `<button data-g="${g}">${NOMS_GESTES[g] || g}</button>`).join("");
-$$("#gestes [data-g]").forEach((b) => (b.onclick = () => { memoriserEtat(); anim.jouerGeste(b.dataset.g, { cote: $("#cote-geste").value }); }));
+/* Boutons en bascule (gestes et poses) : premier appui, le robot exécute et TIENT la position ; second appui sur
+   le même bouton, il revient à la position d'avant cet appui, ou à la position de départ selon le réglage
+   « Second appui ». Les bascules s'empilent : défaire l'une défait aussi celles activées après elle. */
+const DEPART = { base: anim.instantane(), emotion: { ...anim.emotion }, auTenu: {}, tabouret: false, regard: anim.regardMode,
+  pointe: { g: false, d: false } };
+const bascules = [];
+function etatComplet() {
+  return { base: anim.instantane(), emotion: { ...anim.emotion }, auTenu: { ...anim.auTenu }, tabouret: anim.tabouret,
+    regard: anim.regardMode, pointe: { ...anim.pointe } };
+}
+function majBascules() {
+  $$("#gestes [data-g], #poses [data-p]").forEach((b) => {
+    const on = bascules.some((x) => x.bouton === b);
+    b.classList.toggle("actif", on); b.setAttribute("aria-pressed", String(on));
+    b.title = on ? "Appuyer de nouveau pour revenir" : "";
+  });
+}
+function revenirA(etat) {
+  enCours++; anim.arreter();
+  anim.restaurer(etat.base); anim.emotion = { ...etat.emotion }; anim.auTenu = { ...etat.auTenu };
+  anim.tabouret = etat.tabouret; anim.regardMode = etat.regard; anim.pointe = { ...etat.pointe }; anim.auGeste = {};
+  for (const n of anim.noms) anim.vitesseDof[n] = 0.9;                // retour posé, sans à-coup
+  setTimeout(() => { for (const n of anim.noms) delete anim.vitesseDof[n]; }, 1800);
+  anim.emettre(); setTimeout(majCurseurs, 60); majEmotionBoutons();
+}
+function viderBascules() { bascules.length = 0; majBascules(); }
+async function basculer(bouton, lancer) {
+  const i = bascules.findIndex((x) => x.bouton === bouton);
+  if (i >= 0) {                                                       // second appui : retour
+    const depart = $("#retour-bascule").value === "depart";
+    const etat = depart ? DEPART : bascules[i].etat;
+    bascules.splice(depart ? 0 : i);
+    memoriserEtat(); revenirA(etat); majBascules();
+    journal({ html: `Retour ${depart ? "à la position de départ" : "à la position d'avant"} (« ${echapper(bouton.textContent)} »)` });
+    return;
+  }
+  memoriserEtat();
+  bascules.push({ bouton, etat: etatComplet() }); majBascules();
+  await lancer();
+}
+$("#gestes").innerHTML = SCHEMA.gestes.map((g) => `<button data-g="${g}" aria-pressed="false">${NOMS_GESTES[g] || g}</button>`).join("");
+$$("#gestes [data-g]").forEach((b) => (b.onclick = () => basculer(b, () => anim.jouerGeste(b.dataset.g, { cote: $("#cote-geste").value, tenir: true }))));
 const NOMS_POSES = { repos: "repos", debout: "debout", assis: "assis", accroupi: "accroupi", a_genoux: "à genoux", garde_a_vous: "garde-à-vous", recroqueville: "recroquevillé",
   effondre: "effondré", en_garde: "en garde", penseur: "le penseur", statue: "statue" };
-$("#poses").innerHTML = SCHEMA.poses.map((p) => `<button data-p="${p}">${NOMS_POSES[p] || p}</button>`).join("");
-$$("#poses [data-p]").forEach((b) => (b.onclick = () => { memoriserEtat(); anim.prendrePose(b.dataset.p); setTimeout(majCurseurs, 50); }));
-$("#btn-annuler").onclick = () => { if (!annuler()) journal({ html: "Rien à annuler." }); };
+$("#poses").innerHTML = SCHEMA.poses.map((p) => `<button data-p="${p}" aria-pressed="false">${NOMS_POSES[p] || p}</button>`).join("");
+$$("#poses [data-p]").forEach((b) => (b.onclick = () => basculer(b, async () => { anim.prendrePose(b.dataset.p); setTimeout(majCurseurs, 50); })));
+$("#btn-annuler").onclick = () => { viderBascules(); if (!annuler()) journal({ html: "Rien à annuler." }); };
 
 /* Poses mémorisées (navigateur) et chorégraphie */
 let poses = lireLS("robo-scene-avatar-poses", {});

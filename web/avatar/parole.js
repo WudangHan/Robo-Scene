@@ -20,6 +20,24 @@ export function visemes(texte) {
   return phonetiser(texte);
 }
 
+/* Anti-écho de la dictée : vrai si ce que le micro vient d'entendre reprend une phrase que le robot a dite
+   (haut-parleurs captés par le micro). Comparaison sur les mots, sans accents ni ponctuation. */
+const plier = (s) => String(s || "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase()
+  .replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim();
+export function estEcho(entendu, ditsRecemment) {
+  const e = plier(entendu);
+  if (!e) return false;
+  const motsE = e.split(" ").filter((m) => m.length > 2);
+  if (motsE.length < 2) return false;      // « aide », « pardon » : toujours des directives, jamais un écho
+  return (ditsRecemment || []).some((dit) => {
+    const d = plier(dit);
+    if (!d) return false;
+    if (d.includes(e) || (e.length > 12 && e.includes(d))) return true;
+    const motsD = new Set(d.split(" "));
+    return motsE.filter((m) => motsD.has(m)).length / motsE.length >= 0.6;
+  });
+}
+
 function voixMasculine(v) {
   return /thomas|daniel|nicolas|paul|henri|jacques|antoine|f[ée]lix|mathieu|guillaume|jean|louis|olivier|eddy|reed|rocko|grandpa|male|homme|masculin/i.test(v.name);
 }

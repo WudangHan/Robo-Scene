@@ -88,7 +88,9 @@ export class Animateur {
     this.jeton++; this.geste = null; this.marche = null; this.auGeste = {};
     for (const n of this.noms) this.vit[n] = 0;
   }
-  async jouerGeste(nom, { cote = "d", repetitions = 1, intensite = 1, direction = "devant", vitesse = null } = {}) {
+  /* tenir : le geste garde sa dernière position au lieu de revenir à la position d'avant (boutons en bascule :
+     le second appui sur le même bouton ramène le robot, voir app.js, basculer). */
+  async jouerGeste(nom, { cote = "d", repetitions = 1, intensite = 1, direction = "devant", vitesse = null, tenir = false } = {}) {
     const fabrique = GESTES[nom];
     if (!fabrique) return false;
     const j = ++this.jeton;
@@ -105,6 +107,7 @@ export class Animateur {
       if (att > 0) await attendre(att);
       if (j !== this.jeton) return false;
       if (im.fin) {
+        if (tenir) continue;                       // position tenue jusqu'au second appui
         if (im.regard) this.regardMode = im.regard;
         for (const n of touches) this.base[n] = avant[n];
         this.pointe = pointeAvant; this.auGeste = im.au ? { ...im.au } : {};

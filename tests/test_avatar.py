@@ -330,3 +330,53 @@ def test_ancrage_plantaire(tmp_path):
     assert out["saut"]["g"] > 0.25 and out["saut"]["d"] > 0.25        # le saut quitte le sol
     assert out["jambe_levee"]["g"] > 0.3 and abs(out["jambe_levee"]["d"]) < 0.006
     assert out["sans_ancrage"]["g"] < -0.25               # témoin : sans la passe, le pied s'enfonçait
+
+
+@pytest.mark.skipif(not NODE, reason="Node.js absent")
+def test_anti_echo_de_la_dictee():
+    """16 oct. 2026 : le micro captait « Pardon, je n'ai pas compris… » et le robot se répondait sans fin."""
+    out = node("""
+      import { estEcho } from "./web/avatar/parole.js";
+      const dits = ["Pardon, je n'ai pas compris. Dites « aide » pour connaître mes commandes.", "Je ne reviendrai pas."];
+      const cas = ["pardon je n'ai pas compris dites aide pour connaitre mes commandes", "dites aide pour connaître mes commandes",
+                   "je n'ai pas compris", "Je ne reviendrai pas", "lève le bras droit", "aide", "sois très en colère",
+                   "pardon"];
+      console.log(JSON.stringify(Object.fromEntries(cas.map((c) => [c, estEcho(c, dits)]))));
+    """)
+    assert out == {"pardon je n'ai pas compris dites aide pour connaitre mes commandes": True,
+                   "dites aide pour connaître mes commandes": True, "je n'ai pas compris": True,
+                   "Je ne reviendrai pas": True, "lève le bras droit": False,
+                   "aide": False, "sois très en colère": False, "pardon": False}   # directives d'un mot : jamais un écho
+
+
+@pytest.mark.skipif(not NODE, reason="Node.js absent")
+def test_geste_tenu_pour_les_boutons_en_bascule(tmp_path):
+    """16 oct. 2026 : un bouton de geste fait le geste et le TIENT ; sans « tenir », le geste revient seul."""
+    crochet = tmp_path / "three.mjs"
+    vendor = (WEB / "vendor" / "three.module.min.js").as_uri()
+    crochet.write_text('import { register } from "node:module";\n'
+                       'register("data:text/javascript," + encodeURIComponent('
+                       f'`export async function resolve(s, c, n) {{ if (s === "three") return {{ url: "{vendor}", '
+                       'shortCircuit: true }; return n(s, c); }`));\n', encoding="utf-8")
+    script = """
+      import fs from "node:fs";
+      import { Humanoide } from "./web/avatar/humanoide.js";
+      import { Animateur } from "./web/avatar/animation.js";
+      const S = JSON.parse(fs.readFileSync("./web/avatar/schema.json", "utf8"));
+      const a = new Animateur(new Humanoide(S), S);
+      a.prendrePose("repos"); a.vitesse = 20;
+      const repos = a.instantane();
+      const ecart = () => Math.max(...Object.keys(repos).map((k) => Math.abs((a.base[k] || 0) - (repos[k] || 0))));
+      await a.jouerGeste("bras_au_ciel", { tenir: true });
+      const tenu = ecart();
+      a.restaurer(repos);
+      await a.jouerGeste("bras_au_ciel");
+      const libre = ecart();
+      console.log(JSON.stringify({ tenu, libre }));
+    """
+    r = subprocess.run([NODE, "--import", crochet.as_uri(), "--input-type=module", "-e", script],
+                       capture_output=True, text=True, timeout=60, cwd=RACINE)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out["tenu"] > 60          # bras levés et tenus (degrés)
+    assert out["libre"] < 1e-6       # sans bascule : retour automatique à la position d'avant

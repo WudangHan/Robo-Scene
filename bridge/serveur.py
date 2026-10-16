@@ -786,8 +786,18 @@ def _page(nom: str):
     return servir
 
 
+@web.middleware
+async def _revalider(request: web.Request, handler):
+    """Pages et scripts de l'interface : toujours revalidés (ETag / Last-Modified), jamais pris tels quels dans le
+    cache du navigateur ; sans cela, une mise à jour de web/ restait invisible tant que le cache n'expirait pas."""
+    reponse = await handler(request)
+    if request.method in ("GET", "HEAD") and not request.path.startswith(("/api", "/ws")):
+        reponse.headers.setdefault("Cache-Control", "no-cache")
+    return reponse
+
+
 def creer_app(cfg: dict[str, Any]) -> web.Application:
-    app = web.Application(client_max_size=16 * 1024 * 1024)
+    app = web.Application(client_max_size=16 * 1024 * 1024, middlewares=[_revalider])
     app[CTL] = ctl = Controleur(cfg)
 
     async def demarrer(app: web.Application) -> None:
