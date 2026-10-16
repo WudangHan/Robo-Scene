@@ -264,6 +264,7 @@ export class Animateur {
       this.phase += dt * 2 * Math.PI * 0.85 * M.vitesse * (M.recul ? -1 : 1);
     } else if (this.pietinement) this.phase += dt * 2 * Math.PI * 0.9;
     const w = this.poidsMarche;
+    extra.marche = w;                  // l'ancrage plantaire laisse alors le déroulé talon-pointe libre
     if (w < 0.001) return;
     const amp = this.pietinement && !M ? 0.45 : (M?.deCote ? 0.4 : 1);
     const s = Math.sin(this.phase), c = Math.cos(this.phase);

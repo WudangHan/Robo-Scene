@@ -260,3 +260,73 @@ def test_toutes_les_commandes_repondent():
     assert e["tourne sur toi-même"] == ["orienter"] and e["frappe à la porte"] == ["frapper_porte"]
     assert e["pointe le pied droit"] == ["cheville_d.flexion"]
     assert out["incompris"]["actions"] == [] and out["incompris"]["ignores"]
+
+
+@pytest.mark.skipif(not NODE, reason="Node.js absent")
+def test_phonetisation_francaise_des_visemes():
+    """Audit du 2026-10-16 (chantier 5) : digrammes, nasales, lettres muettes et liaisons."""
+    cas = ["où", "bonjour", "moi", "photo", "ils parlent", "les amis", "les copains", "temps", "chanter", "la mer",
+           "quel", "beau", "bien", "est-il", "les hommes"]
+    out = node(f"""
+      import {{ visemes }} from "./web/avatar/parole.js";
+      const cas = {json.dumps(cas)};
+      const f = (t) => visemes(t).filter((s) => s.v !== "repos" || s.muet)
+        .map((s) => t.toLowerCase().substr(s.i, s.n) + ":" + (s.muet ? "-" : s.v)).join(" ");
+      console.log(JSON.stringify(Object.fromEntries(cas.map((c) => [c, f(c)]))));
+    """)
+    attendu = {
+        "où": "où:ou",
+        "bonjour": "b:pbm on:on j:ch ou:ou r:r",
+        "moi": "m:pbm o:ou i:a",                                         # /wa/
+        "photo": "ph:fv o:o t:dent o:o",
+        "ils parlent": "i:i l:dent s:- p:pbm a:a r:r l:dent e:- n:- t:-",  # -ent verbal muet
+        "les amis": "l:dent e:e s:dent a:a m:pbm i:i s:-",               # liaison
+        "les copains": "l:dent e:e s:- c:k o:o p:pbm ain:in s:-",
+        "temps": "t:dent em:an p:- s:-",
+        "chanter": "ch:ch an:an t:dent e:e r:-",
+        "la mer": "l:dent a:a m:pbm e:e r:r",
+        "quel": "q:k u:- e:e l:dent",
+        "beau": "b:pbm eau:o",
+        "bien": "b:pbm i:i en:in",
+        "est-il": "e:e s:- t:dent i:i l:dent",
+        "les hommes": "l:dent e:e s:dent h:- o:o m:pbm m:pbm e:- s:-",
+    }
+    assert out == attendu
+
+
+@pytest.mark.skipif(not NODE, reason="Node.js absent")
+def test_ancrage_plantaire(tmp_path):
+    """Audit du 2026-10-16 (chantier 5) : aucun pied ne flotte ni ne s'enfonce, hors saut et hors tabouret."""
+    crochet = tmp_path / "three.mjs"
+    vendor = (WEB / "vendor" / "three.module.min.js").as_uri()
+    crochet.write_text('import { register } from "node:module";\n'
+                       'register("data:text/javascript," + encodeURIComponent('
+                       f'`export async function resolve(s, c, n) {{ if (s === "three") return {{ url: "{vendor}", '
+                       'shortCircuit: true }; return n(s, c); }`));\n', encoding="utf-8")
+    script = """
+      import fs from "node:fs";
+      import { Humanoide } from "./web/avatar/humanoide.js";
+      import { POSES } from "./web/avatar/emotions.js";
+      const S = JSON.parse(fs.readFileSync("./web/avatar/schema.json", "utf8"));
+      const mesure = (P, extra = {}) => { const H = new Humanoide(S); H.appliquer(P, extra); H.racine.updateMatrixWorld(true);
+        return { g: H.hauteurSemelle("g"), d: H.hauteurSemelle("d"), genou: H.os.genou_g.rotation.x * 180 / Math.PI }; };
+      const out = {};
+      for (const [nom, P] of Object.entries(POSES)) if (!["assis", "penseur"].includes(nom)) out[nom] = mesure(P);
+      out.flechi = mesure({ "genou_g.flexion": 40, "genou_d.flexion": 40 });
+      out.abaisse = mesure({ "bassin.abaissement": 30 });
+      out.saut = mesure({ "bassin.elevation": 30 });
+      out.jambe_levee = mesure({ "hanche_g.flexion": 80 });
+      out.sans_ancrage = mesure({ "bassin.abaissement": 30 }, { ancrage: false });
+      console.log(JSON.stringify(out));
+    """
+    r = subprocess.run([NODE, "--import", crochet.as_uri(), "--input-type=module", "-e", script],
+                       capture_output=True, text=True, timeout=60, cwd=RACINE)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    for nom in [n for n in out if n not in ("saut", "jambe_levee", "sans_ancrage")]:
+        appui = min(out[nom]["g"], out[nom]["d"])
+        assert abs(appui) < 0.006, (nom, out[nom])        # pied d'appui au contact du plateau (± 6 mm)
+    assert out["abaisse"]["genou"] > 60                   # l'abaissement est absorbé par la flexion du genou
+    assert out["saut"]["g"] > 0.25 and out["saut"]["d"] > 0.25        # le saut quitte le sol
+    assert out["jambe_levee"]["g"] > 0.3 and abs(out["jambe_levee"]["d"]) < 0.006
+    assert out["sans_ancrage"]["g"] < -0.25               # témoin : sans la passe, le pied s'enfonçait

@@ -51,18 +51,42 @@ def jetons(s: str) -> list[str]:
     return [raciner(m) for m in mots(s) if m not in MOTS_VIDES and len(m) > 1]
 
 
-def syllabes(texte: str) -> int:
-    """Estimation du nombre de syllabes orales (groupes vocaliques).
+_PRONOMS_PLURIELS = {"ils", "elles"}
+_CLITIQUES = {"ne", "n", "se", "s", "le", "la", "les", "l", "lui", "leur", "y", "en", "me", "m", "te", "t", "nous",
+              "vous", "qu", "qui"}
 
-    Approximation : le « e » final muet et les élisions ne sont pas
-    traités finement ; suffisante pour un débit relatif, non pour la
-    métrique du vers.
+
+def _verbe_pluriel(prec: list[str]) -> bool:
+    """Vrai si le mot suit « ils » ou « elles », éventuellement séparés par des clitiques (ils ne se parlent)."""
+    for p in reversed(prec[-4:]):
+        if p in _PRONOMS_PLURIELS:
+            return True
+        if p not in _CLITIQUES:
+            return False
+    return False
+
+
+def syllabes(texte: str) -> int:
+    """Estimation du nombre de syllabes orales (groupes vocaliques), pour le débit de jeu.
+
+    Le « e » caduc final (« porte », « portes ») ne compte pas après consonne ; la terminaison « -ent » ne
+    tombe que pour un verbe à la 3e personne du pluriel (« ils parlent » : 1 syllabe pour « parlent »),
+    jamais dans « moment », « souvent » ou « lentement », où elle est nasale. Les élisions (l', qu', j')
+    ne forment pas de syllabe. Approximation suffisante pour un débit relatif, non pour la métrique du vers,
+    qui exige la règle du e devant voyelle et la diérèse.
     """
-    n = 0
+    n, prec = 0, []
     for m in re.findall(r"[a-zàâäéèêëîïôöùûüÿœæ]+", texte.lower()):
         groupes = re.findall(r"[aàâäeéèêëiîïoôöuùûüyÿœæ]+", m)
         k = len(groupes)
-        if k > 1 and re.search(r"(?<![aeiouy])e(s|nt)?$", m):
-            k -= 1
+        if k > 1:
+            if re.search(r"(?<![aeiouyé])es?$", m):
+                k -= 1                                  # e caduc final : « porte », « portes »
+            elif re.search(r"(?<![aeiouy])ent$", m) and _verbe_pluriel(prec):
+                k -= 1                                  # « ils parlent » ; mais « moment », « souvent » gardent -ent
+        if m == "qu" or (k == 0 and len(m) == 1 and m in "ljmtsndc"):  # élision : l', j', qu', d'…
+            prec.append(m)
+            continue
         n += max(1, k)
+        prec.append(m)
     return n

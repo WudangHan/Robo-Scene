@@ -10,6 +10,9 @@ const lerp = THREE.MathUtils.lerp;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const REPOS_BRAS = 7;          // abduction structurelle : les bras pendent sans traverser le thorax
 const REPOS_COUDE = 6;
+// Segments de la jambe (repère de l'échelle, en m) : hanche → genou, genou → cheville, cheville → semelle
+const CUISSE = 0.43, JAMBE = 0.41, SEMELLE = 0.08;
+const TOLERANCE_SOL = 0.002;
 
 export const PEAUX = { "très claire": "#f0d2bd", claire: "#e2b794", mate: "#c99a78", olive: "#ad875c", brune: "#8a5a3c", "foncée": "#5c3925" };
 export const YEUX = { bleu: "#3d6ea8", vert: "#4f7d4a", brun: "#4a3220", noir: "#1e1612", gris: "#7d8790", noisette: "#7a5a2e" };
@@ -236,6 +239,9 @@ export class Humanoide {
       const cheville = (O[`cheville_${s}`] = groupe(`cheville_${s}`, genou, 0, -0.41, 0));
       const pied = capsule(0.046, 0.16, M.chaussures, `pied_${s}`); pied.rotation.x = Math.PI / 2; pied.position.set(0, -0.036, 0.055); pied.scale.set(1.05, 1, 0.82); cheville.add(pied);
       const talon = ellipsoide(0.045, M.chaussures, `pied_${s}`, [1, 0.8, 1]); talon.position.set(0, -0.035, -0.02); cheville.add(talon);
+      // points de contact de la semelle (talon, pointe), pour l'ancrage au sol
+      O[`contact_talon_${s}`] = groupe(`contact_talon_${s}`, cheville, 0, -SEMELLE, -0.03);
+      O[`contact_pointe_${s}`] = groupe(`contact_pointe_${s}`, cheville, 0, -SEMELLE, 0.15);
     }
     // tabouret (visible quand le personnage s'assied)
     const tab = (O.tabouret = new THREE.Group());
@@ -293,6 +299,70 @@ export class Humanoide {
       O[`cheville_${s}`].rotation.x = R(v(`cheville_${s}.flexion`));
     }
     O.tabouret.visible = !!extra.tabouret;
+    if (extra.ancrage !== false && !extra.tabouret) this.ancrer(P, extra);
+  }
+
+  /* Ancrage plantaire (audit du 2026-10-16) : passe géométrique appliquée après les ressorts.
+     1. jambe enfoncée dans le plateau → flexion résiduelle du genou et de la hanche, par cinématique inverse
+        à deux segments (loi des cosinus), la cheville restant sous la hanche ;
+     2. le bassin descend (pieds qui flottent) ou remonte (enfoncement résiduel) jusqu'au contact du pied le plus bas ;
+     3. hors marche, la semelle du ou des pieds d'appui est mise à plat.
+     Pendant un saut ou sur demi-pointes (bassin.elevation > 0), seul l'enfoncement est corrigé : le corps
+     peut quitter le sol. Assis (tabouret), aucune correction. */
+  hauteurSemelle(s) {
+    const O = this.os, p = new THREE.Vector3();
+    const y = (o) => O.echelle.worldToLocal(o.getWorldPosition(p)).y;
+    return Math.min(y(O[`contact_talon_${s}`]), y(O[`contact_pointe_${s}`]));
+  }
+  plierJambe(s, P, enfoncement) {
+    const O = this.os, p = new THREE.Vector3();
+    const hanche = O.echelle.worldToLocal(O[`hanche_${s}`].getWorldPosition(p)).y;
+    const D = clamp(hanche - (this.hauteurSemelle(s) + enfoncement) - SEMELLE, Math.abs(CUISSE - JAMBE) + 0.01, CUISSE + JAMBE);
+    const k = Math.acos(clamp((D * D - CUISSE * CUISSE - JAMBE * JAMBE) / (2 * CUISSE * JAMBE), -1, 1));
+    const hf = Math.atan2(JAMBE * Math.sin(k), CUISSE + JAMBE * Math.cos(k));
+    const genou = Math.min(140, Math.max(P[`genou_${s}.flexion`] || 0, THREE.MathUtils.radToDeg(k)));
+    const flex = Math.min(125, Math.max(P[`hanche_${s}.flexion`] || 0, THREE.MathUtils.radToDeg(hf)));
+    O[`genou_${s}`].rotation.x = R(genou);
+    O[`hanche_${s}`].rotation.x = -R(flex);
+  }
+  aplatirPied(s) {
+    const O = this.os, p = new THREE.Vector3(), q = new THREE.Vector3();
+    for (let n = 0; n < 2; n++) {
+      this.racine.updateMatrixWorld(true);
+      const t = O.echelle.worldToLocal(O[`contact_talon_${s}`].getWorldPosition(p));
+      const pt = O.echelle.worldToLocal(O[`contact_pointe_${s}`].getWorldPosition(q));
+      const d = Math.atan2(pt.y - t.y, Math.hypot(pt.x - t.x, pt.z - t.z));   // < 0 : pointe plus basse que le talon
+      O[`cheville_${s}`].rotation.x = clamp(O[`cheville_${s}`].rotation.x + d, R(-40), R(45));
+    }
+  }
+  ancrer(P, extra) {
+    const O = this.os;
+    const saut = (P["bassin.elevation"] || 0) > 0.5;
+    const hauteurs = () => { this.racine.updateMatrixWorld(true); return { g: this.hauteurSemelle("g"), d: this.hauteurSemelle("d") }; };
+    // appui le plus bas de chaque jambe : la semelle, ou la rotule quand le personnage est à genoux
+    const p = new THREE.Vector3();
+    const rotule = (s) => O.echelle.worldToLocal(O[`genou_${s}`].getWorldPosition(p)).y - 0.052;
+    let h = hauteurs();
+    // flexion résiduelle seulement pour une jambe d'appui peu fléchie : une pose composée (à genoux, accroupi,
+    // effondré) garde ses angles et n'est que recalée verticalement
+    if (!saut) for (const s of ["g", "d"]) {
+      if (h[s] < -TOLERANCE_SOL && h[s] <= rotule(s) && (P[`genou_${s}.flexion`] || 0) < 75) this.plierJambe(s, P, -h[s]);
+    }
+    const caler = () => {
+      h = hauteurs();
+      const min = Math.min(h.g, h.d, rotule("g"), rotule("d"));
+      if (min < -TOLERANCE_SOL || (!saut && min > TOLERANCE_SOL)) O.bassin.position.y -= min;
+    };
+    caler();
+    if (!saut && !(extra.marche > 0.05)) {
+      h = hauteurs();
+      // tibia proche de la verticale seulement (debout, fléchi, accroupi) ; à genoux, le cou-de-pied reste au sol
+      const tibia = (s) => Math.abs(-O[`hanche_${s}`].rotation.x - O[`genou_${s}`].rotation.x);
+      for (const s of ["g", "d"]) if (h[s] < 0.02 && tibia(s) < R(45)) this.aplatirPied(s);
+      caler();
+    }
+    this.racine.updateMatrixWorld(true);
+    this.contact = { g: this.hauteurSemelle("g"), d: this.hauteurSemelle("d") };
   }
 
   appliquerApparence(a) {

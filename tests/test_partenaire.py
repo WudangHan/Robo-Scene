@@ -378,3 +378,13 @@ def test_catalogue_dracor_hors_ligne():
 
 
 
+
+
+def test_syllabes_e_caducs_et_terminaison_ent():
+    """Audit du 2026-10-16 (chantier 5) : débit syllabique pondéré par les e caducs."""
+    from bridge.partenaire.texte_outils import syllabes
+    cas = {"porte": 1, "portes": 1, "étoile": 2, "aimée": 2, "le": 1, "je": 1,
+           "moment": 2, "souvent": 2,                     # -ent nasal : conservé
+           "ils parlent": 2, "elles ne se parlent": 4,    # -ent verbal muet après « ils », « elles »
+           "l'homme": 1, "qu'il vienne": 2, "Je ne reviendrai pas.": 6}
+    assert {t: syllabes(t) for t in cas} == cas

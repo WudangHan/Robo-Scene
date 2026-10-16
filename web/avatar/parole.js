@@ -4,6 +4,8 @@
    groupe rythmique). Les événements « boundary » de la synthèse, quand la voix en fournit,
    recalent l'horloge des visèmes ; sinon un débit estimé sert de repli. */
 
+import { phonetiser } from "./phonetique.js";
+
 /* Visèmes : {jaw : ouverture, pucker : arrondi, stretch : étirement, press : lèvres closes} */
 const VIS = {
   a: { jaw: 0.75, stretch: 0.25 }, e: { jaw: 0.42, stretch: 0.35 }, i: { jaw: 0.18, stretch: 0.6 },
@@ -12,25 +14,10 @@ const VIS = {
   pbm: { jaw: 0, press: 1 }, fv: { jaw: 0.08, press: 0.45 }, ch: { jaw: 0.2, pucker: 0.7 },
   dent: { jaw: 0.14, stretch: 0.3 }, r: { jaw: 0.28 }, k: { jaw: 0.3 }, repos: { jaw: 0 },
 };
-const REGLES = [
-  [/^(eau|au|o|ô)/, "o"], [/^(ou|où|oû)/, "ou"], [/^(eu|œu|oeu)/, "eu"], [/^(an|am|en|em)(?![aeiouyéèênm])/, "an"],
-  [/^(on|om)(?![aeiouyéèênm])/, "on"], [/^(ain|ein|in|im|un|um)(?![aeiouyéèênm])/, "in"], [/^(ai|ei|é|è|ê|ë|e)/, "e"],
-  [/^(a|à|â)/, "a"], [/^(i|î|ï|y)/, "i"], [/^(u|û|ü)/, "u"], [/^(oi|oy)/, "a"],
-  [/^(p|b|m)/, "pbm"], [/^(f|v|ph)/, "fv"], [/^(ch|j|ge|gi|sh)/, "ch"], [/^(s|z|c|ç|t|d|n|l|x)/, "dent"], [/^r/, "r"], [/^(k|q|g|gu)/, "k"],
-];
-
+/* Graphie → visèmes : règles contextuelles françaises (digrammes, nasales, lettres muettes, liaisons),
+   voir phonetique.js. L'ancienne table testait « o » avant « ou » et « on », qui n'étaient jamais reconnus. */
 export function visemes(texte) {
-  const t = String(texte || "").toLowerCase();
-  const out = [];
-  let i = 0;
-  while (i < t.length) {
-    const reste = t.slice(i);
-    if (/^[\s,.;:!?«»"()—–-]/.test(reste)) { out.push({ i, n: 1, v: /^[,.;:!?]/.test(reste) ? "pause" : "repos" }); i++; continue; }
-    const r = REGLES.find(([re]) => re.test(reste));
-    if (r) { const n = reste.match(r[0])[0].length; out.push({ i, n, v: r[1] }); i += n; }
-    else { out.push({ i, n: 1, v: "repos" }); i++; }
-  }
-  return out;
+  return phonetiser(texte);
 }
 
 function voixMasculine(v) {
