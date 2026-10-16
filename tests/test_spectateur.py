@@ -149,7 +149,8 @@ def test_avis_transparence_S06():
     a = avis_transparence("fr", essai=True, seuil=5, conservation={"DO-03": ""})
     t = " ".join(a["points"])
     assert "ESSAI" in t and "adresse IP" in t and "5" in t and "à fixer" in t
-    assert "UQAM" not in t
+    assert "recherche indépendante" in t
+    assert not any(x in t for x in ("UQAM", "Université Laval", "Virginia Tech", "postdoct"))   # B-001
     assert "IP address" in " ".join(avis_transparence("en", essai=False, seuil=5, conservation={})["points"])
 
 
