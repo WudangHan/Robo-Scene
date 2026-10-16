@@ -14,6 +14,12 @@ from bridge.partenaire.connaissances import Index
 from bridge.partenaire.livret import Livret, accompagnement
 from bridge.serveur import CTL, RACINE, charger_config, creer_app
 
+# Index et livret extraits des documents de travail (partenaire/sources) : locaux, jamais versionnés (dépôt public).
+INDEX_LOCAL = pytest.mark.skipif(not (RACINE / "partenaire" / "index" / "corpus.json").exists(),
+                                 reason="index local absent (documents de travail hors dépôt)")
+LIVRET_LOCAL = pytest.mark.skipif(not (RACINE / "partenaire" / "index" / "livret.json").exists(),
+                                  reason="livret local absent (documents de travail hors dépôt)")
+
 DEMO = (RACINE / "partenaire" / "demo" / "le_souffleur.txt").read_text(encoding="utf-8")
 NOMS, REPOS = ["Base", "Épaule", "Coude", "Tête"], [90.0] * 4
 MIN, MAX = [10, 20, 15, 30], [170, 160, 165, 150]
@@ -41,6 +47,7 @@ def isole(tmp_path, monkeypatch):
 
 
 # ── Base de connaissances et livret ─────────────────────────
+@INDEX_LOCAL
 def test_index_et_recherche():
     idx = Index.charger()
     assert len(idx.passages) >= 400
@@ -51,6 +58,7 @@ def test_index_et_recherche():
     assert any("Dossier" in x["source"] for x in r)
 
 
+@LIVRET_LOCAL
 def test_livret_complet():
     L = Livret.charger()
     assert len(L.exercices) == 97
@@ -241,6 +249,7 @@ def test_convention_agents():
         assert {"agent_type", "agent_name", "timestamp"} <= set(e) and e["agent_type"] == t
 
 
+@INDEX_LOCAL
 def test_conseiller_retire_les_references_inventees():
     idx = Index.charger()
     a = ag.Agents({"modele": "test"}, idx)

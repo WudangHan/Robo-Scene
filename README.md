@@ -151,10 +151,10 @@ Renseigner `operatrice` et `type` dans `[protocole]` avant la séance. Le dossie
 L'interface est publiée sur <https://robo-scene.netlify.app> (console), <https://robo-scene.netlify.app/partenaire> et <https://robo-scene.netlify.app/avatar> (robot virtuel, utilisable sans pont). Netlify ne sert que des pages statiques : le pont Python, le robot, vos documents et les données des acteurs restent sur votre ordinateur, et la page en ligne se connecte au pont local, `ws://127.0.0.1:8765/ws`.
 
 1. Lancer le pont sur l'ordinateur (`bash lancer.command`).
-2. Ouvrir l'adresse en ligne : la pastille passe à « Robot connecté ». Si le pont n'est pas joint, un bandeau l'indique ; « Modifier l'adresse » permet de viser un autre port ou une autre machine.
+2. Ouvrir l'adresse en ligne : la pastille passe à « Robot connecté ». Si le pont n'est pas joint dans les 1,5 s, la Console passe en **simulation autonome dans le navigateur** (`web/simulateur.js`) : un bandeau l'annonce, la téléopération, les séquences et la télémétrie sont simulées, aucune commande matérielle n'est émise, rien n'est consigné et l'IA supervisée reste fermée. « Réessayer le pont » recharge la page ; « Modifier l'adresse » vise un autre port ou une autre machine. L'adresse `?simulation=1` force la démonstration même quand le pont tourne.
 3. Le pont n'accepte que les pages qu'il sert lui-même et celles que liste `[serveur] origines_autorisees` dans `config.toml` ; toute autre page est refusée (HTTP 403), ce qui empêche un site tiers ouvert dans le navigateur de commander le robot.
 
-Seul le dossier `web/` est publié (`netlify.toml`), avec des en-têtes qui interdisent l'intégration dans un cadre et l'indexation. Essai réalisé le 10 octobre 2026 avec Chromium : connexion de la page en ligne au pont local réussie. Le comportement de Safari envers `ws://127.0.0.1` depuis une page https n'a pas été vérifié : en cas d'échec, utiliser Chrome, ou l'interface locale <http://127.0.0.1:8765>.
+Seul le dossier `web/` est publié (`netlify.toml`) ; les onze pages ont une route explicite (`/console`, `/partenaire`, `/avatar`, `/atelier`, `/scene`, `/spectateur`, `/surtitres`, `/recherche`, `/gouvernance`, `/regie`, `/tableau-public`), et les en-têtes interdisent l'intégration dans un cadre et l'indexation, limitent caméra et microphone à l'origine, et appliquent une politique de sécurité du contenu en mode « rapport seulement » (à rendre contraignante après un essai d'imitation MediaPipe sans écart dans la console du navigateur). Essai réalisé le 10 octobre 2026 avec Chromium : connexion de la page en ligne au pont local réussie. Le comportement de Safari envers `ws://127.0.0.1` depuis une page https n'a pas été vérifié : en cas d'échec, utiliser Chrome, ou l'interface locale <http://127.0.0.1:8765>.
 
 Pour republier après une modification de l'interface : relier le dépôt GitHub au projet Netlify (déploiement continu), ou relancer un déploiement manuel du dossier `web/`.
 
@@ -186,7 +186,7 @@ Désactivée par défaut (`[partenaire] incarnation = false`), elle se bascule d
 
 ### Vos documents
 
-La base de connaissances indexe les fichiers de `partenaire/sources/`. Pour en ajouter : déposer le fichier (.docx, .pdf, .md, .txt, .html), puis lancer `python -m bridge.partenaire.connaissances`. Après une nouvelle édition du livret : `python -m bridge.partenaire.livret`.
+La base de connaissances indexe les fichiers de `partenaire/sources/`. Ce dossier et les index qui en sont tirés (`partenaire/index/`) restent sur l'ordinateur de l'équipe : ils ne sont pas versionnés (dépôt public) ; les trois tests qui en dépendent sont ignorés là où ils manquent. Pour en ajouter : déposer le fichier (.docx, .pdf, .md, .txt, .html), puis lancer `python -m bridge.partenaire.connaissances`. Après une nouvelle édition du livret : `python -m bridge.partenaire.livret`.
 
 ## Robot virtuel humanoïde
 
@@ -212,7 +212,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 python -m pytest -q
 ```
 
-162 tests réussis et 1 ignoré (classeur de la grille de biais absent du dépôt), tous sans appel réseau ni matériel :
+177 tests réussis sur l'ordinateur de l'équipe (audit du 16 octobre 2026 ; 3 sont ignorés sur un clone neuf, faute des index locaux du partenaire), tous sans appel réseau ni matériel. Avant l'audit :
 prototypes P1, P2, P3, T.6 et X.2 (60) ; console (7) ; partenaire (22) ; robots et pilotes (16) ; modèles D13 (7) ;
 traçabilité (6) ; spectateur (10) ; analyse (11) ; extensions (8) ; plateforme (3) ; certificats HTTPS (3) ; robot virtuel (9, dont 4 en JavaScript exécutés par Node.js s'il est présent). L'intégration continue
 (`.github/workflows/tests.yml`) les exécute à chaque dépôt.
