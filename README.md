@@ -205,6 +205,17 @@ Personnage masculin procédural en 3D (three.js 0.169, licence MIT, servi locale
 
 Cadrages (face, trois-quarts, profil, gros plan, plan américain, en pied, plan large, plongée), cinq ambiances lumineuses, *Mode scène* plein écran et *Fenêtre* séparée pour un second écran. Le bouton ARRÊT et la touche Échap figent le personnage, coupent la parole et envoient l'arrêt d'urgence au pont.
 
+## Documentation et version en ligne
+
+Version publiée : **2.3** (16 octobre 2026), en ligne sur <https://robo-scene.netlify.app> ; le dossier `web/` de l'étiquette `v2.3.0` est celui qui est déployé.
+
+- `docs/Guide_plateforme_integree_ROBO-SCENE_v2.0.1.docx` — guide de la plateforme intégrée (58 fonctions, révision 2.0.1 du 16 octobre 2026)
+- `docs/Rapport_mise_en_oeuvre_audit_ROBO-SCENE_2026-10-16.docx` — mise en œuvre de l'audit indépendant : correctifs, vérifications, décisions résiduelles
+- `docs/Guide_partenaire_ROBO-SCENE.docx` — partenaire de théâtre
+- `docs/Guide_robot_virtuel_ROBO-SCENE.docx` — robot virtuel humanoïde
+
+Les journaux de séance, les procès-verbaux de clôture et les données des personnes participantes (pseudonymes, consentements) ne sont jamais versionnés dans ce dépôt public.
+
 ## Tests
 
 ```bash
@@ -212,7 +223,7 @@ pip install -r requirements.txt -r requirements-dev.txt
 python -m pytest -q
 ```
 
-177 tests réussis sur l'ordinateur de l'équipe (audit du 16 octobre 2026 ; 3 sont ignorés sur un clone neuf, faute des index locaux du partenaire), tous sans appel réseau ni matériel. Avant l'audit :
+179 tests réussis sur l'ordinateur de l'équipe (audit du 16 octobre 2026 ; 3 sont ignorés sur un clone neuf, faute des index locaux du partenaire), tous sans appel réseau ni matériel. Avant l'audit :
 prototypes P1, P2, P3, T.6 et X.2 (60) ; console (7) ; partenaire (22) ; robots et pilotes (16) ; modèles D13 (7) ;
 traçabilité (6) ; spectateur (10) ; analyse (11) ; extensions (8) ; plateforme (3) ; certificats HTTPS (3) ; robot virtuel (9, dont 4 en JavaScript exécutés par Node.js s'il est présent). L'intégration continue
 (`.github/workflows/tests.yml`) les exécute à chaque dépôt.
