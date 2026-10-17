@@ -5,7 +5,8 @@
    oscillation ; poids fort → accélération accrue ; espace indirect → dérive lente du regard
    et des extrémités. Couches superposées : pose voulue + posture émotionnelle + vie
    (respiration, transfert de poids, micro-mouvements, clignements, saccades) + parole + marche. */
-import { EMOTIONS, GESTES, POSES } from "./emotions.js";
+import { CONTACTS, CONTACTS_POSES, EMOTIONS, GESTES, POSES } from "./emotions.js";
+import { REPERES_VISAGE } from "./humanoide.js";
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -32,6 +33,9 @@ export class Animateur {
     this.geste = null;                                     // {jeton}
     this.jeton = 0;
     this.imitation = null;                                 // {pose:{}, au:{}, tete:{}} imposé par la caméra
+    this.toucher = { g: null, d: null };                   // contact main-visage voulu : {point, local}
+    this.toucherCourant = { g: null, d: null };            // contact effectivement suivi (cible lissée)
+    this.poidsToucher = { g: 0, d: 0 };
     this.camera = null;                                    // fourni par la scène (cible du regard « public »)
     this.ecouteurs = new Set();
   }
@@ -58,7 +62,7 @@ export class Animateur {
     if (vitesse) this.vitesseDof[n] = vitesse; else delete this.vitesseDof[n];
   }
   instantane() { return { ...this.base }; }
-  restaurer(p) { for (const n of this.noms) this.base[n] = p[n] ?? 0; this.tabouret = (this.base["bassin.abaissement"] > 35 && this.base["genou_g.flexion"] > 60 && this.base["hanche_g.flexion"] > 60 && this.base["genou_g.flexion"] < 110); }
+  restaurer(p) { this.toucher = { g: null, d: null }; for (const n of this.noms) this.base[n] = p[n] ?? 0; this.tabouret = (this.base["bassin.abaissement"] > 35 && this.base["genou_g.flexion"] > 60 && this.base["hanche_g.flexion"] > 60 && this.base["genou_g.flexion"] < 110); }
   /* ── émotions et visage ─────────────────────────────── */
   definirEmotion(nom, intensite, relatif = false) {
     if (!EMOTIONS[nom]) return;
@@ -83,8 +87,41 @@ export class Animateur {
     if (this.imitation?.au) for (const [a, v] of Object.entries(this.imitation.au)) c[a] = v;
     return c;
   }
+  /* ── contacts main-visage ───────────────────────────── */
+  /* spec : {X|g|d : [point de la main, repère du visage, décalage]} ; « X » = côté du geste (le repère et le
+     décalage sont écrits pour la main droite et reflétés pour la gauche) ; null efface les contacts. */
+  definirContacts(spec, cote = "d") {
+    this.toucher = { g: null, d: null };
+    if (!spec) return;
+    for (const [k, [point, rep, dec = [0, 0, 0]]] of Object.entries(spec)) {
+      const s = k === "X" ? cote : k;
+      const miroir = k === "X" && cote === "g";
+      const nom = miroir ? rep.replace(/_d$/, "_g") : rep;
+      const r = REPERES_VISAGE[nom];
+      if (!r) continue;
+      this.toucher[s] = { point, local: [r[0] + (miroir ? -dec[0] : dec[0]), r[1] + dec[1], r[2] + dec[2]] };
+    }
+  }
+  majContacts(dt) {
+    const out = [];
+    const k = 1 - Math.exp(-dt / 0.12);
+    for (const s of ["g", "d"]) {
+      const t = this.toucher[s];
+      this.poidsToucher[s] = clamp(this.poidsToucher[s] + (t ? dt / 0.35 : -dt / 0.3), 0, 1);
+      if (t) {
+        const c = this.toucherCourant[s];
+        if (!c || c.point !== t.point || this.poidsToucher[s] < 0.02) this.toucherCourant[s] = { point: t.point, local: t.local.slice() };
+        else c.local = c.local.map((v, i) => v + (t.local[i] - v) * k);
+      }
+      const c = this.toucherCourant[s];
+      if (c && this.poidsToucher[s] > 0.01) out.push({ s, point: c.point, local: c.local, poids: this.poidsToucher[s] });
+      else if (!t) this.toucherCourant[s] = null;
+    }
+    return this.imitation?.pose ? [] : out;
+  }
   /* ── gestes et poses ────────────────────────────────── */
   arreter() {
+    this.toucher = { g: null, d: null };
     this.jeton++; this.geste = null; this.marche = null; this.auGeste = {};
     for (const n of this.noms) this.vit[n] = 0;
   }
@@ -102,12 +139,14 @@ export class Animateur {
     const v = (vitesse || 1) * this.vitesse;
     const t0 = performance.now();
     this.geste = { nom, j };
-    for (const im of images) {
+    const contacts = CONTACTS[nom] || {};
+    for (const [i, im] of images.entries()) {
       const att = t0 + (im.t * 1000) / v - performance.now();
       if (att > 0) await attendre(att);
       if (j !== this.jeton) return false;
       if (im.fin) {
         if (tenir) continue;                       // position tenue jusqu'au second appui
+        this.definirContacts(null);                // la main quitte le visage avec le retour
         if (im.regard) this.regardMode = im.regard;
         for (const n of touches) this.base[n] = avant[n];
         this.pointe = pointeAvant; this.auGeste = im.au ? { ...im.au } : {};
@@ -124,6 +163,7 @@ export class Animateur {
         this.base[n] = clamp(ancre + (val - ancre) * intensite, d.min, d.max);
         this.vitesseDof[n] = 1.4 * v;
       }
+      if (i in contacts) this.definirContacts(contacts[i], cote);
       if (im.au) this.auGeste = { ...this.auGeste, ...im.au };
       if (im.regard) this.regardMode = im.regard;
     }
@@ -142,6 +182,7 @@ export class Animateur {
       this.vitesseDof[n] = vitesse || 0.8;
     }
     this.tabouret = nom === "assis" || nom === "penseur";
+    this.definirContacts(CONTACTS_POSES[nom] || null);
     if (nom === "repos") { this.auTenu = {}; this.pointe = { g: false, d: false }; }
     this.emettre();
   }
@@ -243,6 +284,8 @@ export class Animateur {
     this.majMarche(dt, P, extra);
     // regard
     this.majRegard(dt, t, P, espace);
+    // contact main-visage : la main suit la tête où qu'elle aille (passe géométrique dans humanoide.js)
+    extra.contacts = this.majContacts(dt);
     this.h.appliquer(P, extra);
     this.h.racine.position.set(this.racine.x, 0, this.racine.z);
     this.h.racine.rotation.y = this.racine.yaw;

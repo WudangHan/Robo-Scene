@@ -380,3 +380,59 @@ def test_geste_tenu_pour_les_boutons_en_bascule(tmp_path):
     out = json.loads(r.stdout)
     assert out["tenu"] > 60          # bras levés et tenus (degrés)
     assert out["libre"] < 1e-6       # sans bascule : retour automatique à la position d'avant
+
+
+@pytest.mark.skipif(not NODE, reason="Node.js absent")
+def test_contact_main_visage(tmp_path):
+    """16 oct. 2026 : la main qui devait toucher le visage s'arrêtait au bas du cou ; elle se pose désormais sur le
+    repère visé (bouche, menton, yeux, front, tempe, oreille, crâne), même quand la tête bouge."""
+    crochet = tmp_path / "three.mjs"
+    vendor = (WEB / "vendor" / "three.module.min.js").as_uri()
+    crochet.write_text('import { register } from "node:module";\n'
+                       'register("data:text/javascript," + encodeURIComponent('
+                       f'`export async function resolve(s, c, n) {{ if (s === "three") return {{ url: "{vendor}", '
+                       'shortCircuit: true }; return n(s, c); }`));\n', encoding="utf-8")
+    script = """
+      import fs from "node:fs";
+      import { Humanoide, REPERES_VISAGE } from "./web/avatar/humanoide.js";
+      import { Animateur } from "./web/avatar/animation.js";
+      import { CONTACTS, GESTES } from "./web/avatar/emotions.js";
+      const S = JSON.parse(fs.readFileSync("./web/avatar/schema.json", "utf8"));
+      const B = { jaw: 0, pucker: 0, stretch: 0, press: 0 };
+      const out = {};
+      for (const nom of Object.keys(CONTACTS)) {
+        for (const regard of ["public", "haut"]) {
+          const h = new Humanoide(S), a = new Animateur(h, S);
+          a.vivant = false; a.vitesse = 25; a.prendrePose("repos");
+          await a.jouerGeste(nom, { tenir: true });
+          a.regardMode = regard;
+          let t = 0; for (let i = 0; i < 200; i++) { t += 0.02; a.maj(0.02, t, B); }
+          h.racine.updateMatrixWorld(true);
+          const spec = Object.values(CONTACTS[nom]).at(-1);
+          const ecarts = Object.entries(spec).map(([k, [point, rep, dec]]) => {
+            const s = k === "X" ? "d" : k, r = REPERES_VISAGE[rep];
+            const l = h.visage.g.worldToLocal(h.pointMain(s, point));
+            return Math.hypot(l.x - r[0] - dec[0], l.y - r[1] - dec[1], l.z - r[2] - dec[2]);
+          });
+          out[`${nom}/${regard}`] = Math.max(...ecarts);
+        }
+      }
+      // témoin : sans la passe de contact, « réfléchir » laissait le poing sous le menton, vers le cou
+      const h = new Humanoide(S), a = new Animateur(h, S); a.vivant = false; a.vitesse = 25; a.prendrePose("repos");
+      await a.jouerGeste("reflechir", { tenir: true }); a.definirContacts(null);
+      let t = 0; for (let i = 0; i < 200; i++) { t += 0.02; a.maj(0.02, t, B); }
+      h.racine.updateMatrixWorld(true);
+      const l = h.visage.g.worldToLocal(h.pointMain("d", "poing"));
+      out.temoin_y = l.y;
+      out.inconnus = Object.keys(CONTACTS).filter((n) => !GESTES[n]);
+      console.log(JSON.stringify(out));
+    """
+    r = subprocess.run([NODE, "--import", crochet.as_uri(), "--input-type=module", "-e", script],
+                       capture_output=True, text=True, timeout=120, cwd=RACINE)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out.pop("inconnus") == []
+    temoin = out.pop("temoin_y")
+    assert temoin < -0.13                                  # sans correction : au niveau du cou (> 13 cm sous le centre de la tête)
+    for cle, ecart in out.items():
+        assert ecart < 0.02, (cle, ecart)                  # main posée sur le repère visé (± 2 cm), tête levée ou non

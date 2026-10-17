@@ -13,6 +13,16 @@ const REPOS_COUDE = 6;
 // Segments de la jambe (repère de l'échelle, en m) : hanche → genou, genou → cheville, cheville → semelle
 const CUISSE = 0.43, JAMBE = 0.41, SEMELLE = 0.08;
 const TOLERANCE_SOL = 0.002;
+/* Repères du visage (m), dans le repère du groupe « visage » (origine au centre de la tête ; x vers la gauche du
+   personnage, y vers le haut, z vers l'avant), relevés sur la géométrie ci-dessous (crâne, yeux, nez, menton,
+   oreilles). Un contact vise un repère plus un décalage, qui laisse l'épaisseur de la main hors de la peau. */
+export const REPERES_VISAGE = {
+  bouche: [0, -0.048, 0.093], levres: [0, -0.045, 0.1], menton: [0, -0.08, 0.085], menton_dessous: [0, -0.1, 0.06],
+  nez: [0, -0.024, 0.113], front: [0, 0.055, 0.092], sourcil_g: [0.045, 0.035, 0.088], sourcil_d: [-0.045, 0.035, 0.088],
+  oeil_g: [0.032, 0.012, 0.1], oeil_d: [-0.032, 0.012, 0.1], tempe_g: [0.078, 0.035, 0.045], tempe_d: [-0.078, 0.035, 0.045],
+  oreille_g: [0.1, 0, -0.006], oreille_d: [-0.1, 0, -0.006], joue_g: [0.06, -0.03, 0.075], joue_d: [-0.06, -0.03, 0.075],
+  crane_g: [0.05, 0.1, 0], crane_d: [-0.05, 0.1, 0],
+};
 
 export const PEAUX = { "très claire": "#f0d2bd", claire: "#e2b794", mate: "#c99a78", olive: "#ad875c", brune: "#8a5a3c", "foncée": "#5c3925" };
 export const YEUX = { bleu: "#3d6ea8", vert: "#4f7d4a", brun: "#4a3220", noir: "#1e1612", gris: "#7d8790", noisette: "#7a5a2e" };
@@ -300,6 +310,78 @@ export class Humanoide {
     }
     O.tabouret.visible = !!extra.tabouret;
     if (extra.ancrage !== false && !extra.tabouret) this.ancrer(P, extra);
+    if (extra.contacts) this.toucherVisage(P, extra.contacts);
+  }
+
+  /* ── Contact main-visage (2026-10-16) ───────────────────────────────────────────────
+     Les angles des gestes « au visage » (bouche, menton, yeux, front, tempe, oreille, crâne) ne suffisaient
+     pas : la tête bouge (regard vers le public, respiration, saccades, inclinaisons du geste), et la main
+     arrivait à hauteur du bas du cou. Passe géométrique appliquée après les ressorts, comme l'ancrage
+     plantaire : pour chaque main en contact, les moindres carrés amortis (Jacobien numérique) ajustent
+     flexion, abduction et rotation de l'épaule et flexion du coude, depuis la pose voulue, jusqu'à poser le
+     point choisi de la main sur le repère du visage ; le résultat est dosé par le poids du contact (0 à 1),
+     que l'animateur fait monter et descendre en douceur. */
+  pointMain(s, type) {
+    const x = s === "g" ? 1 : -1, O = this.os, v = new THREE.Vector3();
+    const main = O[`poignet_${s}`].children.find((c) => c.name === `main_${s}`);
+    switch (type) {
+      case "paume": return main.localToWorld(v.set(-x * 0.016, -0.06, 0));          // face palmaire
+      case "dos": return main.localToWorld(v.set(x * 0.016, -0.06, 0));             // dos de la main
+      case "index": return O[`doigts_${s}`][0][1].localToWorld(v.set(0, -0.02, 0));  // bout de l'index
+      case "doigts": return O[`doigts_${s}`][1][1].localToWorld(v.set(0, -0.018, 0)); // bout du majeur
+      case "poing": return O[`doigts_${s}`][1][0].localToWorld(v.set(0, -0.012, 0));  // jointures
+      case "avantbras": return O[`coude_${s}`].localToWorld(v.set(0, -0.06, 0.035)); // pli du coude
+      default: return main.localToWorld(v.set(0, -0.06, 0));
+    }
+  }
+  regleBras(s, P, q) {
+    const O = this.os, x = s === "g" ? 1 : -1;
+    O[`clav_${s}`].rotation.z = x * R((P[`epaule_${s}.haussement`] || 0) + Math.max(0, q[1] - 90) * 0.25);
+    O[`epaule_${s}`].rotation.set(-R(q[0]), -x * R(q[2]), x * R(q[1] + REPOS_BRAS));
+    O[`coude_${s}`].rotation.x = -R(q[3] + REPOS_COUDE);
+    O[`clav_${s}`].updateMatrixWorld(true);
+  }
+  toucherVisage(P, contacts) {
+    const D = this.schema.dofs, f = this.visage.g;
+    // départ à chaud : la correction de l'image précédente sert de point de départ (convergence sur quelques
+    // images pour les contacts difficiles, comme le pli du coude devant le nez) ; effacée quand le contact cesse
+    this.ikDelta = this.ikDelta || { g: null, d: null };
+    for (const s of ["g", "d"]) if (!contacts.some((c) => c.s === s)) this.ikDelta[s] = null;
+    if (!contacts.length) return;
+    this.racine.updateMatrixWorld(true);
+    for (const c of contacts) {
+      const s = c.s, w = clamp(c.poids ?? 1, 0, 1);
+      if (w < 0.01) continue;
+      const noms = ["flexion", "abduction", "rotation"].map((k) => `epaule_${s}.${k}`).concat([`coude_${s}.flexion`]);
+      const bornes = noms.map((n) => [D[n].min, D[n].max]);
+      const q0 = noms.map((n) => P[n] || 0);
+      const cible = f.localToWorld(new THREE.Vector3(...c.local));
+      const ecart = (q) => { this.regleBras(s, P, q); return cible.clone().sub(this.pointMain(s, c.point)); };
+      const delta = this.ikDelta[s] || [0, 0, 0, 0];
+      let q = q0.map((v, i) => clamp(v + delta[i], bornes[i][0], bornes[i][1]));
+      for (let it = 0; it < 8; it++) {
+        const e = ecart(q);
+        if (e.length() < 0.004) break;
+        // Jacobien numérique (m par degré), puis pas des moindres carrés amortis : dq = Jᵀ (J Jᵀ + λ² I)⁻¹ e
+        const J = q.map((_, i) => {
+          const qq = q.slice(); qq[i] += 1;
+          return e.clone().sub(ecart(qq));                       // dérivée du point de la main (m/°)
+        });
+        const A = new THREE.Matrix3(), l2 = 0.006 * 0.006;
+        const m = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+        for (const j of J) { const a = [j.x, j.y, j.z]; for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) m[r * 3 + k] += a[r] * a[k]; }
+        m[0] += l2; m[4] += l2; m[8] += l2;
+        A.set(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8]).invert();
+        const y = e.clone().applyMatrix3(A);
+        q = q.map((v, i) => {
+          const d = clamp(J[i].dot(y), -20, 20);
+          return clamp(v + d, bornes[i][0], bornes[i][1]);
+        });
+      }
+      this.ikDelta[s] = q.map((v, i) => v - q0[i]);
+      // dosage : de la pose voulue (poids 0) à la pose de contact (poids 1)
+      this.regleBras(s, P, q0.map((v, i) => v + (q[i] - v) * w));
+    }
   }
 
   /* Ancrage plantaire (audit du 2026-10-16) : passe géométrique appliquée après les ressorts.
