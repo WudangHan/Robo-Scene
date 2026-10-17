@@ -64,6 +64,11 @@
   from = "/public"
   to = "/tableau-public.html"
   status = 200
+# Aide : guide de la plateforme et répertoire des commandes, gestes et mouvements du robot (web/aide/)
+[[redirects]]
+  from = "/aide"
+  to = "/aide/index.html"
+  status = 200
 
 [[headers]]
   for = "/*"

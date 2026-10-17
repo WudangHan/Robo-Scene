@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aide — ROBO-SCÈNE</title>
+<meta name="description" content="Documentation de la plateforme ROBO-SCÈNE : guide de la plateforme intégrée et répertoire des commandes vocales, gestes et mouvements du robot (recherche indépendante et autofinancée de Sylvain Gagné, Ph. D.).">
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/plateforme.css">
+<style>
+  .docs { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }
+  .doc h2 { margin: 0 0 .35rem; font-size: 1.05rem; }
+  .doc p { margin: .35rem 0; }
+  .doc .meta { opacity: .75; font-size: .85rem; }
+  .doc a.bouton { display: inline-block; margin-top: .6rem; padding: 6px 12px; border-radius: 6px; background: var(--accent);
+    color: #1b1406; font-weight: 600; text-decoration: none; }
+  .doc a.bouton:hover, .doc a.bouton:focus-visible { background: #ffd88a; }
+  #contenu a:not(.bouton) { color: var(--info); }
+  .raccourcis li { margin: .25rem 0; }
+</style>
+</head>
+<body>
+<header class="barre">
+  <div class="titre"><span class="marque">ROBO-SCÈNE</span><span class="sous">Aide et documentation</span></div>
+  <nav data-nav></nav>
+</header>
+<main class="page" id="contenu">
+  <section class="carte large">
+    <h1 data-i18n>Aide</h1>
+    <p>Les deux documents de référence de la plateforme, au format Word. Ils décrivent ce que fait le logiciel publié sur ce site et sur le dépôt GitHub Robo-Scene ; leurs données proviennent du code lui-même.</p>
+  </section>
+  <section class="docs">
+    <article class="carte doc">
+      <h2>Guide de la plateforme intégrée</h2>
+      <p class="meta">Version 2.0.1 — 16 octobre 2026 · Word, 13 pages</p>
+      <p>Les onze pages de la plateforme, la connexion de tout robot (profils, protocoles, pilotes), les modèles d'IA et la règle de sensibilité D03, l'analyse du plan A.2, la gouvernance appliquée par le code, la couverture des 58 fonctions et la mise en œuvre de l'audit indépendant du 16 octobre 2026.</p>
+      <a class="bouton" href="/static/aide/Guide_plateforme_integree_ROBO-SCENE_v2.0.1.docx" download>Télécharger le guide</a>
+    </article>
+    <article class="carte doc">
+      <h2>Répertoire des commandes vocales, gestes et mouvements du robot</h2>
+      <p class="meta">Version 1.0 — 16 octobre 2026 · Word, 19 pages</p>
+      <p>Tout ce que le robot comprend et produit : la façon de lui parler et de moduler une consigne, les commandes de contrôle, la parole, les 12 émotions, les 70 gestes, les 11 poses, les mouvements par partie du corps, les déplacements, le regard, la caméra, la lumière, l'apparence, les mouvements qu'il fait de lui-même, et les bibliothèques fermées des robots physiques.</p>
+      <a class="bouton" href="/static/aide/Repertoire_commandes_gestes_robot_ROBO-SCENE_v1.0_2026-10-16.docx" download>Télécharger le répertoire</a>
+    </article>
+  </section>
+  <section class="carte large">
+    <h2>Pour commencer avec le robot virtuel</h2>
+    <ul class="raccourcis">
+      <li>Dites ou écrivez « aide » dans la page <a href="/avatar">Robot virtuel</a> : le robot affiche ses 188 exemples de commandes, cliquables.</li>
+      <li>Enchaînez les actions avec « puis » ou une virgule : « salue le public, puis assieds-toi ».</li>
+      <li>« stop » arrête tout ; « annule » revient en arrière ; « répète » rejoue la dernière consigne.</li>
+      <li>Les boutons de gestes et de poses sont des bascules : un second appui ramène le robot.</li>
+    </ul>
+    <p class="petit">Recherche indépendante et autofinancée — Sylvain Gagné, Ph. D. Le robot, les documents de travail et les données des acteurs restent sur l'ordinateur de l'équipe ; ce site ne publie que l'interface et sa documentation.</p>
+  </section>
+</main>
+<script src="/static/i18n.js"></script>
+</body>
+</html>

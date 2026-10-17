@@ -147,6 +147,14 @@ async def test_plateforme_bout_en_bout(cfg, monkeypatch):
             assert r.status == 200 and "i18n.js" in html and "data-nav" in html, page
         r = await c.get("/tableau-public", allow_redirects=False)
         assert r.status == 302 and r.headers["Location"] == "/static/tableau-public.html"
+        # Aide : page et documents servis par le pont comme par Netlify (web/aide/)
+        r = await c.get("/aide", allow_redirects=False)
+        assert r.status == 302 and r.headers["Location"] == "/static/aide/index.html"
+        html = await (await c.get("/static/aide/index.html")).text()
+        for doc in ("Guide_plateforme_integree_ROBO-SCENE_v2.0.1.docx", "Repertoire_commandes_gestes_robot_ROBO-SCENE_v1.0_2026-10-16.docx"):
+            assert f"/static/aide/{doc}" in html
+            r = await c.get(f"/static/aide/{doc}")
+            assert r.status == 200 and (await r.read())[:2] == b"PK"      # archive Word
         assert '"/atelier/api/' in await (await c.get("/atelier/p1")).text()
 
 

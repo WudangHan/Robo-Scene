@@ -4,7 +4,7 @@ Toutes les routes JSON d'écriture exigent l'en-tête « X-Plateforme: 1 » : un
 requête de contrôle préalable que le pont ne valide pas pour une origine étrangère, ce qui ferme la porte aux
 requêtes intersites ; la console est par ailleurs servie sur 127.0.0.1 par défaut.
 
-Pages : /atelier, /scene, /spectateur, /recherche, /gouvernance, /regie, /surtitres, /tableau-public.
+Pages : /atelier, /scene, /spectateur, /recherche, /gouvernance, /regie, /surtitres, /tableau-public, /aide.
 """
 from __future__ import annotations
 
@@ -95,6 +95,10 @@ def monter(app: web.Application, ctl) -> None:
     async def tableau_public(_req):     # page statique à chemins relatifs, identique sur le site public
         raise web.HTTPFound("/static/tableau-public.html")
     r.add_get("/tableau-public", tableau_public)
+
+    async def aide(_req):
+        raise web.HTTPFound("/static/aide/index.html")
+    r.add_get("/aide", aide)
 
     # ── Vue d'ensemble ──────────────────────────────────────
     @_json

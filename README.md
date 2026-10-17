@@ -207,9 +207,10 @@ Cadrages (face, trois-quarts, profil, gros plan, plan américain, en pied, plan 
 
 ## Documentation et version en ligne
 
-Version publiée : **2.3** (16 octobre 2026), en ligne sur <https://robo-scene.netlify.app> ; le dossier `web/` de l'étiquette `v2.3.0` est celui qui est déployé.
+Version publiée : **2.3.3** (16 octobre 2026), en ligne sur <https://robo-scene.netlify.app> ; les deux documents de référence se téléchargent aussi depuis la page **Aide** (<https://robo-scene.netlify.app/aide>, dossier `web/aide/`).
 
 - `docs/Guide_plateforme_integree_ROBO-SCENE_v2.0.1.docx` — guide de la plateforme intégrée (58 fonctions, révision 2.0.1 du 16 octobre 2026)
+- `docs/Repertoire_commandes_gestes_robot_ROBO-SCENE_v1.0_2026-10-16.docx` — répertoire exhaustif des commandes vocales, des 70 gestes, des 11 poses et des mouvements induits du robot, et des bibliothèques fermées des robots physiques
 - `docs/Rapport_mise_en_oeuvre_audit_ROBO-SCENE_2026-10-16.docx` — mise en œuvre de l'audit indépendant : correctifs, vérifications, décisions résiduelles
 - `docs/Guide_partenaire_ROBO-SCENE.docx` — partenaire de théâtre
 - `docs/Guide_robot_virtuel_ROBO-SCENE.docx` — robot virtuel humanoïde
