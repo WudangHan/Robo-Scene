@@ -84,7 +84,7 @@ fournisseur_prefere = "anthropic"  # "openai" pour placer GPT en premier
 # hors de cette machine sont refusés par verifier_local() (VP-14).
 api_local = "lmstudio"
 local = "luciole-8b-instruct-1.1"            # LM Studio : OpenLLM-France, GGUF Q4_K_M (quantification évaluée)
-local_secours = "apertus-8b-instruct-2509"   # LM Studio : GGUF Q3_K_M (l'évaluation portait sur Q4_K_M)
+local_secours = "apertus-8b-instruct-2509-si02"   # LM Studio : le GGUF évalué lui-même (bartowski Q4_K_M, gabarit simple)
 local_provisoire = false
 url_local = "http://127.0.0.1:1234"
 plafond_jetons_seance = 200000

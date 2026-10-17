@@ -17,7 +17,7 @@ systemes:
     risque: modere
     mesures: "verifier_local (aucun serveur hors de cette machine, aucune étiquette cloud ou remote, entrées remote_* ou device non local refusées) ; refus sans repli distant"
     version_courante: "luciole-8b-instruct-1.1 (LM Studio, GGUF Q4_K_M d'OpenLLM-France ; désigné le 2026-10-16, évaluation à l'aveugle du 2026-10-12, n = 131)"
-    secours: "apertus-8b-instruct-2509 (LM Studio, GGUF Q3_K_M ; évalué en Q4_K_M : à réévaluer ou remplacer par Q4_K_M ; stéréotype moyen 0,26 contre 0,09 : à surveiller)"
+    secours: "apertus-8b-instruct-2509-si02 (LM Studio ; le fichier même de l'évaluation à l'aveugle : GGUF bartowski Q4_K_M, poids identiques au téléchargement du 2026-10-17 — empreinte des tenseurs 02b26279…df437f1 —, gabarit de conversation simplifié de config/apertus_2509_gabarit_simple.jinja ; stéréotype moyen 0,26 contre 0,09 : à surveiller)"
     changement_fournisseur: "2026-10-16 : Ollama (F-03) remplacé par LM Studio (F-09), Luciole 1.1 n'étant pas accessible par Ollama sur le poste ; mêmes contrôles D03"
     approbation: "Changement de fournisseur (LM Studio) et correction du contact main-visage du robot virtuel (v2.3.3) approuvés par S. Gagné le 2026-10-17"
     version_anterieure: "gemma4:12b (provisoire, essais seulement, jusqu'au 2026-10-16)"

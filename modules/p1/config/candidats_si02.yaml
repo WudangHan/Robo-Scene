@@ -14,11 +14,14 @@ candidats:
     donnees_entrainement_publiques: true      # « open weights + open data + full training details »
     depot_gguf: bartowski/swiss-ai_Apertus-8B-Instruct-2509-GGUF   # communautaire (aucun GGUF du développeur)
     etiquette_ollama: apertus-8b-instruct-2509-local:q4_k_m   # créée par config/Modelfile_apertus_2509
-    etiquette_lmstudio: apertus-8b-instruct-2509
+    etiquette_lmstudio: apertus-8b-instruct-2509-si02
     gguf_lmstudio: >-
-      Éditeur « Lisnsharragh », Q3_K_M (relevé le 2026-10-16) : provenance et quantification DIFFÉRENTES du GGUF
-      évalué (bartowski, Q4_K_M) ; secours admissible pour la continuité, à réévaluer ou à remplacer par le GGUF
-      bartowski Q4_K_M avant tout usage en atelier.
+      Depuis le 2026-10-17 : le fichier évalué lui-même (eval_si02/apertus_2509_Q4_K_M_gabarit_simple.gguf), importé
+      dans LM Studio par lien physique (lms import -L, dépôt local robo-scene/Apertus-8B-Instruct-2509-SI02-GGUF).
+      Le GGUF bartowski Q4_K_M téléchargé le même jour a des poids identiques (empreinte SHA-256 des 324 tenseurs
+      02b26279c2a19de95d5efa2029e65cf85b763513ac6b7bcff6a00148adf437f1) mais son gabarit Jinja d'origine fait échouer
+      llama-server (« Unable to generate parser for this template »), comme Ollama le 2026-10-12. L'ancienne copie
+      « Lisnsharragh » Q3_K_M (apertus-8b-instruct-2509) n'est plus employée.
     gabarit: >-
       Gabarit Jinja du GGUF illisible par Ollama 0.33 (échec au chargement) ; remplacé dans une copie locale par
       config/apertus_2509_gabarit_simple.jinja (mêmes jetons de rôle, délibération et outils désactivés).

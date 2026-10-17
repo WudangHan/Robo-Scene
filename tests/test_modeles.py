@@ -125,7 +125,7 @@ def test_gpt_terra_en_attente_puis_adopte(tmp_path, monkeypatch):
 
 # ── SI-02 désigné (audit du 2026-10-16 : A-009, A-010, VP-14) ──────────────────────────────
 LUCIOLE = "luciole-8b-instruct-1.1"            # identifiants LM Studio (serveur local depuis le 2026-10-16)
-APERTUS = "apertus-8b-instruct-2509"
+APERTUS = "apertus-8b-instruct-2509-si02"
 LUCIOLE_OLLAMA = "hf.co/OpenLLM-France/Luciole-8B-Instruct-1.1-GGUF:Q4_K_M"
 
 
@@ -202,7 +202,7 @@ def test_service_lmstudio_par_defaut(tmp_path):
 
 def test_secours_local_seulement_si_principal_absent():
     from bridge.modeles.clients import ClientLocal
-    tags = [{"name": "Apertus-8B-Instruct-2509"}]
+    tags = [{"name": "Apertus-8B-Instruct-2509-SI02"}]
     c = ClientLocal(LUCIOLE, secours=APERTUS, lister=lambda: tags)
     assert c.choisir() == APERTUS
     tags.append({"name": LUCIOLE})
