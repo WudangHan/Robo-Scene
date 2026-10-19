@@ -132,3 +132,33 @@ dossier = "donnees_ett"
 [diffusion]
 c2pa_certificat = ""               # O-07 : certificat et clé de signature ; vides → manifeste compagnon non signé
 c2pa_cle = ""
+
+# ─────────────────────────────────────────────────────────────
+#  Drone de scène (page « Drone ») — le drone virtuel fonctionne sans rien régler ici
+# ─────────────────────────────────────────────────────────────
+[drone]
+# Description de la salle (plateau, cadre, porteuses, gradins, balcon) : web/drone/salle.json par défaut.
+# salle = "/chemin/vers/releve_salle.json"
+reel_autorise = false              # true seulement après : relevé de la salle, autorisation écrite du lieu, assurance
+vol_en_representation = false      # vol réel avec public présent : à n'activer qu'après une analyse de risques dédiée
+whep_url = ""                      # flux 4K de la caméra par WHEP, ex. "http://127.0.0.1:8889/drone/whep" (MediaMTX)
+# Aucune option de conservation vidéo n'existe (G-06) : conserver_video et apparentées sont refusées au démarrage.
+
+[drone.repere]                     # origine locale de l'autopilote dans le repère du théâtre, et cap du nord local
+origine = [0.0, 0.0, -6.5]         # aire de décollage (salle.json, aire.centre)
+cap_deg = 0.0                      # 0 : nord local = lointain, est = cour
+
+[drone.mavlink]                    # ArduPilot Copter (GUIDED) ; pip install pymavlink
+connexion = "udpin:0.0.0.0:14550"  # télémétrie de la radio ou de l'ordinateur compagnon
+delai_s = 5
+
+[drone.tello]                      # Tello (SDK 2.0) ; caméra 720p, position estimée : répétitions seulement
+hote = "192.168.10.1"
+port = 8889
+port_etat = 8890
+rc_echelle_m_s = 1.0               # (à étalonner) vitesse correspondant à « rc 100 »
+inverser_rc_lateral = false        # (à vérifier au banc) sens de la composante gauche/droite de « rc »
+
+[drone.ligne_json]                 # ordinateur compagnon : JSON par ligne en UDP (PROTOCOLE.md, section Drone)
+hote = "127.0.0.1"
+port = 9750

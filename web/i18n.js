@@ -56,12 +56,12 @@ window.I18N = (() => {
     // Régie
     "Tâches": "Tasks", "Régisseur IA (lecture seule)": "AI stage manager (read only)", "Question": "Question",
     "Demander": "Ask", "Revue trimestrielle (P-04)": "Quarterly review (P-04)", "Produire la revue": "Produce the review",
-    "Robot virtuel": "Virtual robot", "Aide": "Help",
+    "Robot virtuel": "Virtual robot", "Drone": "Drone", "Aide": "Help",
     "Dépôts du jour (P-03)": "Today's deposits (P-03)", "Inventaire mensuel (P-02)": "Monthly inventory (P-02)",
   };
   const PAGES = [["/", "Console"], ["/partenaire", "Partenaire"], ["/atelier", "Atelier"], ["/scene", "Scène"],
     ["/spectateur", "Spectateur"], ["/surtitres", "Surtitres"], ["/recherche", "Recherche"], ["/gouvernance", "Gouvernance"],
-    ["/regie", "Régie"], ["/tableau-public", "Tableau public"], ["/avatar", "Robot virtuel"], ["/aide", "Aide"]];
+    ["/regie", "Régie"], ["/tableau-public", "Tableau public"], ["/avatar", "Robot virtuel"], ["/drone", "Drone"], ["/aide", "Aide"]];
   let langue = "fr";
   try { langue = localStorage.getItem(CLE) || "fr"; } catch (e) { /* stockage indisponible : français */ }
   if (!["fr", "en"].includes(langue)) langue = "fr";

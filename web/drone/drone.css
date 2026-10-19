@@ -1,0 +1,59 @@
+/* Page « Drone » — complète style.css et avatar/avatar.css (thème régie de scène, contrastes WCAG 2.2 AA). */
+.drone-grille { grid-template-columns: minmax(0, 1.6fr) minmax(340px, 1fr); }
+.bascule { display: inline-flex; align-items: center; gap: 4px; background: #0d0f14cc; border: 1px solid #343c4d; border-radius: 7px; padding: 4px 8px; font-size: 12px; }
+.pip { position: absolute; right: 12px; bottom: 44px; width: min(42%, 520px); margin: 0; background: #000; border: 1px solid #343c4d; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 24px #0009; }
+.pip.grand { width: min(86%, 1200px); }
+.pip-cadre { position: relative; aspect-ratio: 16 / 9; }
+.pip-cadre canvas, .pip-cadre video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+#cam-surimp { pointer-events: none; background: transparent; }
+.pip.superposee #cam-reelle { opacity: 1; }
+.pip.superposee #cam-virtuelle { opacity: 0.45; mix-blend-mode: screen; z-index: 1; background: transparent; }
+.pip figcaption { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 8px; font-size: 12px; color: var(--doux); background: #0d0f14; }
+.pip figcaption button { padding: 1px 8px; }
+.cible-cmd { flex-wrap: wrap; gap: 10px; margin-bottom: 6px; }
+.boutons-vol { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.boutons-vol button { min-height: 40px; }
+button.primaire { background: #2d6a4f; border-color: #3f8f6b; }
+button.danger { background: #4a1f24; border-color: #8f2f2f; color: #ffd4d4; }
+.manettes { display: flex; gap: 16px; justify-content: space-around; margin: 6px 0 10px; }
+.manette { position: relative; width: 132px; height: 132px; border-radius: 50%; background: radial-gradient(circle, #1f2430 0 30%, #171a21 31%); border: 1px solid #343c4d; touch-action: none; cursor: grab; }
+.manette i { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: #2a3140; border: 2px solid var(--accent); transform: translate(var(--dx, 0px), var(--dy, 0px)); }
+.manette span { position: absolute; left: 0; right: 0; bottom: -18px; text-align: center; font-size: 11px; color: var(--doux); }
+.manette:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+kbd { font: 11px var(--mono); border: 1px solid #343c4d; border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: #0f1218; }
+.telemetrie { font-size: 12px; background: #0f1218; border: 1px solid var(--bord); border-radius: 8px; padding: 8px 10px; margin-top: 10px; white-space: pre-wrap; }
+.go-ligne { align-items: center; margin: 10px 0; }
+.go { background: #2d6a4f; border: 1px solid #3f8f6b; font-weight: 800; letter-spacing: .1em; font-size: 22px; padding: 10px 30px; border-radius: 10px; }
+.go:disabled { opacity: .45; cursor: not-allowed; }
+.note { background: #141b26; border: 1px solid #2c3a52; border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+.note .erreur, .note.erreur { color: var(--alerte); }
+.note ul { margin: 4px 0; padding-left: 18px; }
+.defile { max-height: 300px; overflow: auto; margin: 6px 0; }
+table.donnees { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.donnees th, table.donnees td { border-bottom: 1px solid var(--bord); padding: 5px 6px; text-align: left; vertical-align: top; }
+table.donnees th { color: var(--doux); font-weight: 500; position: sticky; top: 0; background: var(--panneau); }
+table.donnees tr.courant td { background: #23293a; }
+table.donnees tr.fait td { color: var(--doux); }
+.modes { display: grid; gap: 6px; }
+.modes label { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: start; border: 1px solid var(--bord); border-radius: 8px; padding: 8px; cursor: pointer; }
+.modes label:has(input:checked) { border-color: var(--accent); background: #1f2430; }
+.modes small { grid-column: 2; color: var(--doux); }
+.conditions li::before { content: "○"; color: var(--avert); margin-right: 4px; }
+.conditions li.ok::before { content: "●"; color: var(--ok); }
+#d-coupure { background: var(--panneau); color: var(--texte); border: 2px solid var(--arret); border-radius: 12px; max-width: 460px; }
+#d-coupure::backdrop { background: #000a; }
+#d-coupure input { width: 100%; margin: 6px 0 10px; }
+.message { min-height: 1.4em; margin: 6px 0; font-size: 13px; }
+.message.erreur { color: var(--alerte); } .message.ok { color: var(--ok); }
+#ong-camera input#whep-url { flex: 1; min-width: 0; }
+body.mode-scene .pip { display: none; }
+@media (max-width: 980px) { .drone-grille { grid-template-columns: 1fr; } .pip { width: min(60%, 420px); } }
+@media (max-width: 560px) { .pip { width: calc(100% - 24px); bottom: 40px; } .manette { width: 112px; height: 112px; } }
+.commandes .ligne input[type=radio], .commandes .ligne input[type=checkbox] { flex: 0 0 auto; min-width: 0; width: auto; margin: 0 4px 0 0; }
+.commandes .ligne input[type=number] { flex: 0 0 76px; min-width: 0; width: 76px; }
+.commandes .ligne input[type=range] { flex: 1 1 140px; min-width: 120px; width: auto; }
+.commandes .ligne input[type=color] { flex: 0 0 48px; min-width: 0; height: 34px; padding: 2px; }
+.commandes .ligne output { font: 12px var(--mono); min-width: 52px; }
+.commandes .ligne label.petit, .commandes .ligne .petit { white-space: nowrap; }
+.barre-vue select { max-width: 260px; }
+.barre .statuts { flex: 1 1 380px; }

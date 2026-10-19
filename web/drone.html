@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drone de scène — ROBO-SCÈNE</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/avatar/avatar.css">
+<link rel="stylesheet" href="/static/drone/drone.css">
+<script type="importmap">{ "imports": { "three": "/static/vendor/three.module.min.js", "three/addons/": "/static/vendor/" } }</script>
+</head>
+<body>
+<header class="barre">
+  <div class="titre">
+    <span class="marque">ROBO-SCÈNE</span>
+    <span class="sous">Drone de scène — virtuel, puis réel</span>
+  </div>
+  <nav data-nav class="nav-pages" aria-label="Plateforme intégrée"><a href="/">Console</a><a href="/partenaire">Partenaire</a><a href="/atelier">Atelier</a><a href="/scene">Scène</a><a href="/spectateur">Spectateur</a><a href="/surtitres">Surtitres</a><a href="/recherche">Recherche</a><a href="/gouvernance">Gouvernance</a><a href="/regie">Régie</a><a href="/tableau-public">Tableau public</a><a href="/avatar">Robot virtuel</a><a href="/drone" aria-current="page">Drone</a><a href="/aide">Aide</a></nav>
+  <div class="statuts" aria-live="polite">
+    <span class="pastille neutre" id="st-etat">Au sol</span>
+    <span class="pastille neutre" id="st-mode">Plateau seul</span>
+    <span class="pastille neutre" id="st-batt">Batterie 100 %</span>
+    <span class="pastille neutre" id="st-alt">Alt. 0,0 m · 0,0 m/s</span>
+    <span class="pastille neutre" id="st-reel">Drone réel : non relié</span>
+  </div>
+  <div class="urgence">
+    <button id="btn-arret" class="arret" title="ARRÊT : descente contrôlée immédiate du drone (virtuel et réel), verrouillée jusqu'au réarmement ; envoie aussi l'arrêt d'urgence global au pont (touche Échap)">ARRÊT</button>
+  </div>
+</header>
+
+<main class="avatar-grille drone-grille">
+  <section class="scene-zone" aria-label="Théâtre et drone en 3D">
+    <div id="vue3d"></div>
+    <div class="barre-vue">
+      <div class="groupe-boutons" role="group" aria-label="Point de vue">
+        <button data-vue="regie">Régie</button><button data-vue="salle">Salle</button><button data-vue="plateau">Plateau</button>
+        <button data-vue="cour">Cour</button><button data-vue="lointain">Lointain</button><button data-vue="dessus">Dessus</button>
+        <button data-vue="poursuite">Poursuite</button>
+      </div>
+      <label class="bascule"><input type="checkbox" id="voir-zones" checked> Zones</label>
+      <label class="bascule"><input type="checkbox" id="voir-poursuite"> Projecteur de poursuite</label>
+      <select id="outil-clic" aria-label="Clic sur le sol">
+        <option value="">Clic : aucun effet</option>
+        <option value="aller">Clic : aller ici (altitude du curseur)</option>
+        <option value="interprete">Clic : placer un interprète</option>
+      </select>
+      <button id="btn-scene" title="Plein écran sans panneaux (Échap pour sortir)">Mode scène</button>
+    </div>
+    <figure class="pip" id="pip" aria-label="Caméra embarquée">
+      <div class="pip-cadre">
+        <canvas id="cam-virtuelle" width="1280" height="720"></canvas>
+        <video id="cam-reelle" playsinline muted hidden></video>
+        <canvas id="cam-surimp"></canvas>
+      </div>
+      <figcaption><span id="pip-titre">Caméra embarquée (virtuelle)</span>
+        <button id="pip-taille" class="discret" title="Agrandir ou réduire la vue de la caméra">⤢</button></figcaption>
+    </figure>
+    <div class="etat-scene"><span id="repere-courant"></span><span id="etat-conduite"></span></div>
+  </section>
+
+  <aside class="panneau commandes">
+    <div class="onglets" role="tablist" aria-label="Commandes du drone">
+      <button role="tab" data-onglet="vol">Vol</button>
+      <button role="tab" data-onglet="conduite">Conduite</button>
+      <button role="tab" data-onglet="camera">Caméra 4K</button>
+      <button role="tab" data-onglet="zones">Zones</button>
+      <button role="tab" data-onglet="reel">Drone réel</button>
+      <button role="tab" data-onglet="journal">Journal</button>
+    </div>
+
+    <!-- ── Vol ── -->
+    <div class="panneau-onglet" id="ong-vol" role="tabpanel">
+      <div class="ligne cible-cmd">
+        <span class="petit">Les commandes vont au</span>
+        <label><input type="radio" name="cible" value="virtuel" checked> drone virtuel</label>
+        <label><input type="radio" name="cible" value="reel" id="cible-reel" disabled> drone réel (le virtuel devient son jumeau)</label>
+      </div>
+      <div class="boutons-vol">
+        <button id="b-decoller" class="primaire" title="T">Décoller</button>
+        <button id="b-station" title="Espace">Stationnaire</button>
+        <button id="b-atterrir" title="L">Atterrir</button>
+        <button id="b-retour" title="H">Retour à l'aire</button>
+        <button id="b-rearmer" class="rearmer" title="Lever le verrou d'arrêt d'urgence (drone posé)">Réarmer</button>
+      </div>
+      <div class="ligne petit">
+        <label for="h-decollage">Hauteur de décollage</label><input type="range" id="h-decollage" min="0.6" max="3" step="0.1" value="1.5"><output id="h-decollage-val">1,5 m</output>
+      </div>
+      <h3>Manettes <small>(mode 2 : gauche = montée et lacet ; droite = avant et côté)</small></h3>
+      <div class="manettes">
+        <div class="manette" id="manette-g" aria-label="Manette gauche : montée, descente et rotation"><i></i><span>↑ monter · ↻ lacet</span></div>
+        <div class="manette" id="manette-d" aria-label="Manette droite : avancer, reculer, glisser"><i></i><span>↑ avant · → droite</span></div>
+      </div>
+      <p class="petit">Clavier : <kbd>W</kbd> <kbd>S</kbd> avant et arrière, <kbd>A</kbd> <kbd>D</kbd> gauche et droite (du drone), <kbd>R</kbd> <kbd>F</kbd> ou <kbd>↑</kbd> <kbd>↓</kbd> monter et descendre, <kbd>Q</kbd> <kbd>E</kbd> ou <kbd>←</kbd> <kbd>→</kbd> lacet ; <kbd>T</kbd> décoller, <kbd>L</kbd> atterrir, <kbd>H</kbd> retour, <kbd>Espace</kbd> stationnaire, <kbd>Échap</kbd> ARRÊT. Manette de jeu reconnue (mode 2 ; A décoller, B atterrir, X stationnaire, Y retour).</p>
+      <h3>Aller à un repère</h3>
+      <div class="ligne">
+        <select id="aller-repere" aria-label="Repère"></select>
+        <label class="petit">durée <input type="number" id="aller-duree" min="0" max="60" step="0.5" value="5"> s</label>
+        <label class="petit">lacet <input type="number" id="aller-lacet" min="-180" max="180" step="15" value="0"> °</label>
+        <button id="b-aller" class="primaire">Aller</button>
+      </div>
+      <div class="ligne petit"><label for="alt-clic">Altitude du clic « aller ici »</label><input type="range" id="alt-clic" min="0.6" max="7" step="0.1" value="2"><output id="alt-clic-val">2,0 m</output></div>
+      <h3>Lumière du drone</h3>
+      <div class="ligne"><input type="color" id="del" value="#f2b544" aria-label="Couleur de la couronne de DEL">
+        <label class="petit"><input type="checkbox" id="turbulence" checked> turbulence de ventilation</label>
+        <button id="b-batterie" title="Remplacer la batterie (au sol)">Batterie neuve</button>
+        <button id="b-coupure" class="danger" title="Dernier recours : le drone tombe">Couper les moteurs…</button></div>
+      <div id="telemetrie" class="telemetrie mono" aria-live="off"></div>
+    </div>
+
+    <!-- ── Conduite ── -->
+    <div class="panneau-onglet" id="ong-conduite" role="tabpanel" hidden>
+      <div class="ligne">
+        <button id="c-exemple">Charger l'exemple</button>
+        <button id="c-valider">Valider</button>
+        <label class="bouton-fichier">Ouvrir…<input type="file" id="c-fichier" accept=".json,application/json" hidden></label>
+        <button id="c-exporter">Exporter (.json)</button>
+      </div>
+      <div class="ligne go-ligne">
+        <button id="c-go" class="go" title="Entrée : jouer le repère suivant">GO</button>
+        <button id="c-tout">Jouer tout</button>
+        <button id="c-retour">Revenir au début</button>
+        <span id="c-prochain" class="petit"></span>
+      </div>
+      <div id="c-bilan" class="note" aria-live="polite"></div>
+      <div class="defile"><table class="donnees" id="c-table"><thead><tr><th>Repère</th><th>Action</th><th>Vers</th><th>Durée</th><th>Caméra</th><th></th></tr></thead><tbody></tbody></table></div>
+      <details><summary>Texte JSON de la conduite</summary>
+        <textarea id="c-json" rows="14" spellcheck="false" class="mono"></textarea>
+        <button id="c-appliquer">Appliquer le texte</button>
+      </details>
+      <p class="petit">Chaque repère est un déplacement en ligne droite à secousse minimale (départ et arrivée sans à-coup). La validation échantillonne la trajectoire tous les 5 cm contre les zones de vol ; une durée trop courte est allongée, jamais raccourcie ; un GO reste bloqué tant qu'un segment touche un obstacle, le public ou un interprète.</p>
+    </div>
+
+    <!-- ── Caméra 4K ── -->
+    <div class="panneau-onglet" id="ong-camera" role="tabpanel" hidden>
+      <h3>Source affichée</h3>
+      <div class="ligne">
+        <label><input type="radio" name="source" value="virtuelle" checked> virtuelle</label>
+        <label><input type="radio" name="source" value="reelle"> réelle</label>
+        <label><input type="radio" name="source" value="superposee"> superposée (calage du jumeau)</label>
+      </div>
+      <h3>Nacelle et objectif</h3>
+      <div class="ligne petit"><label for="tangage">Tangage</label><input type="range" id="tangage" min="-90" max="20" step="1" value="-15"><output id="tangage-val">−15°</output></div>
+      <div class="ligne petit"><label for="zoom">Zoom</label><input type="range" id="zoom" min="1" max="4" step="0.1" value="1"><output id="zoom-val">×1,0</output></div>
+      <div class="ligne petit"><label for="viser">Viser</label><select id="viser"><option value="">— (nacelle libre)</option></select></div>
+      <div class="ligne petit">
+        <label><input type="checkbox" id="tiers" checked> grille des tiers</label>
+        <label for="definition">Aperçu</label>
+        <select id="definition"><option value="1280x720">1280 × 720</option><option value="1920x1080">1920 × 1080</option><option value="3840x2160">3840 × 2160 (exigeant)</option></select>
+      </div>
+      <h3>Caméra virtuelle</h3>
+      <div class="ligne"><button id="b-photo">Image 4K (3840 × 2160)</button><button id="b-rec" aria-pressed="false">● Enregistrer</button></div>
+      <p class="petit">L'image fixe est rendue à 3840 × 2160 quelle que soit la définition de l'aperçu ; l'enregistrement (WebM) suit la définition choisie.</p>
+      <h3>Caméra réelle 4K</h3>
+      <div class="ligne">
+        <select id="cam-liste" aria-label="Carte de capture"><option value="">Carte de capture HDMI / webcam…</option></select>
+        <button id="b-capture">Ouvrir la capture</button>
+      </div>
+      <div class="ligne">
+        <input id="whep-url" placeholder="http://127.0.0.1:8889/drone/whep" aria-label="Adresse WHEP">
+        <button id="b-whep">Lire le flux WHEP</button><button id="b-cam-fermer">Fermer</button>
+      </div>
+      <p id="cam-info" class="petit">—</p>
+      <div class="note petit">Deux voies vers la caméra 4K du drone réel : une <b>carte de capture HDMI → USB</b> branchée sur la sortie HDMI de la radiocommande (elle apparaît comme une webcam ; la page demande 3840 × 2160 et affiche la définition obtenue), ou un <b>serveur WebRTC</b> tel que MediaMTX qui reçoit le flux RTSP ou SRT de la caméra et le sert par WHEP. <b>Rien n'est enregistré</b> : le flux réel est seulement affiché (garde-fou G-06) ; un avertissement s'affiche quand le jumeau vise le public.</div>
+    </div>
+
+    <!-- ── Zones ── -->
+    <div class="panneau-onglet" id="ong-zones" role="tabpanel" hidden>
+      <h3>Mode de vol</h3>
+      <div id="modes" class="modes"></div>
+      <div class="ligne petit" id="salle-vide-ligne">
+        <label for="salle-vide-par">Salle vérifiée vide de toute personne par (initiales, requis pour « Salle vide »)</label><input id="salle-vide-par" maxlength="12" size="8">
+      </div>
+      <h3>Interprètes sur le plateau</h3>
+      <div class="ligne"><button id="z-ajout">Placer un interprète (clic sur le plateau)</button><button id="z-vider">Retirer tous</button></div>
+      <ul id="z-interpretes" class="liste"></ul>
+      <h3>Règles <small>(salle.json, partagées avec le pont)</small></h3>
+      <div id="regles" class="petit"></div>
+      <h3>Vérifier un point</h3>
+      <div class="ligne"><input id="z-point" placeholder="x, y, z (ex. 0, 4.5, 2)" class="mono"><button id="z-tester">Vérifier</button></div>
+      <p id="z-verdict" class="message"></p>
+      <p class="petit">La salle dessinée est un gabarit à l'italienne : remplacez web/drone/salle.json par le relevé de votre salle (cotes du plateau, du cadre, des porteuses, des gradins, du balcon) avant tout vol réel ; la page et le pont liront le même fichier.</p>
+    </div>
+
+    <!-- ── Drone réel ── -->
+    <div class="panneau-onglet" id="ong-reel" role="tabpanel" hidden>
+      <p id="r-pont" class="petit">Pont : —</p>
+      <h3>Adaptateur</h3>
+      <div class="ligne"><select id="r-adaptateur"></select><button id="r-connecter" class="primaire">Relier</button><button id="r-deconnecter">Délier</button></div>
+      <p id="r-desc" class="petit"></p>
+      <h3>Conditions du vol réel</h3>
+      <ul class="liste conditions" id="r-conditions"></ul>
+      <h3>Liste de contrôle avant vol</h3>
+      <ul class="liste" id="r-liste"></ul>
+      <div class="ligne"><label for="r-liste-par" class="petit">Vérifiée par (initiales)</label><input id="r-liste-par" maxlength="12" size="8"><button id="r-liste-signer">Signer la liste</button></div>
+      <h3>Télémétrie du drone réel</h3>
+      <div id="r-tel" class="telemetrie mono">—</div>
+      <div class="note petit">Le pont applique, avant toute commande, les mêmes zones que le drone virtuel, les plafonds de vitesse, l'observateur de sécurité (déclaré dans la Console), la liste de contrôle signée et un chien de garde : si cette page se tait, le drone passe en stationnaire après 1 s puis atterrit après 4 s. L'ARRÊT de n'importe quelle page de la plateforme pose le drone. La coupure des moteurs, distincte, exige une confirmation.</div>
+    </div>
+
+    <!-- ── Journal ── -->
+    <div class="panneau-onglet" id="ong-journal" role="tabpanel" hidden>
+      <ol id="journal" class="flux"></ol>
+      <button id="j-exporter">Exporter le journal (.json)</button>
+      <p class="petit">Métadonnées de l'essai : identifiant [DATE]_[SYSTÈME]_[TYPE]_[NUMÉRO], conduite, mode de vol, durées, refus et alertes ; aucune image.</p>
+    </div>
+  </aside>
+</main>
+
+<dialog id="d-coupure">
+  <form method="dialog">
+    <h2>Couper les moteurs ?</h2>
+    <p>Dernier recours, si le drone est hors de contrôle : <b>il tombe</b>. Pour une situation ordinaire, utilisez ARRÊT (descente contrôlée).</p>
+    <label>Tapez <b>COUPER</b> pour confirmer <input id="d-coupure-texte" autocomplete="off"></label>
+    <div class="ligne"><button value="annuler">Annuler</button><button id="d-coupure-ok" value="ok" class="danger">Couper</button></div>
+  </form>
+</dialog>
+
+<script src="/static/i18n.js"></script>
+<script src="/static/pont.js"></script>
+<script type="module" src="/static/drone/app.js"></script>
+</body>
+</html>

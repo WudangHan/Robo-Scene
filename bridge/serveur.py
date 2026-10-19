@@ -80,6 +80,8 @@ class Controleur:
         self._ouvrir_seance()
         from .partenaire.controleur import Partenaire
         self.partenaire = Partenaire(self, cfg.get("partenaire", {}))
+        from .drone.controleur import DroneControleur
+        self.drone = DroneControleur(self, cfg.get("drone", {}))
 
     def _ouvrir_seance(self) -> None:
         p = self.cfg["protocole"]
@@ -261,8 +263,10 @@ class Controleur:
             await self.log(f"ARRÊT D'URGENCE — {motif}", "alerte")
         if hasattr(self, "scene"):
             self.scene.arret_logiciel()
+        await self.drone.arret_urgence(motif)
 
     async def rearmer(self) -> None:
+        self.drone.rearmer()
         for r in self.robots.values():
             r.securite.rearmer()
             if r.pilote and r.lien == "connecte":
@@ -592,6 +596,9 @@ class Controleur:
         if isinstance(op, str) and op.startswith("p_"):
             await self._traiter_partenaire(ws, m)
             return
+        if isinstance(op, str) and op.startswith("drone_"):
+            await self._traiter_drone(ws, m)
+            return
         rob = m.get("robot")
         try:
             if op == "estop":
@@ -711,6 +718,46 @@ class Controleur:
                                 "msg": f"{exc}" if niveau == "refus" else f"Message mal formé ({op}) : {exc}",
                                 "ts": time.strftime("%H:%M:%S")})
 
+    async def _traiter_drone(self, ws: web.WebSocketResponse, m: dict[str, Any]) -> None:
+        """Page « Drone » : chaque commande passe par le contrôleur du drone (zones, observateur, liste de contrôle)."""
+        op, d = m["op"], self.drone
+        try:
+            if op == "drone_hb":
+                d.battement()
+            elif op == "drone_etat":
+                await ws.send_json(d.etat())
+            elif op == "drone_connecter":
+                await d.connecter(str(m.get("adaptateur", "simulation")))
+            elif op == "drone_deconnecter":
+                await d.deconnecter()
+            elif op == "drone_mode":
+                await d.regler_mode(str(m.get("mode", "")), str(m.get("par", "")))
+            elif op == "drone_interpretes":
+                await d.regler_interpretes(list(m.get("liste") or []))
+            elif op == "drone_liste":
+                await d.cocher(list(m.get("coches") or []), str(m.get("par", "")))
+            elif op == "drone_decoller":
+                await d.decoller(float(m.get("hauteur", 1.5)))
+            elif op == "drone_atterrir":
+                await d.atterrir()
+            elif op == "drone_stationnaire":
+                await d.stationnaire()
+            elif op == "drone_aller":
+                T = await d.aller(m["p"], m.get("duree"), m.get("vitesse"), m.get("lacet"))
+                await ws.send_json({"type": "drone_aller", "duree": T, "id": m.get("id")})
+            elif op == "drone_vitesse":
+                await d.vitesse(m["v"], float(m.get("lacet_vitesse", 0)))
+            elif op == "drone_coupure":
+                await d.couper(str(m.get("confirmation", "")))
+            else:
+                raise KeyError(op)
+        except CommandeRefusee as exc:
+            self.seance.compter("commandes_refusees")
+            self.seance.evenement("refus", op=op, motif=str(exc))
+            await ws.send_json({"type": "drone_refus", "op": op, "msg": str(exc)})
+        except (KeyError, ValueError, TypeError) as exc:
+            await ws.send_json({"type": "drone_refus", "op": op, "msg": f"Message mal formé ({op}) : {exc}"})
+
     async def _traiter_partenaire(self, ws: web.WebSocketResponse, m: dict[str, Any]) -> None:
         op = m["op"]
         try:
@@ -805,7 +852,8 @@ def creer_app(cfg: dict[str, Any]) -> web.Application:
             r.demarrer(ctl._sur_message_robot, ctl.log)
         app[TACHES] = [asyncio.create_task(ctl.boucle_surveillance()),
                        asyncio.create_task(ctl.boucle_diffusion()),
-                       asyncio.create_task(ctl.ouvrir_modeles())]
+                       asyncio.create_task(ctl.ouvrir_modeles()),
+                       asyncio.create_task(ctl.drone.boucle())]
 
     async def arreter(app: web.Application) -> None:
         for r in ctl.robots.values():
@@ -815,6 +863,13 @@ def creer_app(cfg: dict[str, Any]) -> web.Application:
                 pass
         for t in app[TACHES]:
             t.cancel()
+        if ctl.drone.adaptateur:
+            try:
+                if ctl.drone.en_vol:
+                    await ctl.drone.adaptateur.atterrir()
+                await ctl.drone.adaptateur.fermer()
+            except Exception:
+                pass
         for r in ctl.robots.values():
             await r.arreter()
         ctl.seance.cloturer()
@@ -825,6 +880,7 @@ def creer_app(cfg: dict[str, Any]) -> web.Application:
     app.router.add_get("/console", _page("index.html"))      # même adresse que sur Netlify
     app.router.add_get("/partenaire", _page("partenaire.html"))
     app.router.add_get("/avatar", _page("avatar.html"))
+    app.router.add_get("/drone", _page("drone.html"))
     app.router.add_get("/ws", ws_handler)
     from . import plateforme
     plateforme.monter(app, ctl)

@@ -1,3 +1,4 @@
 pytest>=8
 pytest-asyncio>=0.23
 amqtt>=0.11                # courtier MQTT de test
+pymavlink>=2.4          # essai de l'adaptateur MAVLink du drone de scène (facultatif en production)

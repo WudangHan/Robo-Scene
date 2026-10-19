@@ -1,0 +1,412 @@
+{
+  "version": "1.0",
+  "titre": "Salle à l'italienne type (plateau, cadre de scène, parterre, balcon)",
+  "repere": "Origine au centre de la ligne du cadre de scène, au niveau du plateau ; x vers cour (à droite vu de la salle), y vers le haut, z vers la salle ; mètres.",
+  "note": "Gabarit à remplacer par le relevé de la salle réelle avant tout vol matériel : cotes du plateau, du cadre, des porteuses, des gradins et du balcon. La même description sert au drone virtuel (navigateur) et à la couche de sécurité du pont (bridge/drone/zones.py).",
+  "volumes": {
+    "plateau": {
+      "libelle": "Plateau",
+      "x": [
+        -7,
+        7
+      ],
+      "y": [
+        0,
+        8.2
+      ],
+      "z": [
+        -9,
+        1.5
+      ]
+    },
+    "salle": {
+      "libelle": "Salle",
+      "x": [
+        -9,
+        9
+      ],
+      "y": [
+        -1.2,
+        7.6
+      ],
+      "z": [
+        1.5,
+        20
+      ]
+    }
+  },
+  "obstacles": [
+    {
+      "id": "cadre_jardin",
+      "libelle": "Cadre de scène (jardin)",
+      "x": [
+        -9.5,
+        -5
+      ],
+      "y": [
+        -1.2,
+        9.5
+      ],
+      "z": [
+        -0.3,
+        0.3
+      ]
+    },
+    {
+      "id": "cadre_cour",
+      "libelle": "Cadre de scène (cour)",
+      "x": [
+        5,
+        9.5
+      ],
+      "y": [
+        -1.2,
+        9.5
+      ],
+      "z": [
+        -0.3,
+        0.3
+      ]
+    },
+    {
+      "id": "manteau",
+      "libelle": "Manteau d'Arlequin (haut du cadre)",
+      "x": [
+        -5,
+        5
+      ],
+      "y": [
+        6.5,
+        9.5
+      ],
+      "z": [
+        -0.3,
+        0.3
+      ]
+    },
+    {
+      "id": "nez_de_scene",
+      "libelle": "Nez de scène (mur sous le plateau)",
+      "x": [
+        -7,
+        7
+      ],
+      "y": [
+        -1.2,
+        0
+      ],
+      "z": [
+        1.5,
+        1.6
+      ]
+    },
+    {
+      "id": "porteuse_1",
+      "libelle": "Porteuse lumière n° 1",
+      "x": [
+        -7,
+        7
+      ],
+      "y": [
+        7.0,
+        7.4
+      ],
+      "z": [
+        -1.6,
+        -1.2
+      ]
+    },
+    {
+      "id": "porteuse_2",
+      "libelle": "Porteuse lumière n° 2",
+      "x": [
+        -7,
+        7
+      ],
+      "y": [
+        7.0,
+        7.4
+      ],
+      "z": [
+        -4.6,
+        -4.2
+      ]
+    },
+    {
+      "id": "porteuse_3",
+      "libelle": "Porteuse lumière n° 3",
+      "x": [
+        -7,
+        7
+      ],
+      "y": [
+        7.0,
+        7.4
+      ],
+      "z": [
+        -7.4,
+        -7.0
+      ]
+    },
+    {
+      "id": "balcon",
+      "libelle": "Dalle du balcon",
+      "x": [
+        -9,
+        9
+      ],
+      "y": [
+        3.4,
+        4.3
+      ],
+      "z": [
+        14,
+        20
+      ]
+    },
+    {
+      "id": "regie",
+      "libelle": "Cabine de régie",
+      "x": [
+        -2.5,
+        2.5
+      ],
+      "y": [
+        4.3,
+        7.6
+      ],
+      "z": [
+        19,
+        20
+      ]
+    }
+  ],
+  "public": [
+    {
+      "id": "parterre_jardin",
+      "libelle": "Parterre jardin",
+      "x": [
+        -8.5,
+        -0.9
+      ],
+      "y": [
+        -1.2,
+        0.4
+      ],
+      "z": [
+        4.5,
+        13.5
+      ]
+    },
+    {
+      "id": "parterre_cour",
+      "libelle": "Parterre cour",
+      "x": [
+        0.9,
+        8.5
+      ],
+      "y": [
+        -1.2,
+        0.4
+      ],
+      "z": [
+        4.5,
+        13.5
+      ]
+    },
+    {
+      "id": "fond_de_salle",
+      "libelle": "Fond de salle (sous le balcon)",
+      "x": [
+        -8.5,
+        8.5
+      ],
+      "y": [
+        0.4,
+        1.6
+      ],
+      "z": [
+        14.2,
+        19.5
+      ]
+    },
+    {
+      "id": "balcon_public",
+      "libelle": "Balcon",
+      "x": [
+        -8.5,
+        8.5
+      ],
+      "y": [
+        4.3,
+        5.6
+      ],
+      "z": [
+        15,
+        19
+      ]
+    }
+  ],
+  "aire": {
+    "libelle": "Aire de décollage (lointain centre)",
+    "centre": [
+      0,
+      0,
+      -6.5
+    ],
+    "rayon": 0.8
+  },
+  "reperes": {
+    "aire": [
+      0,
+      0,
+      -6.5
+    ],
+    "aire_haut": [
+      0,
+      1.5,
+      -6.5
+    ],
+    "centre": [
+      0,
+      2.0,
+      -3.0
+    ],
+    "centre_haut": [
+      0,
+      4.5,
+      -3.0
+    ],
+    "cour": [
+      4.5,
+      2.0,
+      -3.0
+    ],
+    "jardin": [
+      -4.5,
+      2.0,
+      -3.0
+    ],
+    "lointain": [
+      0,
+      3.0,
+      -7.5
+    ],
+    "avant_scene": [
+      0,
+      2.5,
+      0.9
+    ],
+    "cadre_passage": [
+      0,
+      4.5,
+      0.0
+    ],
+    "salle_entree": [
+      0,
+      4.5,
+      1.9
+    ],
+    "salle_centre": [
+      0,
+      5.5,
+      8.0
+    ],
+    "salle_fond": [
+      0,
+      5.5,
+      12.5
+    ],
+    "salle_cour": [
+      6.0,
+      5.0,
+      8.0
+    ],
+    "salle_jardin": [
+      -6.0,
+      5.0,
+      8.0
+    ]
+  },
+  "regles": {
+    "marge_m": 0.5,
+    "marge_public_m": 2.0,
+    "hauteur_min_m": 0.5,
+    "hauteur_fauteuils_m": 1.3,
+    "rayon_interpretes_m": 2.0,
+    "hauteur_interpretes_m": 2.6,
+    "vitesse_max_h_m_s": 1.5,
+    "vitesse_max_v_m_s": 0.8,
+    "acceleration_max_m_s2": 2.0,
+    "vitesse_lacet_max_deg_s": 90,
+    "autonomie_min": 12,
+    "batterie_alerte_pct": 30,
+    "batterie_retour_pct": 20,
+    "batterie_critique_pct": 10,
+    "perte_liaison_stationnaire_s": 1.0,
+    "perte_liaison_atterrir_s": 4.0,
+    "descente_urgence_m_s": 0.5
+  },
+  "modes": {
+    "plateau": {
+      "libelle": "Plateau seul",
+      "volumes": [
+        "plateau"
+      ],
+      "public": "absent",
+      "aide": "Le drone reste au-dessus du plateau, en deçà du cadre de scène ; la salle est fermée."
+    },
+    "salle_vide": {
+      "libelle": "Salle vide (répétition)",
+      "volumes": [
+        "plateau",
+        "salle"
+      ],
+      "public": "fauteuils",
+      "aide": "Salle vérifiée vide de toute personne : le drone peut passer le cadre et voler au-dessus des fauteuils, à la marge près."
+    },
+    "representation": {
+      "libelle": "Représentation (public présent)",
+      "volumes": [
+        "plateau",
+        "salle"
+      ],
+      "public": "colonnes",
+      "aide": "Survol du public interdit : chaque bloc de sièges devient une colonne d'exclusion de toute hauteur, élargie de la marge du public ; restent ouverts le plateau et la bande libre au-dessus de la fosse, devant le premier rang."
+    }
+  },
+  "liste_controle": [
+    {
+      "id": "helices",
+      "texte": "Protège-hélices montés et serrés ; hélices intactes"
+    },
+    {
+      "id": "batterie",
+      "texte": "Batterie de vol chargée (plus de 90 %) ; batterie de secours prête"
+    },
+    {
+      "id": "releve",
+      "texte": "Description de la salle conforme au relevé du jour (porteuses à leur hauteur, décor en place)"
+    },
+    {
+      "id": "zone",
+      "texte": "Aire de décollage dégagée ; plateau et volume de vol libres d'obstacles imprévus"
+    },
+    {
+      "id": "observateur",
+      "texte": "Observateur de sécurité en place, en vue directe du drone, avec l'arrêt matériel en main"
+    },
+    {
+      "id": "interpretes",
+      "texte": "Interprètes informés de la trajectoire et des distances ; positions saisies dans la page"
+    },
+    {
+      "id": "liaison",
+      "texte": "Liaison radio et télémétrie vérifiées ; comportement en cas de perte de liaison réglé (stationnaire puis atterrissage)"
+    },
+    {
+      "id": "autorisation",
+      "texte": "Autorisation écrite du lieu et assurance couvrant le vol intérieur ; règles applicables vérifiées"
+    }
+  ]
+}

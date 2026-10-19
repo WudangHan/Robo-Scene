@@ -71,3 +71,37 @@ Chaque trousse applique elle-même les quatre règles de sécurité ci-dessus. U
 → {"t":"estop"}
 ← {"t":"tel", …, "estop":true}
 ```
+
+## Drone de scène (O-13)
+
+Repère commun : le **repère du théâtre** (`web/drone/salle.json`) — origine au centre de la ligne du cadre de scène, au
+niveau du plateau ; `x` vers cour, `y` vers le haut, `z` vers la salle, en mètres. Lacet en degrés : 0 = nez vers la
+salle, 90 = nez vers cour, croissant dans le sens antihoraire vu de dessus ; `lacet_vitesse` dans le même sens.
+
+### Page « Drone » → pont (WebSocket `/ws`)
+
+| `op` | Champs | Effet |
+|---|---|---|
+| `drone_etat` | — | Renvoie `drone_etat` (adaptateur, mode, conditions, liste de contrôle) |
+| `drone_connecter` / `drone_deconnecter` | `adaptateur` : `simulation`, `mavlink`, `tello`, `ligne_json` | Adaptateur réel ouvert seulement si `[drone] reel_autorise = true` |
+| `drone_mode` | `mode` : `plateau`, `salle_vide`, `representation` ; `par` | `salle_vide` exige des initiales ; `representation` réel exige `vol_en_representation = true` |
+| `drone_interpretes` | `liste` : `[{x, z}]` | Cylindres d'exclusion autour des interprètes |
+| `drone_liste` | `coches` : identifiants ; `par` | Liste de contrôle avant vol (complète + initiales requises pour le vol réel) |
+| `drone_decoller` | `hauteur` (0,6 à 3 m) | Après vérification des conditions et de la zone |
+| `drone_aller` | `p` (repère ou `[x, y, z]`), `duree`, `vitesse`, `lacet` | Destination et segment vérifiés ; trajet à secousse minimale, consignes à 10 Hz ; réponse `drone_aller` (durée retenue) |
+| `drone_vitesse` | `v` `[vx, vy, vz]` m/s, `lacet_vitesse` °/s | Valable 0,5 s ; plafonnée ; composantes qui franchiraient une limite retirées |
+| `drone_stationnaire`, `drone_atterrir` | — | — |
+| `drone_coupure` | `confirmation` : `"COUPER"` | Coupure des moteurs (le drone tombe) puis ARRÊT global |
+| `drone_hb` | — | Battement de la page (4 Hz) ; silence > 1 s : stationnaire ; > 4 s : atterrissage |
+
+Pont → page : `drone_tel` (10 Hz : `p`, `v`, `lacet`, `batterie`, `arme`, `etat`, `adaptateur`, `reel`, `urgence`,
+`position` « mesurée » ou « estimée »), `drone_etat`, `drone_refus` (`msg`). L'`estop` global pose le drone ;
+`rearmer` lève son verrou.
+
+### Pont → ordinateur compagnon (adaptateur `ligne_json`, UDP, une ligne JSON par message)
+
+Du pont : `{"t": "drone", "cmd": "hello" | "armer" | "decoller" (hauteur) | "position" (p, lacet) | "vitesse" (v,
+lacet_vitesse) | "stationnaire" | "atterrir" | "urgence" | "couper"}`, coordonnées dans le repère du théâtre.
+Du compagnon : `{"t": "tel", "p": [x, y, z], "v": […], "lacet": …, "batterie": …, "arme": …, "etat": "au_sol" |
+"decollage" | "vol" | "atterrissage" | "coupe"}`. Le compagnon applique ses propres sécurités (perte de liaison,
+géorepérage de l'autopilote) ; celles du pont s'y ajoutent sans les remplacer.

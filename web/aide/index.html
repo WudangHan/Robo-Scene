@@ -27,7 +27,7 @@
 <main class="page" id="contenu">
   <section class="carte large">
     <h1 data-i18n>Aide</h1>
-    <p>Les deux documents de référence de la plateforme, au format Word. Ils décrivent ce que fait le logiciel publié sur ce site et sur le dépôt GitHub Robo-Scene ; leurs données proviennent du code lui-même.</p>
+    <p>Les documents de référence de la plateforme, au format Word. Ils décrivent ce que fait le logiciel publié sur ce site et sur le dépôt GitHub Robo-Scene ; leurs données proviennent du code lui-même.</p>
   </section>
   <section class="docs">
     <article class="carte doc">
@@ -42,6 +42,21 @@
       <p>Tout ce que le robot comprend et produit : la façon de lui parler et de moduler une consigne, les commandes de contrôle, la parole, les 12 émotions, les 70 gestes, les 11 poses, les mouvements par partie du corps, les déplacements, le regard, la caméra, la lumière, l'apparence, les mouvements qu'il fait de lui-même, et les bibliothèques fermées des robots physiques.</p>
       <a class="bouton" href="/static/aide/Repertoire_commandes_gestes_robot_ROBO-SCENE_v1.0_2026-10-16.docx" download>Télécharger le répertoire</a>
     </article>
+    <article class="carte doc">
+      <h2>Guide du drone de scène</h2>
+      <p class="meta">Version 1.0 — 19 octobre 2026 · Word</p>
+      <p>La page Drone : le drone virtuel dans le théâtre en 3D, la console de vol, la conduite au GO, la caméra 4K virtuelle et réelle, les zones de vol (plateau, salle vide, représentation), le passage au drone réel par le pont (MAVLink, Tello, JSON) et les conditions de sécurité.</p>
+      <a class="bouton" href="/static/aide/Guide_drone_de_scene_ROBO-SCENE_v1.0.docx" download>Télécharger le guide</a>
+    </article>
+  </section>
+  <section class="carte large">
+    <h2>Pour commencer avec le drone de scène</h2>
+    <ul class="raccourcis">
+      <li>Ouvrez la page <a href="/drone">Drone</a> : le drone virtuel attend sur l'aire de décollage, au lointain ; <kbd>T</kbd> le fait décoller, <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, <kbd>R</kbd> <kbd>F</kbd> et <kbd>Q</kbd> <kbd>E</kbd> le pilotent, <kbd>L</kbd> le pose, <kbd>Échap</kbd> déclenche l'ARRÊT.</li>
+      <li>Onglet Conduite : « Charger l'exemple », puis GO (touche Entrée) repère par repère, ou « Jouer tout ».</li>
+      <li>Onglet Zones : la salle n'est ouverte qu'en mode « Salle vide » (initiales de la personne qui l'a vérifiée) ; en « Représentation », le survol du public est interdit.</li>
+      <li>Le drone réel se relie par le pont (onglet Drone réel), seulement après autorisation dans config.toml, observateur déclaré et liste de contrôle signée.</li>
+    </ul>
   </section>
   <section class="carte large">
     <h2>Pour commencer avec le robot virtuel</h2>

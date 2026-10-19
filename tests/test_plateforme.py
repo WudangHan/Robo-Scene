@@ -52,7 +52,7 @@ def test_table_de_couverture_complete():
     ids = [f["id"] for f in FONCTIONS]
     attendus = ([f"N-0{i}" for i in range(1, 9)] + [f"A-0{i}" for i in range(1, 9)] + [f"R-0{i}" for i in range(1, 9)]
                 + [f"S-0{i}" for i in range(1, 7)] + [f"Q-0{i}" for i in range(1, 6)] + [f"G-0{i}" for i in range(1, 8)]
-                + [f"P-0{i}" for i in range(1, 5)] + [f"O-{i:02d}" for i in range(1, 13)])
+                + [f"P-0{i}" for i in range(1, 5)] + [f"O-{i:02d}" for i in range(1, 14)])
     assert sorted(ids) == sorted(attendus) and len(ids) == len(set(ids))
     for f in FONCTIONS:
         for chemin in f["test"].split(" ; ") if f["test"] else []:
@@ -67,7 +67,7 @@ async def test_plateforme_bout_en_bout(cfg, monkeypatch):
         ctl = app[CTL]
         r = await c.get("/api/plateforme")
         d = await r.json()
-        assert r.status == 200 and d["fonctions"]["total"] == 58 and d["regle_ia"] == "bibliotheque_fermee"
+        assert r.status == 200 and d["fonctions"]["total"] == 59 and d["regle_ia"] == "bibliotheque_fermee"
 
         # Écriture sans en-tête : refusée
         assert (await c.post("/api/scene/charger", json={"texte": CONDUITE})).status == 403

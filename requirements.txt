@@ -16,4 +16,4 @@ openpyxl>=3.1              # grille de biais P1, inventaires
 python-docx>=1.1           # lecture de pièces .docx, inventaire mensuel
 pypdf>=4.0                 # base de connaissances du partenaire
 pillow>=10.0               # planches du jumeau numérique
-# Facultatifs : jumeau MuJoCo complet (pip install "reachy-mini[mujoco]"), c2patool (signature C2PA)
+# Facultatifs : drone réel ArduPilot (pip install pymavlink) ; jumeau MuJoCo complet (pip install "reachy-mini[mujoco]"), c2patool (signature C2PA)

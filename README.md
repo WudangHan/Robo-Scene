@@ -1,14 +1,15 @@
 # Robo-Scène
 
 *Plateforme intégrée du projet de recherche « L'IA au service de la création théâtrale »* (Sylvain Gagné, Ph. D., chercheur indépendant non affilié et autofinancé) :
-console de pilotage multi-robots, partenaire de théâtre, robot virtuel humanoïde, atelier dramaturgique instrumenté, pont scénique, interface
+console de pilotage multi-robots, partenaire de théâtre, robot virtuel humanoïde, drone de scène (virtuel, puis réel), atelier dramaturgique instrumenté, pont scénique, interface
 spectateur, analyse et gouvernance, réunis autour d'un seul journal des cinq opérations de la cocréation instrumentée
 (consigne, génération, sélection, transformation, attribution).
 
 ## Plateforme intégrée
 
 La plateforme réalise les 58 fonctions du *Cahier des fonctions et plan d'action* v1.0 (11 oct. 2026) : les fonctions
-« doit » (N, A, R, S, Q, G, P) et les extensions « pourrait » (O-01 à O-12). La table `bridge/pilotage/fonctions.py`,
+« doit » (N, A, R, S, Q, G, P) et les extensions « pourrait » (O-01 à O-12), auxquelles s'ajoute l'extension O-13 (drone
+de scène, 19 oct. 2026), soit 59 fonctions. La table `bridge/pilotage/fonctions.py`,
 affichée dans la page Gouvernance et vérifiée par les tests, rattache chaque fonction à son code, à son test et à ce
 qui reste à faire.
 
@@ -24,6 +25,7 @@ qui reste à faire.
 | `/gouvernance` | G-01 à G-07, R-08 | Verrous (avis éthique, EFVP), incidents, décisions humaines (Loi 25, art. 12.1), conservation, registre des systèmes |
 | `/regie` | P-01 à P-04 | Registre du projet, régisseur IA en lecture seule, revue trimestrielle ISO/IEC 42001, inventaire mensuel, dépôts |
 | `/tableau-public` | O-09 | Indicateurs agrégés publiés après validation (seuil de cinq) |
+| `/drone` | O-13 | Drone de scène : drone virtuel dans le théâtre en 3D (plateau et salle), console de vol, conduite au GO, caméra 4K virtuelle et réelle, zones de vol, liaison au drone réel par le pont |
 
 Toutes les pages sont bilingues (français par défaut, anglais), sans ressource externe, et utilisables au clavier.
 
@@ -148,13 +150,13 @@ Renseigner `operatrice` et `type` dans `[protocole]` avant la séance. Le dossie
 
 ## Interface en ligne (Netlify)
 
-L'interface est publiée sur <https://robo-scene.netlify.app> (console), <https://robo-scene.netlify.app/partenaire> et <https://robo-scene.netlify.app/avatar> (robot virtuel, utilisable sans pont). Netlify ne sert que des pages statiques : le pont Python, le robot, vos documents et les données des acteurs restent sur votre ordinateur, et la page en ligne se connecte au pont local, `ws://127.0.0.1:8765/ws`.
+L'interface est publiée sur <https://robo-scene.netlify.app> (console), <https://robo-scene.netlify.app/partenaire> et <https://robo-scene.netlify.app/avatar> (robot virtuel, utilisable sans pont) et <https://robo-scene.netlify.app/drone> (drone de scène, utilisable sans pont). Netlify ne sert que des pages statiques : le pont Python, le robot, vos documents et les données des acteurs restent sur votre ordinateur, et la page en ligne se connecte au pont local, `ws://127.0.0.1:8765/ws`.
 
 1. Lancer le pont sur l'ordinateur (`bash lancer.command`).
 2. Ouvrir l'adresse en ligne : la pastille passe à « Robot connecté ». Si le pont n'est pas joint dans les 1,5 s, la Console passe en **simulation autonome dans le navigateur** (`web/simulateur.js`) : un bandeau l'annonce, la téléopération, les séquences et la télémétrie sont simulées, aucune commande matérielle n'est émise, rien n'est consigné et l'IA supervisée reste fermée. « Réessayer le pont » recharge la page ; « Modifier l'adresse » vise un autre port ou une autre machine. L'adresse `?simulation=1` force la démonstration même quand le pont tourne.
 3. Le pont n'accepte que les pages qu'il sert lui-même et celles que liste `[serveur] origines_autorisees` dans `config.toml` ; toute autre page est refusée (HTTP 403), ce qui empêche un site tiers ouvert dans le navigateur de commander le robot.
 
-Seul le dossier `web/` est publié (`netlify.toml`) ; les onze pages ont une route explicite (`/console`, `/partenaire`, `/avatar`, `/atelier`, `/scene`, `/spectateur`, `/surtitres`, `/recherche`, `/gouvernance`, `/regie`, `/tableau-public`), et les en-têtes interdisent l'intégration dans un cadre et l'indexation, limitent caméra et microphone à l'origine, et appliquent une politique de sécurité du contenu en mode « rapport seulement » (à rendre contraignante après un essai d'imitation MediaPipe sans écart dans la console du navigateur). Essai réalisé le 10 octobre 2026 avec Chromium : connexion de la page en ligne au pont local réussie. Le comportement de Safari envers `ws://127.0.0.1` depuis une page https n'a pas été vérifié : en cas d'échec, utiliser Chrome, ou l'interface locale <http://127.0.0.1:8765>.
+Seul le dossier `web/` est publié (`netlify.toml`) ; les douze pages ont une route explicite (`/console`, `/partenaire`, `/avatar`, `/drone`, `/atelier`, `/scene`, `/spectateur`, `/surtitres`, `/recherche`, `/gouvernance`, `/regie`, `/tableau-public`), et les en-têtes interdisent l'intégration dans un cadre et l'indexation, limitent caméra et microphone à l'origine, et appliquent une politique de sécurité du contenu en mode « rapport seulement » (à rendre contraignante après un essai d'imitation MediaPipe sans écart dans la console du navigateur). Essai réalisé le 10 octobre 2026 avec Chromium : connexion de la page en ligne au pont local réussie. Le comportement de Safari envers `ws://127.0.0.1` depuis une page https n'a pas été vérifié : en cas d'échec, utiliser Chrome, ou l'interface locale <http://127.0.0.1:8765>.
 
 Pour republier après une modification de l'interface : relier le dépôt GitHub au projet Netlify (déploiement continu), ou relancer un déploiement manuel du dossier `web/`.
 
@@ -205,11 +207,36 @@ Personnage masculin procédural en 3D (three.js 0.169, licence MIT, servi locale
 
 Cadrages (face, trois-quarts, profil, gros plan, plan américain, en pied, plan large, plongée), cinq ambiances lumineuses, *Mode scène* plein écran et *Fenêtre* séparée pour un second écran. Le bouton ARRÊT et la touche Échap figent le personnage, coupent la parole et envoient l'arrêt d'urgence au pont.
 
+## Drone de scène (O-13)
+
+Ouvrir <http://127.0.0.1:8765/drone> (lien « Drone » dans l'en-tête) ou <https://robo-scene.netlify.app/drone> : le drone
+virtuel vole entièrement dans le navigateur, dans un théâtre à l'italienne en 3D (plateau, cadre de scène, porteuses,
+parterre, balcon, régie) ; le pont n'est requis que pour le drone réel.
+
+| Onglet | Contenu |
+|---|---|
+| **Vol** | Décoller, stationnaire, atterrir, retour à l'aire ; manettes à l'écran (mode 2), clavier, manette de jeu ; aller à un repère ou au point cliqué ; couronne de DEL ; coupure des moteurs confirmée (« COUPER ») |
+| **Conduite** | Repères joués au GO (Entrée) ou d'affilée : décoller, aller, stationnaire, atterrir, avec lacet, visée de la caméra et couleur ; trajectoires à secousse minimale, validées tous les 5 cm contre les zones ; durées trop courtes allongées ; GO bloqué si un segment touche un obstacle, le public ou un interprète ; import et export JSON |
+| **Caméra 4K** | Caméra embarquée virtuelle (nacelle, zoom, visée d'un repère, grille des tiers), image fixe rendue à 3840 × 2160, enregistrement WebM ; caméra réelle par carte de capture HDMI (UVC, 3840 × 2160 demandés) ou par WebRTC/WHEP (MediaMTX), affichée seulement, jamais enregistrée (G-06) ; mode superposé pour caler le jumeau |
+| **Zones** | Trois modes : plateau seul ; salle vide (initiales de la personne qui l'a vérifiée) ; représentation (survol du public interdit : colonnes d'exclusion élargies de 2 m) ; cylindres des interprètes ; marges, plafonds de vitesse, seuils de batterie |
+| **Drone réel** | Adaptateurs du pont : simulation, ArduPilot par MAVLink (GUIDED), Tello (SDK texte), JSON par ligne vers un ordinateur compagnon ; conditions affichées ; liste de contrôle signée ; télémétrie ; le virtuel devient le jumeau du réel |
+| **Journal** | Événements et refus ; export JSON nommé [DATE]_[SYSTÈME]_VOL_[NUMÉRO], sans aucune image |
+
+La salle est décrite dans `web/drone/salle.json`, lu à la fois par la page et par le pont (`bridge/drone/zones.py`) ; un
+test vérifie que les deux implantations rendent le même verdict sur 3 000 points dans chacun des trois modes. Avant
+tout vol réel, remplacer ce gabarit par le relevé de la salle. Le pont n'ouvre un adaptateur réel que si
+`[drone] reel_autorise = true` ; il exige ensuite l'observateur de sécurité déclaré dans la Console, la liste de contrôle
+cochée et signée, refuse le mode « représentation » tant que `[drone] vol_en_representation = false`, vérifie chaque
+destination et chaque segment, découpe les trajets en consignes à 10 Hz, filtre les consignes de vitesse par le point
+d'arrêt prévu, met le drone en stationnaire puis le pose si la page se tait (1 s, puis 4 s), et le pose sur tout ARRÊT
+de la plateforme. Pour MAVLink : `pip install pymavlink`. Guide : `docs/Guide_drone_de_scene_ROBO-SCENE_v1.0.docx`.
+
 ## Documentation et version en ligne
 
 Version publiée : **2.3.3** (16 octobre 2026), en ligne sur <https://robo-scene.netlify.app> ; les deux documents de référence se téléchargent aussi depuis la page **Aide** (<https://robo-scene.netlify.app/aide>, dossier `web/aide/`).
 
 - `docs/Guide_plateforme_integree_ROBO-SCENE_v2.0.1.docx` — guide de la plateforme intégrée (58 fonctions, révision 2.0.1 du 16 octobre 2026)
+- `docs/Guide_drone_de_scene_ROBO-SCENE_v1.0.docx` — drone de scène (O-13) : drone virtuel, conduite, caméra 4K, zones, passage au drone réel
 - `docs/Repertoire_commandes_gestes_robot_ROBO-SCENE_v1.0_2026-10-16.docx` — répertoire exhaustif des commandes vocales, des 70 gestes, des 11 poses et des mouvements induits du robot, et des bibliothèques fermées des robots physiques
 - `docs/Rapport_mise_en_oeuvre_audit_ROBO-SCENE_2026-10-16.docx` — mise en œuvre de l'audit indépendant : correctifs, vérifications, décisions résiduelles
 - `docs/Guide_partenaire_ROBO-SCENE.docx` — partenaire de théâtre
@@ -250,6 +277,7 @@ robo-scene/
 │   ├── diffusion/           C2PA (O-07), tableau public (O-09)
 │   ├── gouvernance/         verrous, incidents, décisions, conservation, retrait, biométrie
 │   ├── pilotage/            régie, dépôts, rapports, table de couverture
+│   ├── drone/               drone de scène : zones de vol, adaptateurs (simulation, MAVLink, Tello, JSON), contrôleur
 │   └── partenaire/          partenaire de théâtre ; avatar.py : validation et interprète Claude du robot virtuel
 ├── modules/                 prototypes P1, P2, P3, T.6, X.2 et outils de la Régie (importés tels quels)
 ├── gouvernance/             état, registre des systèmes, EFVP, conservation (YAML)
@@ -259,6 +287,7 @@ robo-scene/
 ├── sdk/                     trousses de pilote : Python, JavaScript, C++, Arduino
 ├── web/                     interfaces (HTML, CSS, JS)
 │   ├── avatar/              robot virtuel (corps, visage, animation, parole, directives, imitation)
+│   ├── drone/               drone de scène (théâtre 3D, vol, conduite, caméra 4K, zones ; salle.json partagé avec le pont)
 │   └── vendor/              three.js 0.169 (MIT), servi localement
 ├── firmware/esp32_robot/    micrologiciel Arduino pour ESP32
 ├── sequences/               chorégraphies (JSON)
