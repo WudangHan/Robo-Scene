@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chien de scène — ROBO-SCÈNE</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/avatar/avatar.css">
+<link rel="stylesheet" href="/static/drone/drone.css">
+<link rel="stylesheet" href="/static/chien/chien.css">
+<script type="importmap">{ "imports": { "three": "/static/vendor/three.module.min.js", "three/addons/": "/static/vendor/" } }</script>
+</head>
+<body>
+<header class="barre">
+  <div class="titre">
+    <span class="marque">ROBO-SCÈNE</span>
+    <span class="sous">Chien de scène — virtuel, puis réel</span>
+  </div>
+  <nav data-nav class="nav-pages" aria-label="Plateforme intégrée"><a href="/">Console</a><a href="/partenaire">Partenaire</a><a href="/atelier">Atelier</a><a href="/scene">Scène</a><a href="/spectateur">Spectateur</a><a href="/surtitres">Surtitres</a><a href="/recherche">Recherche</a><a href="/gouvernance">Gouvernance</a><a href="/regie">Régie</a><a href="/tableau-public">Tableau public</a><a href="/avatar">Robot virtuel</a><a href="/drone">Drone</a><a href="/chien" aria-current="page">Chien</a><a href="/aide">Aide</a></nav>
+  <div class="statuts" aria-live="polite">
+    <span class="pastille neutre" id="st-etat">Couché</span>
+    <span class="pastille neutre" id="st-mode">Plateau seul</span>
+    <span class="pastille neutre" id="st-batt">Batterie 100 %</span>
+    <span class="pastille neutre" id="st-vit">0,0 m/s · plateau</span>
+    <span class="pastille neutre" id="st-reel">Chien réel : non relié</span>
+  </div>
+  <div class="urgence">
+    <button id="btn-arret" class="arret" title="ARRÊT : arrêt freiné puis couché du chien (virtuel et réel), verrouillé jusqu'au réarmement ; envoie aussi l'arrêt d'urgence global au pont (touche Échap)">ARRÊT</button>
+  </div>
+</header>
+
+<main class="avatar-grille drone-grille">
+  <section class="scene-zone" aria-label="Théâtre et chien en 3D">
+    <div id="vue3d"></div>
+    <div class="barre-vue">
+      <div class="groupe-boutons" role="group" aria-label="Point de vue">
+        <button data-vue="plateau_chien">Plateau</button><button data-vue="regie">Régie</button><button data-vue="salle">Salle</button>
+        <button data-vue="ras_du_sol">Ras du sol</button><button data-vue="dessus">Dessus</button><button data-vue="poursuite">Poursuite</button>
+      </div>
+      <label class="bascule"><input type="checkbox" id="voir-zones" checked> Zones</label>
+      <label class="bascule"><input type="checkbox" id="voir-poursuite"> Projecteur de poursuite</label>
+      <select id="outil-clic" aria-label="Clic sur le sol">
+        <option value="">Clic : aucun effet</option>
+        <option value="aller">Clic : aller ici</option>
+        <option value="regarder">Clic : regarder ici</option>
+        <option value="interprete">Clic : placer un interprète</option>
+      </select>
+      <button id="btn-scene" title="Plein écran sans panneaux (Échap pour sortir)">Mode scène</button>
+    </div>
+    <figure class="pip" id="pip" aria-label="Caméra de tête">
+      <div class="pip-cadre">
+        <canvas id="cam-virtuelle" width="1280" height="720"></canvas>
+        <video id="cam-reelle" playsinline muted hidden></video>
+        <canvas id="cam-surimp"></canvas>
+      </div>
+      <figcaption><span id="pip-titre">Caméra de tête (virtuelle)</span>
+        <button id="pip-taille" class="discret" title="Agrandir ou réduire la vue de la caméra">⤢</button></figcaption>
+    </figure>
+    <div class="etat-scene"><span id="repere-courant"></span><span id="etat-conduite"></span></div>
+  </section>
+
+  <aside class="panneau commandes">
+    <div class="onglets" role="tablist" aria-label="Commandes du chien">
+      <button role="tab" data-onglet="marche">Marche</button>
+      <button role="tab" data-onglet="conduite">Conduite</button>
+      <button role="tab" data-onglet="camera">Caméra</button>
+      <button role="tab" data-onglet="zones">Zones</button>
+      <button role="tab" data-onglet="reel">Chien réel</button>
+      <button role="tab" data-onglet="journal">Journal</button>
+    </div>
+
+    <!-- ── Marche ── -->
+    <div class="panneau-onglet" id="ong-marche" role="tabpanel">
+      <div class="ligne cible-cmd">
+        <span class="petit">Les commandes vont au</span>
+        <label><input type="radio" name="cible" value="virtuel" checked> chien virtuel</label>
+        <label><input type="radio" name="cible" value="reel" id="cible-reel" disabled> chien réel (le virtuel devient son jumeau)</label>
+      </div>
+      <div class="boutons-vol">
+        <button id="b-lever" class="primaire" title="U">Se lever</button>
+        <button id="b-arreter" title="Espace">Arrêter</button>
+        <button id="b-coucher" title="J">Se coucher</button>
+        <button id="b-retour" title="H">Retour à la marque</button>
+        <button id="b-rearmer" class="rearmer" title="Lever le verrou d'arrêt d'urgence (robot à l'arrêt)">Réarmer</button>
+      </div>
+      <h3>Postures</h3>
+      <div class="puces" id="postures"></div>
+      <h3>Allure <small>(qualité expressive de la marche)</small></h3>
+      <div class="puces" id="allures"></div>
+      <h3>Manettes <small>(gauche : rotation ; droite : avancer et pas de côté)</small></h3>
+      <div class="manettes">
+        <div class="manette" id="manette-g" aria-label="Manette gauche : rotation"><i></i><span>← rotation →</span></div>
+        <div class="manette" id="manette-d" aria-label="Manette droite : avancer, reculer, pas de côté"><i></i><span>↑ avant · → droite</span></div>
+      </div>
+      <p class="petit">Clavier : <kbd>W</kbd> <kbd>S</kbd> avancer et reculer, <kbd>A</kbd> <kbd>D</kbd> pas de côté, <kbd>Q</kbd> <kbd>E</kbd> ou <kbd>←</kbd> <kbd>→</kbd> tourner ; <kbd>U</kbd> se lever, <kbd>J</kbd> se coucher, <kbd>H</kbd> retour, <kbd>Espace</kbd> arrêter, <kbd>Échap</kbd> ARRÊT. Manette de jeu reconnue (A se lever, B se coucher, X arrêter, Y retour).</p>
+      <h3>Aller à un repère</h3>
+      <div class="ligne">
+        <select id="aller-repere" aria-label="Repère au sol"></select>
+        <label class="petit">durée <input type="number" id="aller-duree" min="0" max="90" step="0.5" value="0"> s</label>
+        <button id="b-aller" class="primaire">Aller</button>
+      </div>
+      <h3>Yeux</h3>
+      <div class="ligne"><input type="color" id="yeux" value="#7fd3ff" aria-label="Couleur des yeux">
+        <button id="b-batterie" title="Remplacer la batterie (à l'arrêt)">Batterie neuve</button>
+        <button id="b-coupure" class="danger" title="Dernier recours : le robot s'affaisse">Couper les moteurs…</button></div>
+      <div id="telemetrie" class="telemetrie mono" aria-live="off"></div>
+    </div>
+
+    <!-- ── Conduite ── -->
+    <div class="panneau-onglet" id="ong-conduite" role="tabpanel" hidden>
+      <div class="ligne">
+        <button id="c-exemple">Charger l'exemple</button>
+        <button id="c-valider">Valider</button>
+        <label class="bouton-fichier">Ouvrir…<input type="file" id="c-fichier" accept=".json,application/json" hidden></label>
+        <button id="c-exporter">Exporter (.json)</button>
+      </div>
+      <div class="ligne go-ligne">
+        <button id="c-go" class="go" title="Entrée : jouer le repère suivant">GO</button>
+        <button id="c-tout">Jouer tout</button>
+        <button id="c-retour">Revenir au début</button>
+        <span id="c-prochain" class="petit"></span>
+      </div>
+      <div id="c-bilan" class="note" aria-live="polite"></div>
+      <div class="defile"><table class="donnees" id="c-table"><thead><tr><th>Repère</th><th>Action</th><th>Détail</th><th>Durée</th><th></th></tr></thead><tbody></tbody></table></div>
+      <details><summary>Texte JSON de la conduite</summary>
+        <textarea id="c-json" rows="14" spellcheck="false" class="mono"></textarea>
+        <button id="c-appliquer">Appliquer le texte</button>
+      </details>
+      <p class="petit">Actions : se lever, se coucher, posture, allure, aller, tourner, attendre, regarder. Chaque marche est une ligne droite à secousse minimale, vérifiée tous les 5 cm contre le sol praticable ; une durée trop courte est allongée (les escaliers et la salle imposent leur vitesse), jamais raccourcie ; un GO reste bloqué tant qu'un trajet quitte le sol praticable, approche le public ou un interprète.</p>
+    </div>
+
+    <!-- ── Caméra ── -->
+    <div class="panneau-onglet" id="ong-camera" role="tabpanel" hidden>
+      <h3>Source affichée</h3>
+      <div class="ligne">
+        <label><input type="radio" name="source" value="virtuelle" checked> virtuelle</label>
+        <label><input type="radio" name="source" value="reelle"> réelle</label>
+        <label><input type="radio" name="source" value="superposee"> superposée (calage du jumeau)</label>
+      </div>
+      <h3>Caméra de tête</h3>
+      <div class="ligne petit"><label for="zoom">Zoom</label><input type="range" id="zoom" min="1" max="4" step="0.1" value="1"><output id="zoom-val">×1,0</output></div>
+      <div class="ligne petit"><label for="viser">Regarder</label><select id="viser"><option value="">— (droit devant)</option><option value="salle">la salle</option></select></div>
+      <div class="ligne petit">
+        <label><input type="checkbox" id="tiers" checked> grille des tiers</label>
+        <label for="definition">Aperçu</label>
+        <select id="definition"><option value="1280x720">1280 × 720</option><option value="1920x1080">1920 × 1080</option><option value="3840x2160">3840 × 2160 (exigeant)</option></select>
+      </div>
+      <h3>Caméra virtuelle</h3>
+      <div class="ligne"><button id="b-photo">Image 4K (3840 × 2160)</button><button id="b-rec" aria-pressed="false">● Enregistrer</button></div>
+      <h3>Caméra réelle</h3>
+      <div class="ligne">
+        <select id="cam-liste" aria-label="Carte de capture"><option value="">Carte de capture HDMI / webcam…</option></select>
+        <button id="b-capture">Ouvrir la capture</button>
+      </div>
+      <div class="ligne">
+        <input id="whep-url" placeholder="http://127.0.0.1:8889/chien/whep" aria-label="Adresse WHEP">
+        <button id="b-whep">Lire le flux WHEP</button><button id="b-cam-fermer">Fermer</button>
+      </div>
+      <p id="cam-info" class="petit">—</p>
+      <div class="note petit">La tête du chien virtuel s'oriente (regard) ; sur la plupart des quadrupèdes du commerce, la caméra frontale est fixe et suit le corps. Le flux réel (carte de capture, ou flux RTSP/SRT relayé en WebRTC par MediaMTX et lu par WHEP) est <b>affiché seulement, jamais enregistré</b> (garde-fou G-06) ; un avertissement s'affiche quand la caméra vise le public.</div>
+    </div>
+
+    <!-- ── Zones ── -->
+    <div class="panneau-onglet" id="ong-zones" role="tabpanel" hidden>
+      <h3>Mode</h3>
+      <div id="modes" class="modes"></div>
+      <div class="ligne petit" id="salle-vide-ligne">
+        <label for="salle-vide-par">Salle vérifiée vide de toute personne par (initiales, requis pour « Salle vide »)</label><input id="salle-vide-par" maxlength="12" size="8">
+      </div>
+      <h3>Interprètes sur le plateau</h3>
+      <div class="ligne"><button id="z-ajout">Placer un interprète (clic sur le plateau)</button><button id="z-vider">Retirer tous</button></div>
+      <ul id="z-interpretes" class="liste"></ul>
+      <h3>Règles <small>(salle.json, bloc « sol », partagées avec le pont)</small></h3>
+      <div id="regles" class="petit"></div>
+      <h3>Vérifier un point</h3>
+      <div class="ligne"><input id="z-point" placeholder="x, z (ex. 5.8, 2.1)" class="mono"><button id="z-tester">Vérifier</button></div>
+      <p id="z-verdict" class="message"></p>
+      <p class="petit">Le sol praticable (plateau, escaliers, avant-salle, allée centrale) et ses hauteurs viennent de web/drone/salle.json, le même relevé que celui du drone : le remplacer par celui de votre salle avant tout essai réel.</p>
+    </div>
+
+    <!-- ── Chien réel ── -->
+    <div class="panneau-onglet" id="ong-reel" role="tabpanel" hidden>
+      <p id="r-pont" class="petit">Pont : —</p>
+      <h3>Adaptateur</h3>
+      <div class="ligne"><select id="r-adaptateur"></select><button id="r-connecter" class="primaire">Relier</button><button id="r-deconnecter">Délier</button></div>
+      <p id="r-desc" class="petit"></p>
+      <h3>Conditions de la marche réelle</h3>
+      <ul class="liste conditions" id="r-conditions"></ul>
+      <h3>Liste de contrôle</h3>
+      <ul class="liste" id="r-liste"></ul>
+      <div class="ligne"><label for="r-liste-par" class="petit">Vérifiée par (initiales)</label><input id="r-liste-par" maxlength="12" size="8"><button id="r-liste-signer">Signer la liste</button></div>
+      <h3>Télémétrie du chien réel</h3>
+      <div id="r-tel" class="telemetrie mono">—</div>
+      <div class="note petit">Le pont applique, avant toute commande, le même sol praticable que le chien virtuel, les plafonds de vitesse par surface, l'observateur de sécurité (déclaré dans la Console), la liste de contrôle signée et un chien de garde : si cette page se tait, le robot s'arrête après 0,5 s et se couche après 3 s. L'ARRÊT de n'importe quelle page de la plateforme l'arrête et le couche. La coupure des moteurs, distincte, exige une confirmation.</div>
+    </div>
+
+    <!-- ── Journal ── -->
+    <div class="panneau-onglet" id="ong-journal" role="tabpanel" hidden>
+      <ol id="journal" class="flux"></ol>
+      <button id="j-exporter">Exporter le journal (.json)</button>
+      <p class="petit">Métadonnées de l'essai : identifiant [DATE]_[SYSTÈME]_MARCHE_[NUMÉRO], conduite, mode, durées, refus et alertes ; aucune image.</p>
+    </div>
+  </aside>
+</main>
+
+<dialog id="d-coupure">
+  <form method="dialog">
+    <h2>Couper les moteurs ?</h2>
+    <p>Dernier recours, si le robot est hors de contrôle : <b>il s'affaisse sur place</b>. Pour une situation ordinaire, utilisez ARRÊT (arrêt freiné puis couché).</p>
+    <label>Tapez <b>COUPER</b> pour confirmer <input id="d-coupure-texte" autocomplete="off"></label>
+    <div class="ligne"><button value="annuler">Annuler</button><button id="d-coupure-ok" value="ok" class="danger">Couper</button></div>
+  </form>
+</dialog>
+
+<script src="/static/i18n.js"></script>
+<script src="/static/pont.js"></script>
+<script type="module" src="/static/chien/app.js"></script>
+</body>
+</html>

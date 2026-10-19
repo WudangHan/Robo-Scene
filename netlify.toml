@@ -15,7 +15,7 @@
   to = "/:splat"
   status = 200
 
-# Les douze pages de la plateforme intégrée, accessibles directement (sans barre oblique finale)
+# Les treize pages de la plateforme intégrée, accessibles directement (sans barre oblique finale)
 [[redirects]]
   from = "/console"
   to = "/index.html"
@@ -59,6 +59,10 @@
 [[redirects]]
   from = "/drone"
   to = "/drone.html"
+  status = 200
+[[redirects]]
+  from = "/chien"
+  to = "/chien.html"
   status = 200
 [[redirects]]
   from = "/tableau-public"

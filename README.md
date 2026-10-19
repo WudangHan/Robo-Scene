@@ -1,15 +1,15 @@
 # Robo-Scène
 
 *Plateforme intégrée du projet de recherche « L'IA au service de la création théâtrale »* (Sylvain Gagné, Ph. D., chercheur indépendant non affilié et autofinancé) :
-console de pilotage multi-robots, partenaire de théâtre, robot virtuel humanoïde, drone de scène (virtuel, puis réel), atelier dramaturgique instrumenté, pont scénique, interface
+console de pilotage multi-robots, partenaire de théâtre, robot virtuel humanoïde, drone de scène et chien de scène (virtuels, puis réels), atelier dramaturgique instrumenté, pont scénique, interface
 spectateur, analyse et gouvernance, réunis autour d'un seul journal des cinq opérations de la cocréation instrumentée
 (consigne, génération, sélection, transformation, attribution).
 
 ## Plateforme intégrée
 
 La plateforme réalise les 58 fonctions du *Cahier des fonctions et plan d'action* v1.0 (11 oct. 2026) : les fonctions
-« doit » (N, A, R, S, Q, G, P) et les extensions « pourrait » (O-01 à O-12), auxquelles s'ajoute l'extension O-13 (drone
-de scène, 19 oct. 2026), soit 59 fonctions. La table `bridge/pilotage/fonctions.py`,
+« doit » (N, A, R, S, Q, G, P) et les extensions « pourrait » (O-01 à O-12), auxquelles s'ajoutent les extensions O-13 (drone
+de scène) et O-14 (chien de scène), du 19 oct. 2026, soit 60 fonctions. La table `bridge/pilotage/fonctions.py`,
 affichée dans la page Gouvernance et vérifiée par les tests, rattache chaque fonction à son code, à son test et à ce
 qui reste à faire.
 
@@ -25,6 +25,7 @@ qui reste à faire.
 | `/gouvernance` | G-01 à G-07, R-08 | Verrous (avis éthique, EFVP), incidents, décisions humaines (Loi 25, art. 12.1), conservation, registre des systèmes |
 | `/regie` | P-01 à P-04 | Registre du projet, régisseur IA en lecture seule, revue trimestrielle ISO/IEC 42001, inventaire mensuel, dépôts |
 | `/tableau-public` | O-09 | Indicateurs agrégés publiés après validation (seuil de cinq) |
+| `/chien` | O-14 | Chien de scène : quadrupède virtuel (12 articulations, trot, postures, allures expressives) sur le plateau, les escaliers et dans la salle, conduite au GO, caméra de tête, sol praticable, liaison au chien réel par le pont |
 | `/drone` | O-13 | Drone de scène : drone virtuel dans le théâtre en 3D (plateau et salle), console de vol, conduite au GO, caméra 4K virtuelle et réelle, zones de vol, liaison au drone réel par le pont |
 
 Toutes les pages sont bilingues (français par défaut, anglais), sans ressource externe, et utilisables au clavier.
@@ -150,13 +151,13 @@ Renseigner `operatrice` et `type` dans `[protocole]` avant la séance. Le dossie
 
 ## Interface en ligne (Netlify)
 
-L'interface est publiée sur <https://robo-scene.netlify.app> (console), <https://robo-scene.netlify.app/partenaire> et <https://robo-scene.netlify.app/avatar> (robot virtuel, utilisable sans pont) et <https://robo-scene.netlify.app/drone> (drone de scène, utilisable sans pont). Netlify ne sert que des pages statiques : le pont Python, le robot, vos documents et les données des acteurs restent sur votre ordinateur, et la page en ligne se connecte au pont local, `ws://127.0.0.1:8765/ws`.
+L'interface est publiée sur <https://robo-scene.netlify.app> (console), <https://robo-scene.netlify.app/partenaire> et <https://robo-scene.netlify.app/avatar> (robot virtuel, utilisable sans pont) <https://robo-scene.netlify.app/drone> (drone de scène) et <https://robo-scene.netlify.app/chien> (chien de scène), tous utilisables sans pont. Netlify ne sert que des pages statiques : le pont Python, le robot, vos documents et les données des acteurs restent sur votre ordinateur, et la page en ligne se connecte au pont local, `ws://127.0.0.1:8765/ws`.
 
 1. Lancer le pont sur l'ordinateur (`bash lancer.command`).
 2. Ouvrir l'adresse en ligne : la pastille passe à « Robot connecté ». Si le pont n'est pas joint dans les 1,5 s, la Console passe en **simulation autonome dans le navigateur** (`web/simulateur.js`) : un bandeau l'annonce, la téléopération, les séquences et la télémétrie sont simulées, aucune commande matérielle n'est émise, rien n'est consigné et l'IA supervisée reste fermée. « Réessayer le pont » recharge la page ; « Modifier l'adresse » vise un autre port ou une autre machine. L'adresse `?simulation=1` force la démonstration même quand le pont tourne.
 3. Le pont n'accepte que les pages qu'il sert lui-même et celles que liste `[serveur] origines_autorisees` dans `config.toml` ; toute autre page est refusée (HTTP 403), ce qui empêche un site tiers ouvert dans le navigateur de commander le robot.
 
-Seul le dossier `web/` est publié (`netlify.toml`) ; les douze pages ont une route explicite (`/console`, `/partenaire`, `/avatar`, `/drone`, `/atelier`, `/scene`, `/spectateur`, `/surtitres`, `/recherche`, `/gouvernance`, `/regie`, `/tableau-public`), et les en-têtes interdisent l'intégration dans un cadre et l'indexation, limitent caméra et microphone à l'origine, et appliquent une politique de sécurité du contenu en mode « rapport seulement » (à rendre contraignante après un essai d'imitation MediaPipe sans écart dans la console du navigateur). Essai réalisé le 10 octobre 2026 avec Chromium : connexion de la page en ligne au pont local réussie. Le comportement de Safari envers `ws://127.0.0.1` depuis une page https n'a pas été vérifié : en cas d'échec, utiliser Chrome, ou l'interface locale <http://127.0.0.1:8765>.
+Seul le dossier `web/` est publié (`netlify.toml`) ; les treize pages ont une route explicite (`/console`, `/partenaire`, `/avatar`, `/drone`, `/chien`, `/atelier`, `/scene`, `/spectateur`, `/surtitres`, `/recherche`, `/gouvernance`, `/regie`, `/tableau-public`), et les en-têtes interdisent l'intégration dans un cadre et l'indexation, limitent caméra et microphone à l'origine, et appliquent une politique de sécurité du contenu en mode « rapport seulement » (à rendre contraignante après un essai d'imitation MediaPipe sans écart dans la console du navigateur). Essai réalisé le 10 octobre 2026 avec Chromium : connexion de la page en ligne au pont local réussie. Le comportement de Safari envers `ws://127.0.0.1` depuis une page https n'a pas été vérifié : en cas d'échec, utiliser Chrome, ou l'interface locale <http://127.0.0.1:8765>.
 
 Pour republier après une modification de l'interface : relier le dépôt GitHub au projet Netlify (déploiement continu), ou relancer un déploiement manuel du dossier `web/`.
 
@@ -231,12 +232,37 @@ destination et chaque segment, découpe les trajets en consignes à 10 Hz, filtr
 d'arrêt prévu, met le drone en stationnaire puis le pose si la page se tait (1 s, puis 4 s), et le pose sur tout ARRÊT
 de la plateforme. Pour MAVLink : `pip install pymavlink`. Guide : `docs/Guide_drone_de_scene_ROBO-SCENE_v1.0.docx`.
 
+## Chien de scène (O-14)
+
+Ouvrir <http://127.0.0.1:8765/chien> (lien « Chien » dans l'en-tête) ou <https://robo-scene.netlify.app/chien>. La
+page reprend la logique du drone : le chien virtuel marche entièrement dans le navigateur, dans le même théâtre (même
+`salle.json`), complété d'escaliers d'accès à la salle ; le pont n'est requis que pour le chien réel.
+
+| Onglet | Contenu |
+|---|---|
+| **Marche** | Se lever, s'arrêter, se coucher, retour à la marque ; postures (debout, couché, assis, donner la patte, saluer, s'étirer) ; allures expressives (neutre, joyeux, craintif, menaçant, fatigué, curieux) ; manettes, clavier, manette de jeu ; aller à un repère ou au point cliqué ; couleur des yeux ; coupure confirmée |
+| **Conduite** | Repères au GO : se lever, se coucher, posture, allure, aller, tourner, attendre, regarder ; marches à secousse minimale vérifiées tous les 5 cm contre le sol praticable ; durées allongées selon les surfaces (escaliers à 0,3 m/s) |
+| **Caméra** | Caméra de tête virtuelle (regard orientable), image 3840 × 2160, enregistrement WebM ; caméra réelle par carte de capture ou WHEP, affichée seulement (G-06) |
+| **Zones** | Sol praticable par mode : plateau seul ; salle vide (escaliers, avant-salle, allée centrale) ; représentation (1 m des rangées, 0,4 m/s hors du plateau ; l'allée centrale se ferme d'elle-même) ; cercles des interprètes |
+| **Chien réel** | Adaptateurs du pont : simulation, ROS 2 ou ROS 1 par rosbridge (`/cmd_vel`, `/odom`, sujets de posture et d'arrêt), Petoi Bittle/Nybble (jetons série OpenCat), JSON par ligne ; conditions, liste de contrôle signée, télémétrie, jumeau |
+| **Journal** | Export JSON nommé [DATE]_[SYSTÈME]_MARCHE_[NUMÉRO], sans image |
+
+Le bloc `sol` de `web/drone/salle.json` décrit les surfaces praticables (avec leur hauteur et leur vitesse maximale),
+les obstacles au sol, la marque de départ, les repères et la liste de contrôle ; `web/chien/sol.js` et
+`bridge/chien/sol.py` appliquent la même règle (parité vérifiée sur 4 000 points dans chacun des trois modes). Le pont
+n'ouvre un adaptateur réel que si `[chien] reel_autorise = true`, exige l'observateur et la liste signée, refuse la
+représentation tant que `[chien] marche_en_representation = false`, suit les trajets par poursuite de la référence à
+10 Hz à partir de l'odométrie, filtre les consignes manuelles par le point d'arrêt prévu, arrête le robot si la page
+se tait (0,5 s) puis le couche (3 s), et le couche sur tout ARRÊT. Pour ROS : un petit nœud côté robot traduit le sujet
+de posture (`std_msgs/String`) en commandes du fabricant. Guide : `docs/Guide_chien_de_scene_ROBO-SCENE_v1.0.docx`.
+
 ## Documentation et version en ligne
 
 Version publiée : **2.3.3** (16 octobre 2026), en ligne sur <https://robo-scene.netlify.app> ; les deux documents de référence se téléchargent aussi depuis la page **Aide** (<https://robo-scene.netlify.app/aide>, dossier `web/aide/`).
 
 - `docs/Guide_plateforme_integree_ROBO-SCENE_v2.0.1.docx` — guide de la plateforme intégrée (58 fonctions, révision 2.0.1 du 16 octobre 2026)
 - `docs/Guide_drone_de_scene_ROBO-SCENE_v1.0.docx` — drone de scène (O-13) : drone virtuel, conduite, caméra 4K, zones, passage au drone réel
+- `docs/Guide_chien_de_scene_ROBO-SCENE_v1.0.docx` — chien de scène (O-14) : quadrupède virtuel, postures et allures, conduite, sol praticable, passage au chien réel
 - `docs/Repertoire_commandes_gestes_robot_ROBO-SCENE_v1.0_2026-10-16.docx` — répertoire exhaustif des commandes vocales, des 70 gestes, des 11 poses et des mouvements induits du robot, et des bibliothèques fermées des robots physiques
 - `docs/Rapport_mise_en_oeuvre_audit_ROBO-SCENE_2026-10-16.docx` — mise en œuvre de l'audit indépendant : correctifs, vérifications, décisions résiduelles
 - `docs/Guide_partenaire_ROBO-SCENE.docx` — partenaire de théâtre
@@ -278,6 +304,7 @@ robo-scene/
 │   ├── gouvernance/         verrous, incidents, décisions, conservation, retrait, biométrie
 │   ├── pilotage/            régie, dépôts, rapports, table de couverture
 │   ├── drone/               drone de scène : zones de vol, adaptateurs (simulation, MAVLink, Tello, JSON), contrôleur
+│   ├── chien/               chien de scène : sol praticable, adaptateurs (simulation, rosbridge, Petoi, JSON), contrôleur
 │   └── partenaire/          partenaire de théâtre ; avatar.py : validation et interprète Claude du robot virtuel
 ├── modules/                 prototypes P1, P2, P3, T.6, X.2 et outils de la Régie (importés tels quels)
 ├── gouvernance/             état, registre des systèmes, EFVP, conservation (YAML)
@@ -288,6 +315,7 @@ robo-scene/
 ├── web/                     interfaces (HTML, CSS, JS)
 │   ├── avatar/              robot virtuel (corps, visage, animation, parole, directives, imitation)
 │   ├── drone/               drone de scène (théâtre 3D, vol, conduite, caméra 4K, zones ; salle.json partagé avec le pont)
+│   ├── chien/               chien de scène (quadrupède, sol praticable, conduite ; reprend le théâtre et la caméra du drone)
 │   └── vendor/              three.js 0.169 (MIT), servi localement
 ├── firmware/esp32_robot/    micrologiciel Arduino pour ESP32
 ├── sequences/               chorégraphies (JSON)

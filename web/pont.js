@@ -73,7 +73,9 @@ window.ROBO_PONT = (() => {
       const sansPont = location.pathname.startsWith("/avatar")
         ? " Le robot virtuel fonctionne sans pont ; seuls le journal de séance et l'interprète par modèle en dépendent."
         : location.pathname.startsWith("/drone")
-          ? " Le drone virtuel fonctionne sans pont ; seule la liaison au drone réel en dépend." : "";
+          ? " Le drone virtuel fonctionne sans pont ; seule la liaison au drone réel en dépend."
+          : location.pathname.startsWith("/chien")
+            ? " Le chien virtuel fonctionne sans pont ; seule la liaison au chien réel en dépend." : "";
       bandeau.innerHTML = `<b>Pont ROBO-SCÈNE non joint depuis cette page en ligne.</b> <span data-cause></span>${sansPont}
         <span class="actions"><a class="bouton" href="${echap(adresseLocale())}">Ouvrir la version locale de cette page</a>
         <button type="button" data-a="recharger">Réessayer</button>

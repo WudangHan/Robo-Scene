@@ -105,3 +105,32 @@ lacet_vitesse) | "stationnaire" | "atterrir" | "urgence" | "couper"}`, coordonn�
 Du compagnon : `{"t": "tel", "p": [x, y, z], "v": […], "lacet": …, "batterie": …, "arme": …, "etat": "au_sol" |
 "decollage" | "vol" | "atterrissage" | "coupe"}`. Le compagnon applique ses propres sécurités (perte de liaison,
 géorepérage de l'autopilote) ; celles du pont s'y ajoutent sans les remplacer.
+
+## Chien de scène (O-14)
+
+Repère du théâtre (comme le drone) ; positions au sol en `[x, z]`, lacet en degrés (0 = museau vers la salle,
+croissant dans le sens antihoraire vu de dessus).
+
+### Page « Chien » → pont
+
+| `op` | Champs | Effet |
+|---|---|---|
+| `chien_etat`, `chien_connecter` (`adaptateur` : `simulation`, `rosbridge`, `petoi`, `ligne_json`), `chien_deconnecter` | | Comme le drone ; adaptateur réel seulement si `[chien] reel_autorise = true` |
+| `chien_mode`, `chien_interpretes`, `chien_liste` | comme le drone | Sol praticable du mode, cercles des interprètes, liste de contrôle |
+| `chien_posture` | `posture` : `debout`, `couche`, `assis`, `patte`, `salut`, `etirement` | « couche » toujours permis (position sûre) ; les autres exigent les conditions du réel |
+| `chien_aller` | `p` (repère ou `[x, z]`), `duree`, `lacet` | Destination et trajet vérifiés ; poursuite à 10 Hz ; réponse `chien_aller` |
+| `chien_vitesse` | `v` : `[avant, gauche]` m/s (repère du corps), `lacet_vitesse` °/s | Valable 0,5 s ; plafonnée selon la surface ; filtrée par le point d'arrêt prévu |
+| `chien_arreter`, `chien_coupure` (`"COUPER"`), `chien_hb`, `chien_allure`, `chien_regard` | | Arrêt ; coupure puis ARRÊT global ; battement ; consignation |
+
+Pont → page : `chien_tel` (10 Hz : `p` `[x, y, z]`, `v`, `lacet`, `batterie`, `etat` — `couche`, `debout`, `affaisse` —,
+`posture`, `position`, `adaptateur`, `reel`, `urgence`), `chien_etat`, `chien_refus`.
+
+### Pont → robot
+
+- **rosbridge** : `advertise` puis `publish` de `geometry_msgs/Twist` sur `/cmd_vel` (avant, gauche, lacet en rad/s),
+  `std_msgs/String` sur `/robo_scene/posture`, `std_msgs/Bool` sur `/robo_scene/arret_urgence` ; `subscribe` à
+  `nav_msgs/Odometry` sur `/odom` (sujets réglables dans `[chien.rosbridge]`).
+- **petoi** : jetons série OpenCat terminés par un saut de ligne (`kbalance`, `krest`, `ksit`, `khi`, `kstr`, `kwkF`,
+  `kwkL`, `kwkR`, `kbk`, `d`).
+- **ligne_json** (UDP) : `{"t": "chien", "cmd": "vitesse" (avant, gauche, lacet_vitesse) | "posture" (nom) | "couper"}` ;
+  retour `{"t": "tel", "p": [x, y, z], "lacet": …, "etat": …, "posture": …, "batterie": …}`.

@@ -82,6 +82,8 @@ class Controleur:
         self.partenaire = Partenaire(self, cfg.get("partenaire", {}))
         from .drone.controleur import DroneControleur
         self.drone = DroneControleur(self, cfg.get("drone", {}))
+        from .chien.controleur import ChienControleur
+        self.chien = ChienControleur(self, cfg.get("chien", {}))
 
     def _ouvrir_seance(self) -> None:
         p = self.cfg["protocole"]
@@ -264,9 +266,11 @@ class Controleur:
         if hasattr(self, "scene"):
             self.scene.arret_logiciel()
         await self.drone.arret_urgence(motif)
+        await self.chien.arret_urgence(motif)
 
     async def rearmer(self) -> None:
         self.drone.rearmer()
+        self.chien.rearmer()
         for r in self.robots.values():
             r.securite.rearmer()
             if r.pilote and r.lien == "connecte":
@@ -599,6 +603,9 @@ class Controleur:
         if isinstance(op, str) and op.startswith("drone_"):
             await self._traiter_drone(ws, m)
             return
+        if isinstance(op, str) and op.startswith("chien_"):
+            await self._traiter_chien(ws, m)
+            return
         rob = m.get("robot")
         try:
             if op == "estop":
@@ -758,6 +765,46 @@ class Controleur:
         except (KeyError, ValueError, TypeError) as exc:
             await ws.send_json({"type": "drone_refus", "op": op, "msg": f"Message mal formé ({op}) : {exc}"})
 
+    async def _traiter_chien(self, ws: web.WebSocketResponse, m: dict[str, Any]) -> None:
+        """Page « Chien » : chaque commande passe par le contrôleur du chien (sol praticable, observateur, liste)."""
+        op, c = m["op"], self.chien
+        try:
+            if op == "chien_hb":
+                c.battement()
+            elif op == "chien_etat":
+                await ws.send_json(c.etat())
+            elif op == "chien_connecter":
+                await c.connecter(str(m.get("adaptateur", "simulation")))
+            elif op == "chien_deconnecter":
+                await c.deconnecter()
+            elif op == "chien_mode":
+                await c.regler_mode(str(m.get("mode", "")), str(m.get("par", "")))
+            elif op == "chien_interpretes":
+                await c.regler_interpretes(list(m.get("liste") or []))
+            elif op == "chien_liste":
+                await c.cocher(list(m.get("coches") or []), str(m.get("par", "")))
+            elif op == "chien_posture":
+                await c.posture(str(m.get("posture", "")))
+            elif op == "chien_arreter":
+                await c.arreter()
+            elif op == "chien_aller":
+                T = await c.aller(m["p"], m.get("duree"), m.get("lacet"))
+                await ws.send_json({"type": "chien_aller", "duree": T, "id": m.get("id")})
+            elif op == "chien_vitesse":
+                await c.vitesse(m["v"], float(m.get("lacet_vitesse", 0)))
+            elif op in ("chien_allure", "chien_regard"):
+                await c._journal(op[6:], valeur=m.get("allure") or m.get("regard"))
+            elif op == "chien_coupure":
+                await c.couper(str(m.get("confirmation", "")))
+            else:
+                raise KeyError(op)
+        except CommandeRefusee as exc:
+            self.seance.compter("commandes_refusees")
+            self.seance.evenement("refus", op=op, motif=str(exc))
+            await ws.send_json({"type": "chien_refus", "op": op, "msg": str(exc)})
+        except (KeyError, ValueError, TypeError) as exc:
+            await ws.send_json({"type": "chien_refus", "op": op, "msg": f"Message mal formé ({op}) : {exc}"})
+
     async def _traiter_partenaire(self, ws: web.WebSocketResponse, m: dict[str, Any]) -> None:
         op = m["op"]
         try:
@@ -853,7 +900,8 @@ def creer_app(cfg: dict[str, Any]) -> web.Application:
         app[TACHES] = [asyncio.create_task(ctl.boucle_surveillance()),
                        asyncio.create_task(ctl.boucle_diffusion()),
                        asyncio.create_task(ctl.ouvrir_modeles()),
-                       asyncio.create_task(ctl.drone.boucle())]
+                       asyncio.create_task(ctl.drone.boucle()),
+                       asyncio.create_task(ctl.chien.boucle())]
 
     async def arreter(app: web.Application) -> None:
         for r in ctl.robots.values():
@@ -863,6 +911,12 @@ def creer_app(cfg: dict[str, Any]) -> web.Application:
                 pass
         for t in app[TACHES]:
             t.cancel()
+        if ctl.chien.adaptateur:
+            try:
+                await ctl.chien.adaptateur.urgence()
+                await ctl.chien.adaptateur.fermer()
+            except Exception:
+                pass
         if ctl.drone.adaptateur:
             try:
                 if ctl.drone.en_vol:
@@ -881,6 +935,7 @@ def creer_app(cfg: dict[str, Any]) -> web.Application:
     app.router.add_get("/partenaire", _page("partenaire.html"))
     app.router.add_get("/avatar", _page("avatar.html"))
     app.router.add_get("/drone", _page("drone.html"))
+    app.router.add_get("/chien", _page("chien.html"))
     app.router.add_get("/ws", ws_handler)
     from . import plateforme
     plateforme.monter(app, ctl)

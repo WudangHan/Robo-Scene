@@ -408,5 +408,230 @@
       "id": "autorisation",
       "texte": "Autorisation écrite du lieu et assurance couvrant le vol intérieur ; règles applicables vérifiées"
     }
-  ]
+  ],
+  "sol": {
+    "note": "Sol praticable pour les robots au sol (chien quadrupède) : surfaces en x-z avec leur hauteur, de y0 (bord z0) à y1 (bord z1) ; escaliers et allées en pente. Mêmes cotes que les volumes du drone ; à remplacer par le relevé de la salle. Les escaliers de 45° sont à vérifier selon les capacités du robot réel.",
+    "surfaces": [
+      {
+        "id": "plateau",
+        "libelle": "Plateau",
+        "x": [
+          -7,
+          7
+        ],
+        "z": [
+          -9,
+          1.5
+        ],
+        "y0": 0,
+        "y1": 0,
+        "vitesse_max_m_s": 1.0
+      },
+      {
+        "id": "escalier_jardin",
+        "libelle": "Escalier jardin",
+        "x": [
+          -6.4,
+          -5.2
+        ],
+        "z": [
+          1.5,
+          2.7
+        ],
+        "y0": 0,
+        "y1": -1.2,
+        "vitesse_max_m_s": 0.3
+      },
+      {
+        "id": "escalier_cour",
+        "libelle": "Escalier cour",
+        "x": [
+          5.2,
+          6.4
+        ],
+        "z": [
+          1.5,
+          2.7
+        ],
+        "y0": 0,
+        "y1": -1.2,
+        "vitesse_max_m_s": 0.3
+      },
+      {
+        "id": "avant_salle",
+        "libelle": "Avant-salle (devant le premier rang)",
+        "x": [
+          -8.5,
+          8.5
+        ],
+        "z": [
+          2.7,
+          4.5
+        ],
+        "y0": -1.2,
+        "y1": -1.2,
+        "vitesse_max_m_s": 0.6
+      },
+      {
+        "id": "allee_centrale",
+        "libelle": "Allée centrale",
+        "x": [
+          -0.9,
+          0.9
+        ],
+        "z": [
+          4.5,
+          13.5
+        ],
+        "y0": -1.2,
+        "y1": 0.0,
+        "vitesse_max_m_s": 0.6
+      }
+    ],
+    "obstacles": [
+      "cadre_jardin",
+      "cadre_cour"
+    ],
+    "decor": [],
+    "aire": {
+      "libelle": "Marque de départ du chien (lointain jardin)",
+      "centre": [
+        -3.0,
+        -6.5
+      ],
+      "rayon": 0.6,
+      "lacet": 0
+    },
+    "reperes": {
+      "depart": [
+        -3.0,
+        -6.5
+      ],
+      "centre": [
+        0,
+        -3.0
+      ],
+      "cour": [
+        4.0,
+        -3.0
+      ],
+      "jardin": [
+        -4.0,
+        -3.0
+      ],
+      "lointain": [
+        0,
+        -7.5
+      ],
+      "avant_scene": [
+        0,
+        0.9
+      ],
+      "haut_escalier_cour": [
+        5.8,
+        1.0
+      ],
+      "bas_escalier_cour": [
+        5.8,
+        3.3
+      ],
+      "haut_escalier_jardin": [
+        -5.8,
+        1.0
+      ],
+      "bas_escalier_jardin": [
+        -5.8,
+        3.3
+      ],
+      "avant_salle_centre": [
+        0,
+        3.3
+      ],
+      "allee_milieu": [
+        0,
+        9.0
+      ],
+      "allee_fond": [
+        0,
+        13.0
+      ]
+    },
+    "regles": {
+      "rayon_m": 0.4,
+      "marge_public_m": 0.6,
+      "rayon_interpretes_m": 1.2,
+      "vitesse_max_m_s": 1.0,
+      "vitesse_max_representation_m_s": 0.4,
+      "acceleration_max_m_s2": 1.0,
+      "vitesse_lacet_max_deg_s": 90,
+      "autonomie_min": 60,
+      "batterie_alerte_pct": 30,
+      "batterie_retour_pct": 20,
+      "batterie_critique_pct": 10,
+      "perte_liaison_arret_s": 0.5,
+      "perte_liaison_coucher_s": 3.0
+    },
+    "modes": {
+      "plateau": {
+        "surfaces": [
+          "plateau"
+        ],
+        "public": "absent"
+      },
+      "salle_vide": {
+        "surfaces": [
+          "plateau",
+          "escalier_jardin",
+          "escalier_cour",
+          "avant_salle",
+          "allee_centrale"
+        ],
+        "public": "absent"
+      },
+      "representation": {
+        "surfaces": [
+          "plateau",
+          "escalier_jardin",
+          "escalier_cour",
+          "avant_salle",
+          "allee_centrale"
+        ],
+        "public": "marge"
+      }
+    },
+    "liste_controle": [
+      {
+        "id": "batterie",
+        "texte": "Batterie du robot chargée (plus de 90 %) ; télécommande d'arrêt du fabricant en main"
+      },
+      {
+        "id": "sol",
+        "texte": "Sol sec et dégagé ; câbles plaqués ; trappes fermées ; aucun accessoire glissant au sol"
+      },
+      {
+        "id": "bord",
+        "texte": "Nez de scène et fosse balisés ; relevé de la salle conforme (surfaces, escaliers, décor)"
+      },
+      {
+        "id": "escaliers",
+        "texte": "Escaliers éprouvés hors public avec ce robot, à vitesse réduite"
+      },
+      {
+        "id": "observateur",
+        "texte": "Observateur de sécurité en place, en vue directe du robot, avec l'arrêt matériel en main"
+      },
+      {
+        "id": "interpretes",
+        "texte": "Interprètes informés des trajets, des distances et des postures ; positions saisies dans la page"
+      },
+      {
+        "id": "liaison",
+        "texte": "Liaison et télémétrie vérifiées ; perte de liaison réglée (arrêt puis couché)"
+      },
+      {
+        "id": "autorisation",
+        "texte": "Autorisation écrite du lieu et assurance couvrant un robot mobile parmi le public"
+      }
+    ]
+  }
 }
