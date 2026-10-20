@@ -7,6 +7,8 @@ import { ALLURES, ChienVirtuel, ETATS, POSTURES, deg, rad } from "./chien.js";
 import { CONDUITE_EXEMPLE, cibleRegard, compiler } from "./conduite.js";
 import { hauteurSol, pointSol, verifierSol, verifierTrajet } from "./sol.js";
 import { CameraVirtuelle, FluxReel, UHD, dessinerCadre } from "../drone/camera4k.js";
+import { flechesVersManche, pointRelatif } from "../drone/commande.js";
+import { installerCommandes } from "../drone/commandes_page.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -111,6 +113,18 @@ theatre.surClic = (p) => {
   else if (outil === "regarder") regarder([q[0], (hauteur(q[0], q[1]) ?? 0) + 0.3, q[1]]);
 };
 
+/* ── Souris : glisser le chien, double-clic « aller ici » ─ */
+theatre.hauteurSol = (x, z) => hauteur(x, z);
+const verifierSouris = (q) => { const v = verifierTrajet(salle, chien.p, q, chien.ctx); return { ok: v.ok, motif: v.motif }; };
+function allerSouris(p, libelle) {
+  const q = [+p[0].toFixed(2), +p[2].toFixed(2)], v = verifierSouris(q);
+  if (!v.ok) { journal("refus", `${libelle} : trajet refusé (${v.motif})`); return; }
+  annulerConduite();
+  cmds.executerActions([{ type: "point", p: q }], `🖱 ${libelle}`);
+}
+theatre.surGlisser = (p, phase) => (phase === "fin" ? allerSouris(p, "glisser-déposer") : verifierSouris([p[0], p[2]]));
+theatre.surDoubleClic = (p) => allerSouris(p, "double-clic");
+
 /* ── Commandes : virtuel ou réel ─────────────────────────── */
 function envoyer(m) { if (pont.ouvert) { try { pont.ws.send(JSON.stringify(m)); return true; } catch (e) { /* pont fermé */ } } return false; }
 const reelActif = () => cible === "reel" && pont.ouvert && pont.etat?.adaptateur;
@@ -131,7 +145,7 @@ function allerA(p, o = {}) {
   if (!s.ok) { journal("refus", `Trajet refusé à ${Math.round(s.fraction * 100)} % : ${s.motif}`); return { ok: false }; }
   return chien.allerA(p, { duree: o.duree || undefined, lacet: o.lacet === null || o.lacet === undefined ? undefined : rad(o.lacet) });
 }
-function arret() { annulerConduite(); chien.arretUrgence("bouton ARRÊT de la page Chien"); envoyer({ op: "estop", motif: "ARRÊT de la page Chien" }); }
+function arret() { annulerConduite(); cmds?.vider(); chien.arretUrgence("bouton ARRÊT de la page Chien"); envoyer({ op: "estop", motif: "ARRÊT de la page Chien" }); }
 function rearmer() {
   const r = chien.rearmer();
   if (pont.ouvert && pont.etat?.urgence && window.confirm("Réarmer toute la plateforme (robots, drone et chien) ? Le réarmement est une action volontaire et distincte.")) envoyer({ op: "rearmer" });
@@ -191,15 +205,33 @@ window.addEventListener("keydown", (e) => {
   if (k === "j") { coucher(); return; }
   if (k === "h") { retour(); return; }
   if (k === "enter" && !$("#ong-conduite").hidden) { e.preventDefault(); go(); return; }
+  maj = e.shiftKey;
   if (["w", "a", "s", "d", "q", "e", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) { e.preventDefault(); touches.add(k); }
 });
-window.addEventListener("keyup", (e) => touches.delete(e.key.toLowerCase()));
-window.addEventListener("blur", () => touches.clear());
+window.addEventListener("keyup", (e) => { touches.delete(e.key.toLowerCase()); maj = e.shiftKey; });
+window.addEventListener("blur", () => { touches.clear(); maj = false; });
+let maj = false;
+$("#repere-fleches").value = memo.lire("repere-fleches", "robot");
+$("#repere-fleches").onchange = (e) => { memo.ecrire("repere-fleches", e.target.value); e.target.blur(); };
+const ecartAngle = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
+/* Flèches : repère du chien → ↑ avancer, ↓ reculer, ← → pas de côté ; repère de la scène → le chien se tourne vers
+   la direction demandée (↑ lointain, ↓ salle, ← jardin, → cour) et marche, comme un animal qu'on appelle ;
+   Maj + ← → : tourner sur place. */
+function fleches() {
+  const h = touches.has("arrowup"), b = touches.has("arrowdown"), g = touches.has("arrowleft"), d = touches.has("arrowright");
+  if (maj) return { manche: [0, 0], rotation: (d ? 1 : 0) - (g ? 1 : 0) };
+  if ($("#repere-fleches").value !== "scene") { const m = flechesVersManche(h, b, g, d, "robot", chien.lacet); return { manche: m, rotation: 0 }; }
+  const vx = (d ? 1 : 0) - (g ? 1 : 0), vz = (b ? 1 : 0) - (h ? 1 : 0);
+  if (!vx && !vz) return { manche: [0, 0], rotation: 0 };
+  const e = ecartAngle(chien.lacet, Math.atan2(vx, vz));
+  return { manche: [0, Math.max(0, Math.cos(e))], rotation: Math.max(-1, Math.min(1, -e * 2)) };
+}
 let boutonsPrec = [];
 function lireManche() {
   const k = (a, b) => (touches.has(a) ? 1 : 0) - (touches.has(b) ? 1 : 0);
-  let droite = k("d", "a") + manettes.d[0], avant = k("w", "s") + k("arrowup", "arrowdown") + manettes.d[1];
-  let rotation = k("e", "q") + k("arrowright", "arrowleft") + manettes.g[0];
+  const fl = fleches();
+  let droite = k("d", "a") + fl.manche[0] + manettes.d[0], avant = k("w", "s") + fl.manche[1] + manettes.d[1];
+  let rotation = k("e", "q") + fl.rotation + manettes.g[0];
   const gp = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean)[0] : null;
   if (gp) {
     const z = (v) => (Math.abs(v) < 0.12 ? 0 : v);
@@ -413,6 +445,8 @@ function boucle() {
   const { manche, rotation } = lireManche();
   const actif = manche.some((x) => Math.abs(x) > 0.02) || Math.abs(rotation) > 0.02;
   if (actif && (enCours || toutJouer)) annulerConduite();
+  if (actif && cmds.occupe) { cmds.vider(); journal("info", "Commande interrompue par le pilotage manuel"); }
+  cmds.pas();
   if (reelActif()) {
     if ((actif || mancheActif) && now - dernierEnvoiV > 100) {
       // consignes de vitesse dans le repère du corps du robot : [avant, gauche] m/s, lacet °/s (positif : antihoraire)
@@ -455,6 +489,63 @@ function boucle() {
   }
   if (image % 6 === 0) majStatuts();
 }
+
+/* ── Commandes en langage naturel (voix ou texte) ─────────── */
+const attendre = (s) => { const t = performance.now() + s * 1000; return () => performance.now() > t; };
+const finPosture = () => chien.postureT >= 1;
+const finMarche = () => chien.consigne.type !== "trajectoire" && Math.abs(ecartAngle(chien.lacet, chien.lacetCible)) < 0.05;
+function lancerAction(a) {
+  const reel = reelActif(), refus = (r) => r === false || r?.ok === false;
+  const marcherVers = (q, o = {}) => {
+    let r;
+    if (reel) r = envoyer({ op: "chien_aller", p: q, duree: null, lacet: o.lacet ?? null });
+    else {
+      const s = verifierTrajet(salle, chien.p, q, chien.ctx);
+      if (!s.ok) { journal("refus", `Trajet refusé à ${Math.round(s.fraction * 100)} % : ${s.motif}`); return false; }
+      r = chien.allerA(q, { lacet: o.lacet == null ? undefined : rad(o.lacet), garderCap: o.garderCap });
+    }
+    if (refus(r)) return false;
+    return { fin: reel ? attendre(Math.hypot(q[0] - chien.p[0], q[1] - chien.p[1]) / 0.25 + 1.5) : finMarche };
+  };
+  switch (a.type) {
+    case "lever": return refus(lever()) ? false : { fin: reel ? attendre(1.5) : finPosture };
+    case "coucher": return refus(coucher()) ? false : { fin: reel ? attendre(1.5) : finPosture };
+    case "posture": return refus(posture(a.nom)) ? false : { fin: reel ? attendre(1.5) : finPosture };
+    case "allure": return allure(a.nom);
+    case "retour": return refus(retour()) ? false : { fin: reel ? attendre(10) : () => !chien.retourEnCours };
+    case "arreter": return arreter();
+    case "go": return go();
+    case "point": return marcherVers(a.p);
+    case "aller": { const r = salle.sol.reperes[a.repere]; if (!r) { journal("refus", `Repère inconnu : ${a.repere}`); return false; } return marcherVers(r.slice()); }
+    case "deplacer": {
+      // pas en arrière ou de côté : le chien garde son orientation
+      const q = pointRelatif(chien.p, chien.lacet, a.droite, a.avant).map((x) => +x.toFixed(2));
+      return marcherVers(q, { garderCap: a.avant <= 0, lacet: a.avant <= 0 ? deg(chien.lacet) : null });
+    }
+    case "tourner": {
+      const cible = chien.lacet + rad(a.angle);
+      if (reel) return refus(envoyer({ op: "chien_aller", p: chien.p.map((x) => +x.toFixed(2)), lacet: deg(cible) })) ? false : { fin: attendre(Math.abs(a.angle) / 60 + 1) };
+      return refus(chien.tourner(cible)) ? false : { fin: () => Math.abs(ecartAngle(chien.lacet, chien.lacetCible)) < 0.05 };
+    }
+    case "regarder": {
+      if (!a.cible) return regarder(null);
+      if (a.cible === "salle") return regarder([0, 1.2, 9]);
+      const r = salle.sol.reperes[a.cible]; return r ? regarder([r[0], (hauteur(r[0], r[1]) ?? 0) + 0.3, r[1]]) : true;
+    }
+    default: journal("refus", `Action non prise en charge par le chien : ${a.type}`); return false;
+  }
+}
+const cmds = installerCommandes({
+  robot: "chien", reperes: salle.sol.reperes, lancer: lancerAction, journal,
+  arreterTout: () => arreter(), urgence: () => arret(),
+  // couché ou assis, un déplacement commence par « se lever » (ajouté et annoncé dans le journal)
+  preparer: (actions) => {
+    const bouge = actions.findIndex((a) => ["point", "aller", "deplacer", "tourner"].includes(a.type));
+    const lev = actions.findIndex((a) => a.type === "lever");
+    if (bouge >= 0 && chien.etat === "couche" && (lev < 0 || lev > bouge)) actions.splice(bouge, 0, { type: "lever" });
+    return actions;
+  },
+});
 
 /* ── Démarrage ───────────────────────────────────────────── */
 chien.mode = MODES[memo.lire("mode", "plateau")] ? memo.lire("mode", "plateau") : "plateau";

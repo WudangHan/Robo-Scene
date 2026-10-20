@@ -176,7 +176,8 @@ export class ChienVirtuel {
     return { ok: true };
   }
 
-  /* Aller à un point du sol, en ligne droite, à secousse minimale ; le robot s'oriente dans le sens de la marche. */
+  /* Aller à un point du sol, en ligne droite, à secousse minimale ; le robot s'oriente dans le sens de la marche,
+     sauf avec o.garderCap (pas en arrière ou de côté commandés à la voix : le robot garde son orientation). */
   allerA(cible, o = {}) {
     const e = this.exigerDebout(); if (e) return e;
     const v = verifierSol(this.salle, cible, this.ctx);
@@ -184,7 +185,7 @@ export class ChienVirtuel {
     const T = dureeMarche(this.salle, this.p, cible, this.mode, o.duree, this.A.vitesse);
     const dx = cible[0] - this.p[0], dz = cible[1] - this.p[1];
     this.consigne = { type: "trajectoire", p0: this.p.slice(), p1: cible.slice(), T: T.T, t: 0,
-      cap: Math.hypot(dx, dz) > 0.3 ? Math.atan2(dx, dz) : null, lacetFinal: o.lacet ?? null };
+      cap: !o.garderCap && Math.hypot(dx, dz) > 0.3 ? Math.atan2(dx, dz) : null, lacetFinal: o.lacet ?? null };
     if (T.ralenti) this.evenement("avert", `Marche ralentie : ${o.duree?.toFixed?.(1) ?? "?"} → ${T.T.toFixed(1)} s (plafonds de vitesse du sol)`);
     return { ok: true, duree: T.T };
   }

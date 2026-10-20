@@ -108,11 +108,40 @@ export class Theatre {
     this.rayon = new THREE.Raycaster(); this.souris = new THREE.Vector2();
     this.plans = [new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)];
     this.surClic = null; this.outil = null;
-    r.domElement.addEventListener("pointerdown", (e) => { this.debutClic = [e.clientX, e.clientY]; });
+    // Glisser le robot à la souris : appui sur le robot, glissement (marqueur vert si la destination est permise,
+    // rouge sinon), relâchement → la page l'y envoie ; Maj enfoncée : le drone change d'altitude.
+    this.surGlisser = null; this.surDoubleClic = null; this.glisse = null;
+    this.marqueur = this.creerMarqueur();
+    r.domElement.addEventListener("pointerdown", (e) => {
+      this.debutClic = [e.clientX, e.clientY];
+      if (!this.surGlisser || e.button !== 0) return;
+      this.placerSouris(e);
+      if (this.rayon.intersectObject(this.drone, true).length) {
+        this.glisse = { id: e.pointerId, y: this.drone.position.y, ecranY: e.clientY, p: null };
+        this.controles.enabled = false; r.domElement.setPointerCapture(e.pointerId); r.domElement.style.cursor = "grabbing";
+        e.preventDefault();
+      }
+    });
+    r.domElement.addEventListener("pointermove", (e) => {
+      if (!this.glisse) {
+        if (this.surGlisser && e.buttons === 0) { this.placerSouris(e); r.domElement.style.cursor = this.rayon.intersectObject(this.drone, true).length ? "grab" : ""; }
+        return;
+      }
+      const p = this.pointGlisse(e); if (!p) return;
+      const v = this.surGlisser(p, "deplacement");
+      this.glisse.p = p; this.montrerMarqueur(p, v?.ok !== false);
+    });
     r.domElement.addEventListener("pointerup", (e) => {
+      if (this.glisse) {
+        const p = this.glisse.p; this.glisse = null; this.debutClic = null;
+        this.controles.enabled = true; this.marqueur.visible = false; r.domElement.style.cursor = "";
+        if (p) this.surGlisser(p, "fin");
+        return;
+      }
       if (!this.debutClic || Math.hypot(e.clientX - this.debutClic[0], e.clientY - this.debutClic[1]) > 5) return;
       const p = this.pointSol(e); if (p && this.surClic) this.surClic(p, e);
     });
+    r.domElement.addEventListener("dblclick", (e) => { const p = this.pointSol(e); if (p && this.surDoubleClic) this.surDoubleClic(p, e); });
     new ResizeObserver(() => this.redimensionner()).observe(conteneur);
     this.redimensionner();
   }
@@ -123,6 +152,41 @@ export class Theatre {
   }
 
   /* Point cliqué sur le plateau ou sur le sol de la salle. */
+  placerSouris(e) {
+    const b = this.rendu.domElement.getBoundingClientRect();
+    this.souris.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1);
+    this.rayon.setFromCamera(this.souris, this.camera);
+  }
+
+  /* Point visé pendant un glissement : plan horizontal à l'altitude du drone ; avec Maj, l'altitude varie (1 cm par pixel). */
+  pointGlisse(e) {
+    const g = this.glisse;
+    if (e.shiftKey && g.p) return [g.p[0], Math.max(0, g.y + (g.ecranY - e.clientY) * 0.01), g.p[2]];
+    this.placerSouris(e);
+    const out = new THREE.Vector3();
+    if (!this.rayon.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -g.y), out)) return null;
+    g.ecranY = e.clientY;
+    if (g.p) g.y = g.p[1];
+    return [out.x, g.y, out.z];
+  }
+
+  creerMarqueur() {
+    const g = new THREE.Group(); g.visible = false;
+    const mat = new THREE.MeshBasicMaterial({ color: "#4cc38a", transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthTest: false });
+    const anneau = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.3, 40), mat); anneau.rotation.x = -Math.PI / 2; g.add(anneau);
+    const tige = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1, 8), mat); g.add(tige);
+    g.userData = { mat, anneau, tige }; g.traverse((o) => { o.layers.set(1); o.renderOrder = 20; }); this.scene.add(g);
+    return g;
+  }
+
+  montrerMarqueur(p, ok) {
+    const m = this.marqueur, u = m.userData;
+    u.mat.color.set(ok ? "#4cc38a" : "#ff5d5d");
+    const sol = p[2] > this.salle.volumes.plateau.z[1] ? this.salle.volumes.salle.y[0] : 0, h = Math.max(0.02, p[1] - sol);
+    m.position.set(p[0], sol + 0.02, p[2]); m.visible = true;
+    u.tige.scale.y = h; u.tige.position.y = h / 2; u.anneau.position.y = 0;
+  }
+
   pointSol(e) {
     const b = this.rendu.domElement.getBoundingClientRect();
     this.souris.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1);

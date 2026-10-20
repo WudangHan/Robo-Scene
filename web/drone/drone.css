@@ -57,3 +57,14 @@ body.mode-scene .pip { display: none; }
 .commandes .ligne label.petit, .commandes .ligne .petit { white-space: nowrap; }
 .barre-vue select { max-width: 260px; }
 .barre .statuts { flex: 1 1 380px; }
+
+/* Souris, flèches et voix */
+.voix { align-items: center; gap: 8px; flex-wrap: wrap; }
+#b-parler { min-height: 40px; }
+#b-parler.ecoute { background: #7a1f1f; border-color: #ff5d5d; color: #fff; animation: pulsation 1.2s ease-in-out infinite; }
+@keyframes pulsation { 50% { box-shadow: 0 0 0 6px rgba(255, 93, 93, 0.25); } }
+@media (prefers-reduced-motion: reduce) { #b-parler.ecoute { animation: none; } }
+.voix-interim { display: block; min-height: 1.3em; font-size: 12px; opacity: 0.8; margin: 2px 0 6px; }
+#commande-texte { flex: 1 1 220px; min-width: 0; }
+.voix-aide { columns: 2 150px; margin: 6px 0; padding-left: 18px; }
+.voix-aide button.lien { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline dotted; cursor: pointer; font: inherit; text-align: left; min-height: 0; }

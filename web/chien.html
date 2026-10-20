@@ -92,7 +92,21 @@
         <div class="manette" id="manette-g" aria-label="Manette gauche : rotation"><i></i><span>← rotation →</span></div>
         <div class="manette" id="manette-d" aria-label="Manette droite : avancer, reculer, pas de côté"><i></i><span>↑ avant · → droite</span></div>
       </div>
-      <p class="petit">Clavier : <kbd>W</kbd> <kbd>S</kbd> avancer et reculer, <kbd>A</kbd> <kbd>D</kbd> pas de côté, <kbd>Q</kbd> <kbd>E</kbd> ou <kbd>←</kbd> <kbd>→</kbd> tourner ; <kbd>U</kbd> se lever, <kbd>J</kbd> se coucher, <kbd>H</kbd> retour, <kbd>Espace</kbd> arrêter, <kbd>Échap</kbd> ARRÊT. Manette de jeu reconnue (A se lever, B se coucher, X arrêter, Y retour).</p>
+      <p class="petit">Clavier : <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> ou <kbd>W</kbd> <kbd>S</kbd> <kbd>A</kbd> <kbd>D</kbd> avancer, reculer et pas de côté, <kbd>Maj</kbd> + <kbd>←</kbd> <kbd>→</kbd> ou <kbd>Q</kbd> <kbd>E</kbd> tourner ; <kbd>V</kbd> parler ; <kbd>U</kbd> se lever, <kbd>J</kbd> se coucher, <kbd>H</kbd> retour, <kbd>Espace</kbd> arrêter, <kbd>Échap</kbd> ARRÊT. Manette de jeu reconnue (A se lever, B se coucher, X arrêter, Y retour).</p>
+      <h3>Souris, flèches et voix</h3>
+      <p class="petit"><strong>Souris</strong> : saisir le chien dans la vue 3D et le glisser — l'anneau est vert si la destination est permise, rouge sinon ; au relâchement, le chien s'y rend. <strong>Double-clic</strong> sur le sol : aller ici.</p>
+      <div class="ligne petit"><label for="repere-fleches"><strong>Flèches</strong></label>
+        <select id="repere-fleches"><option value="robot">selon le chien (↑ avancer, ← pas de côté)</option><option value="scene">selon la scène vue de la salle (le chien se tourne vers ↑ lointain, ↓ salle, ← jardin, → cour)</option></select></div>
+      <div class="voix ligne">
+        <button id="b-parler" type="button" aria-pressed="false" title="V">🎙 Parler</button>
+        <label class="petit"><input type="checkbox" id="voix-continue"> écoute continue</label>
+        <label class="petit"><input type="checkbox" id="voix-local" checked> reconnaissance sur l'appareil</label>
+        <span id="voix-etat" class="petit" aria-live="polite"></span>
+      </div>
+      <output id="voix-interim" class="voix-interim mono"></output>
+      <div class="ligne"><input id="commande-texte" type="text" autocomplete="off" placeholder="ou taper une commande : lève-toi puis va au centre" aria-label="Commande en langage naturel"><button id="b-commande" type="button" class="primaire">Exécuter</button></div>
+      <details class="petit"><summary>Exemples de commandes (cliquer pour copier dans le champ)</summary><ul id="voix-aide" class="voix-aide"></ul>
+        <p>Enchaîner avec « puis ». « Stop » arrête, « arrêt d'urgence » déclenche l'ARRÊT ; la voix ne coupe jamais les moteurs. Toute commande passe par les mêmes vérifications que les boutons (sol praticable, pont). Avec « reconnaissance sur l'appareil » cochée, la page exige que le navigateur reconnaisse la parole localement (propriété <code>processLocally</code>) et refuse d'écouter sinon ; décochée, Chrome peut envoyer l'audio à un service distant de reconnaissance. Aucun son n'est enregistré par la plateforme.</p></details>
       <h3>Aller à un repère</h3>
       <div class="ligne">
         <select id="aller-repere" aria-label="Repère au sol"></select>

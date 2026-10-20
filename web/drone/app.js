@@ -6,6 +6,8 @@ import { DroneVirtuel, ETATS, deg, rad } from "./vol.js";
 import { compiler, CONDUITE_EXEMPLE } from "./conduite.js";
 import { point, verifier, verifierSegment } from "./geofence.js";
 import { CameraVirtuelle, FluxReel, UHD, dessinerCadre } from "./camera4k.js";
+import { flechesVersManche, pointRelatif } from "./commande.js";
+import { installerCommandes } from "./commandes_page.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -110,12 +112,41 @@ theatre.surClic = (p) => {
   }
 };
 
+/* ── Souris : glisser le drone, double-clic « aller ici » ── */
+const solSous = (z) => (z > salle.volumes.plateau.z[1] ? salle.volumes.salle.y[0] : 0);
+function cibleSouris(p) {
+  // au sol : la destination prend l'altitude du curseur « aller ici » ; en vol : l'altitude du glissement
+  const q = [+p[0].toFixed(2), +p[1].toFixed(2), +p[2].toFixed(2)];
+  if (!drone.enVol || drone.p[1] - solSous(drone.p[2]) < 0.3) q[1] = +(solSous(q[2]) + Number($("#alt-clic").value)).toFixed(2);
+  return q;
+}
+function verifierSouris(q) {
+  const v = drone.enVol ? verifierSegment(salle, drone.p, q, drone.ctx) : verifier(salle, q, drone.ctx);
+  return { ok: v.ok, motif: v.motif };
+}
+function allerSouris(q, libelle) {
+  const v = verifierSouris(q);
+  if (!v.ok) { journal("refus", `${libelle} : destination refusée (${v.motif})`); return; }
+  annulerConduite();
+  cmds.executerActions([{ type: "point", p: q }], `🖱 ${libelle}`);
+}
+theatre.surGlisser = (p, phase) => {
+  const q = cibleSouris(p);
+  if (phase === "fin") return allerSouris(q, "glisser-déposer");
+  return verifierSouris(q);
+};
+theatre.surDoubleClic = (p) => {
+  const q = cibleSouris(p);
+  if (drone.enVol && drone.p[1] - solSous(drone.p[2]) > 0.3) q[1] = +(solSous(q[2]) + Math.max(0.6, drone.p[1] - solSous(drone.p[2]))).toFixed(2);
+  allerSouris(q, "double-clic");
+};
+
 /* ── Commandes : virtuel ou réel ─────────────────────────── */
 function envoyer(m) { if (pont.ouvert) { try { pont.ws.send(JSON.stringify(m)); return true; } catch (e) { /* pont fermé */ } } return false; }
 const reelActif = () => cible === "reel" && pont.ouvert && pont.etat?.adaptateur;
 
-function decoller() {
-  const h = Number($("#h-decollage").value);
+function decoller(hauteur) {
+  const h = Number(hauteur || $("#h-decollage").value);
   if (reelActif()) return envoyer({ op: "drone_decoller", hauteur: h });
   return drone.decoller(h);
 }
@@ -133,7 +164,7 @@ function allerA(p, o = {}) {
   return drone.allerA(p, { duree: o.duree || undefined, lacet: o.lacet === null || o.lacet === undefined ? undefined : rad(o.lacet) });
 }
 function arret() {
-  annulerConduite();
+  annulerConduite(); cmds?.vider();
   drone.arretUrgence("bouton ARRÊT de la page Drone");
   envoyer({ op: "estop", motif: "ARRÊT de la page Drone" });
 }
@@ -143,7 +174,7 @@ function rearmer() {
   return r;
 }
 
-$("#b-decoller").onclick = decoller; $("#b-atterrir").onclick = atterrir; $("#b-station").onclick = stationnaire;
+$("#b-decoller").onclick = () => decoller(); $("#b-atterrir").onclick = atterrir; $("#b-station").onclick = stationnaire;
 $("#b-retour").onclick = retour; $("#b-rearmer").onclick = rearmer; $("#btn-arret").onclick = arret;
 $("#b-batterie").onclick = () => drone.changerBatterie();
 $("#b-aller").onclick = () => {
@@ -199,15 +230,22 @@ window.addEventListener("keydown", (e) => {
   if (k === "l") { atterrir(); return; }
   if (k === "h") { retour(); return; }
   if (k === "enter" && !$("#ong-conduite").hidden) { e.preventDefault(); go(); return; }
-  if (["w", "a", "s", "d", "r", "f", "q", "e", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) { e.preventDefault(); touches.add(k); }
+  maj = e.shiftKey;
+  if (["w", "a", "s", "d", "r", "f", "q", "e", "arrowup", "arrowdown", "arrowleft", "arrowright", "pageup", "pagedown"].includes(k)) { e.preventDefault(); touches.add(k); }
 });
-window.addEventListener("keyup", (e) => touches.delete(e.key.toLowerCase()));
-window.addEventListener("blur", () => touches.clear());
+window.addEventListener("keyup", (e) => { touches.delete(e.key.toLowerCase()); maj = e.shiftKey; });
+window.addEventListener("blur", () => { touches.clear(); maj = false; });
+let maj = false;
+$("#repere-fleches").value = memo.lire("repere-fleches", "robot");
+$("#repere-fleches").onchange = (e) => { memo.ecrire("repere-fleches", e.target.value); e.target.blur(); };
 let boutonsPrec = [];
 function lireManche() {
   const k = (a, b) => (touches.has(a) ? 1 : 0) - (touches.has(b) ? 1 : 0);
-  let droite = k("d", "a") + manettes.d[0], avant = k("w", "s") + manettes.d[1];
-  let haut = k("r", "f") + k("arrowup", "arrowdown") + manettes.g[1], lacet = k("e", "q") + k("arrowright", "arrowleft") + manettes.g[0];
+  // flèches : déplacement (repère du drone ou de la scène) ; Maj + ↑ ↓ : altitude ; Maj + ← → : lacet
+  const f = maj ? [0, 0] : flechesVersManche(touches.has("arrowup"), touches.has("arrowdown"), touches.has("arrowleft"), touches.has("arrowright"), $("#repere-fleches").value, drone.lacet);
+  let droite = k("d", "a") + f[0] + manettes.d[0], avant = k("w", "s") + f[1] + manettes.d[1];
+  let haut = k("r", "f") + k("pageup", "pagedown") + (maj ? k("arrowup", "arrowdown") : 0) + manettes.g[1];
+  let lacet = k("e", "q") + (maj ? k("arrowright", "arrowleft") : 0) + manettes.g[0];
   const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
   const gp = pads[0];
   if (gp) {
@@ -448,6 +486,8 @@ function boucle() {
   const { manche, lacet } = lireManche();
   const actif = manche.some((x) => Math.abs(x) > 0.02) || Math.abs(lacet) > 0.02;
   if (actif && (enCours || toutJouer)) annulerConduite();
+  if (actif && cmds.occupe) { cmds.vider(); journal("info", "Commande interrompue par le pilotage manuel"); }
+  cmds.pas();
   if (reelActif()) {
     // pilotage du drone réel : consignes de vitesse dans le repère du théâtre, renvoyées à 10 Hz tant que la manette est tenue
     if ((actif || mancheActif) && now - dernierEnvoiV > 100) {
@@ -498,6 +538,50 @@ function boucle() {
   }
   if (image % 6 === 0) majStatuts();
 }
+
+/* ── Commandes en langage naturel (voix ou texte) ─────────── */
+const ecartAngle = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
+const attendre = (s) => { const t = performance.now() + s * 1000; return () => performance.now() > t; };
+const finTrajet = () => drone.consigne.type !== "trajectoire" && Math.abs(ecartAngle(drone.lacet, drone.lacetCible ?? drone.lacet)) < 0.05;
+function cibleRegard(c) { if (c === "salle") return [0, 1.2, 9]; return salle.reperes[c] || null; }
+function lancerAction(a) {
+  const reel = reelActif();
+  const allerPoint = (q, lacetDeg) => {
+    const r = allerA(q, { duree: null, lacet: lacetDeg ?? null });
+    if (r === false || r?.ok === false) return false;
+    return { fin: reel ? attendre(Math.hypot(q[0] - drone.p[0], q[1] - drone.p[1], q[2] - drone.p[2]) / (salle.regles.vitesse_max_h_m_s * 0.5) + 1.5) : finTrajet };
+  };
+  switch (a.type) {
+    case "decoller": { const r = decoller(a.hauteur); if (r === false || r?.ok === false) return false; return { fin: reel ? attendre(4) : () => drone.etat !== "decollage" }; }
+    case "atterrir": { const r = atterrir(); if (r === false || r?.ok === false) return false; return { fin: reel ? attendre(4) : () => !drone.enVol }; }
+    case "retour": { const r = retour(); if (r === false || r?.ok === false) return false; return { fin: reel ? attendre(8) : () => !drone.retourEnCours || !drone.enVol }; }
+    case "arreter": return stationnaire();
+    case "go": return go();
+    case "point": return allerPoint(a.p);
+    case "aller": { const r = salle.reperes[a.repere]; if (!r) { journal("refus", `Repère inconnu : ${a.repere}`); return false; } return allerPoint(r.slice()); }
+    case "deplacer": {
+      const [x, z] = pointRelatif([drone.p[0], drone.p[2]], drone.lacet, a.droite, a.avant);
+      return allerPoint([+x.toFixed(2), +(drone.p[1] + a.haut).toFixed(2), +z.toFixed(2)]);
+    }
+    case "tourner": return allerPoint(drone.p.map((x) => +x.toFixed(2)), deg(drone.lacet + rad(a.angle)));
+    case "regarder": {
+      const c = a.cible && cibleRegard(a.cible); if (!c) return true;
+      return allerPoint(drone.p.map((x) => +x.toFixed(2)), deg(Math.atan2(c[0] - drone.p[0], c[2] - drone.p[2])));
+    }
+    default: journal("refus", `Action non prise en charge par le drone : ${a.type}`); return false;
+  }
+}
+const cmds = installerCommandes({
+  robot: "drone", reperes: salle.reperes, lancer: lancerAction, journal,
+  arreterTout: () => { annulerConduite(); stationnaire(); }, urgence: () => arret(),
+  // au sol, un déplacement commence par un décollage (ajouté et annoncé dans le journal)
+  preparer: (actions) => {
+    const bouge = actions.findIndex((a) => ["point", "aller", "deplacer", "tourner", "regarder"].includes(a.type));
+    const dec = actions.findIndex((a) => a.type === "decoller");
+    if (bouge >= 0 && !drone.enVol && (dec < 0 || dec > bouge)) actions.splice(bouge, 0, { type: "decoller" });
+    return actions;
+  },
+});
 
 /* ── Démarrage ───────────────────────────────────────────── */
 drone.mode = salle.modes[memo.lire("mode", "plateau")] ? memo.lire("mode", "plateau") : "plateau";

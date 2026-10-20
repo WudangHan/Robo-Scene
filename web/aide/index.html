@@ -44,21 +44,23 @@
     </article>
     <article class="carte doc">
       <h2>Guide du drone de scène</h2>
-      <p class="meta">Version 1.0 — 19 octobre 2026 · Word</p>
-      <p>La page Drone : le drone virtuel dans le théâtre en 3D, la console de vol, la conduite au GO, la caméra 4K virtuelle et réelle, les zones de vol (plateau, salle vide, représentation), le passage au drone réel par le pont (MAVLink, Tello, JSON) et les conditions de sécurité.</p>
-      <a class="bouton" href="/static/aide/Guide_drone_de_scene_ROBO-SCENE_v1.0.docx" download>Télécharger le guide</a>
+      <p class="meta">Version 1.1 — 19 octobre 2026 · Word</p>
+      <p>La page Drone : le drone virtuel dans le théâtre en 3D, la console de vol, la conduite au GO, la caméra 4K virtuelle et réelle, les zones de vol (plateau, salle vide, représentation), le pilotage à la souris, aux flèches et à la voix, le passage au drone réel par le pont (MAVLink, Tello, JSON) et les conditions de sécurité.</p>
+      <a class="bouton" href="/static/aide/Guide_drone_de_scene_ROBO-SCENE_v1.1.docx" download>Télécharger le guide</a>
     </article>
     <article class="carte doc">
       <h2>Guide du chien de scène</h2>
-      <p class="meta">Version 1.0 — 19 octobre 2026 · Word</p>
-      <p>La page Chien : le quadrupède virtuel (postures, allures expressives, trot), la conduite au GO, la caméra de tête, le sol praticable (plateau, escaliers, avant-salle, allée) et le passage au chien réel par le pont (ROS 2 par rosbridge, Petoi, JSON).</p>
-      <a class="bouton" href="/static/aide/Guide_chien_de_scene_ROBO-SCENE_v1.0.docx" download>Télécharger le guide</a>
+      <p class="meta">Version 1.1 — 19 octobre 2026 · Word</p>
+      <p>La page Chien : le quadrupède virtuel (postures, allures expressives, trot), la conduite au GO, la caméra de tête, le sol praticable (plateau, escaliers, avant-salle, allée), le pilotage à la souris, aux flèches et à la voix, et le passage au chien réel par le pont (ROS 2 par rosbridge, Petoi, JSON).</p>
+      <a class="bouton" href="/static/aide/Guide_chien_de_scene_ROBO-SCENE_v1.1.docx" download>Télécharger le guide</a>
     </article>
   </section>
   <section class="carte large">
     <h2>Pour commencer avec le drone de scène</h2>
     <ul class="raccourcis">
       <li>Ouvrez la page <a href="/drone">Drone</a> : le drone virtuel attend sur l'aire de décollage, au lointain ; <kbd>T</kbd> le fait décoller, <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, <kbd>R</kbd> <kbd>F</kbd> et <kbd>Q</kbd> <kbd>E</kbd> le pilotent, <kbd>L</kbd> le pose, <kbd>Échap</kbd> déclenche l'ARRÊT.</li>
+      <li>Souris : saisissez le drone dans la vue 3D et glissez-le (anneau vert : permis ; rouge : refusé ; <kbd>Maj</kbd> : altitude) ; double-clic sur le sol : aller ici. Flèches : ↑ ↓ ← → déplacent le drone, <kbd>Maj</kbd> + flèches règlent l'altitude et le lacet.</li>
+      <li>Voix : <kbd>V</kbd> ou « 🎙 Parler », puis « décolle puis va au centre », « avance de deux mètres », « tourne à droite », « stop » ; la même phrase peut être tapée dans le champ de commande.</li>
       <li>Onglet Conduite : « Charger l'exemple », puis GO (touche Entrée) repère par repère, ou « Jouer tout ».</li>
       <li>Onglet Zones : la salle n'est ouverte qu'en mode « Salle vide » (initiales de la personne qui l'a vérifiée) ; en « Représentation », le survol du public est interdit.</li>
       <li>Le drone réel se relie par le pont (onglet Drone réel), seulement après autorisation dans config.toml, observateur déclaré et liste de contrôle signée.</li>
@@ -69,6 +71,7 @@
     <ul class="raccourcis">
       <li>Ouvrez la page <a href="/chien">Chien</a> : le chien est couché sur sa marque, au lointain jardin ; <kbd>U</kbd> le lève, <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> et <kbd>Q</kbd> <kbd>E</kbd> le font marcher et tourner, <kbd>J</kbd> le couche, <kbd>Échap</kbd> déclenche l'ARRÊT.</li>
       <li>Postures et allures en un clic (assis, donner la patte, s'étirer ; joyeux, craintif, curieux…).</li>
+      <li>Souris, flèches et voix : glissez le chien dans la vue 3D, guidez-le aux flèches (repère du chien ou de la scène vue de la salle), ou dites « lève-toi puis va au centre », « assis », « avance de trois pas », « reviens à ta place ».</li>
       <li>Onglet Conduite : « Charger l'exemple », puis GO ou « Jouer tout » ; en mode « Salle vide », le chien descend l'escalier cour et traverse devant le premier rang.</li>
     </ul>
   </section>

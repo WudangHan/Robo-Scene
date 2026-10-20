@@ -101,11 +101,11 @@ FONCTIONS: list[dict[str, Any]] = [
      "reste": "Nouvelle analyse de risques avant usage"},
     {"id": "O-12", "etat": R, "code": "conduite (divulgation voix_synthese) ; web", "test": "tests/test_plateforme.py", "reste": ""},
     # Extension ajoutée le 19 oct. 2026 (hors cahier v1.0) : drone de scène, virtuel puis réel
-    {"id": "O-13", "etat": E, "code": "web/drone ; bridge/drone ; web/drone/salle.json", "test": "tests/test_drone.py",
+    {"id": "O-13", "etat": E, "code": "web/drone ; bridge/drone ; web/drone/salle.json", "test": "tests/test_drone.py ; tests/test_commandes.py",
      "reste": "Relevé de la salle (salle.json), autorisation du lieu et assurance, analyse de risques ; premier vol réel "
               "consigné avec observateur ; signes du Tello et cap MAVLink vérifiés au banc"},
     # Extension ajoutée le 19 oct. 2026 (hors cahier v1.0) : chien de scène (quadrupède), virtuel puis réel
-    {"id": "O-14", "etat": E, "code": "web/chien ; bridge/chien ; web/drone/salle.json (bloc sol)", "test": "tests/test_chien.py",
+    {"id": "O-14", "etat": E, "code": "web/chien ; bridge/chien ; web/drone/salle.json (bloc sol)", "test": "tests/test_chien.py ; tests/test_commandes.py",
      "reste": "Relevé du sol (surfaces, escaliers, décor), autorisation du lieu et assurance, analyse de risques ; "
               "nœud ROS de postures côté robot ; premier essai réel consigné avec observateur ; allures validées par juges"},
 ]

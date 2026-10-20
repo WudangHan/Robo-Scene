@@ -165,6 +165,16 @@ export class TheatreChien extends Theatre {
 
   couleurYeux(c) { for (const o of this.chien.userData.yeux) { o.material.color.set(c); o.material.emissive.set(c); } }
 
+  /* Glissement du chien : point du sol sous la souris (hauteur du sol praticable fournie par la page). */
+  pointGlisse(e) { const p = this.pointSol(e); return p; }
+
+  montrerMarqueur(p, ok) {
+    const m = this.marqueur, u = m.userData;
+    u.mat.color.set(ok ? "#4cc38a" : "#ff5d5d");
+    m.position.set(p[0], (this.hauteurSol ? this.hauteurSol(p[0], p[2]) ?? p[1] : p[1]) + 0.02, p[2]); m.visible = true;
+    u.tige.scale.y = 0.5; u.tige.position.y = 0.25;
+  }
+
   /* Caméra de tête : à l'objectif, dans l'axe du museau. */
   majCameraDrone() {
     const o = this.chien.userData.objectif, c = this.camDrone;
