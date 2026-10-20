@@ -48,6 +48,19 @@
 <main>
 <!-- ═════════════ FORMATION ═════════════ -->
 <section class="onglet" id="o-formation">
+  <div class="panneau" id="d-panneau">
+    <h2>Voix de la direction d'exercices <small>six profils, voix humaines</small></h2>
+    <div id="d-profils" class="voix-profils" role="radiogroup" aria-label="Profil de voix de la personne qui dirige les exercices"></div>
+    <div class="ligne voix-reglages">
+      <label>Voix du système pour <b id="d-nom"></b> <select id="d-voix"></select></label>
+      <label class="case" title="N'utiliser que des voix exécutées sur cet ordinateur : aucun envoi du texte des consignes"><input type="checkbox" id="d-locales"> Voix locales seulement</label>
+      <label class="case" title="Tempo et pauses propres au profil, légères variations d'une phrase à l'autre, temps de respiration après les consignes de souffle"><input type="checkbox" id="d-humain" checked> Prosodie humanisée</label>
+      <button id="d-ecouter" class="primaire">Écouter le profil choisi</button>
+      <button id="d-taire">Silence</button>
+    </div>
+    <p id="d-conseil" class="petit"></p>
+    <p class="petit source">Voix de synthèse du navigateur, divulguée comme telle ; les six profils sont des personnages fictifs et n'imitent aucune personne réelle. La voix de la direction reste distincte de celle du partenaire : elle n'est jamais confiée au robot virtuel ni à la voie tonale.</p>
+  </div>
   <div class="cols3">
     <div class="panneau">
       <h2>Livret d'exercices <small id="livret-source"></small></h2>
@@ -279,6 +292,7 @@
 
 <script src="/static/i18n.js"></script>
 <script src="/static/pont.js"></script>
+<script src="/static/voix-direction.js"></script>
 <script src="/static/partenaire.js"></script>
 </body>
 </html>

@@ -91,3 +91,22 @@ table.res th { color: var(--doux); font-weight: 500; }
 #toast.info { background: #16261e; border-color: #2f7d58; color: #c9f2dc; }
 main a, .plan a { color: var(--info); }
 .plan a:hover { color: var(--accent); }
+
+/* Voix de la direction d'exercices */
+.voix-profils { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 10px; }
+@media (max-width: 1100px) { .voix-profils { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .voix-profils { grid-template-columns: 1fr; } }
+.voix-carte { position: relative; display: grid; gap: 4px; padding: 9px 10px 9px 32px; border: 1px solid var(--bord); border-radius: 10px; background: #161a22; cursor: pointer; }
+.voix-carte input[type=radio] { position: absolute; left: 10px; top: 12px; accent-color: var(--accent); }
+.voix-carte:hover { background: #1c212b; }
+.voix-carte.choisie, .voix-carte:has(input:checked) { border-color: var(--accent); background: #221f15; }
+.voix-carte:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.voix-nom { font-weight: 600; color: var(--texte); }
+.voix-role { font-weight: 400; color: var(--accent); font-size: 12px; margin-left: 4px; }
+.voix-desc { font-size: 12px; color: var(--doux); }
+.voix-sys { font: 11px var(--mono); color: var(--info); overflow-wrap: anywhere; }
+.voix-carte button { justify-self: start; padding: 3px 8px; font-size: 12px; }
+.voix-reglages { flex-wrap: wrap; align-items: center; gap: 10px; }
+.voix-reglages label { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; max-width: 100%; }
+.voix-reglages select { max-width: min(360px, 100%); min-width: 0; }
+@media (max-width: 760px) { .voix-reglages label:first-child, .voix-reglages select { width: 100%; max-width: 100%; } }

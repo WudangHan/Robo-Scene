@@ -193,25 +193,29 @@ const Voix = {
     if (this.audio) { try { this.audio.close(); } catch (e) {} this.audio = null; }
   },
   /* rendu : {parler, debit, hauteur, volume, segments[{texte, pause_apres_ms}], duree_estimee_ms} */
-  async dire(rendu, { indexVoix = 0, tonale = false, volume = null, variation = null, nom = null } = {}) {
+  /* direction : voix humaine de la direction d'exercices, jamais confiée au robot virtuel ni à la voie tonale ;
+     voixObjet : voix du système imposée ; segments[].debit et segments[].hauteur : prosodie phrase par phrase. */
+  async dire(rendu, { indexVoix = 0, tonale = false, volume = null, variation = null, nom = null, direction = false, voixObjet = null } = {}) {
     const j = ++this.jeton;
-    if (!tonale && Avatar.actif()) { await Avatar.dire(rendu, { volume, variation, nom }); return; }   // le robot virtuel parle
+    if (direction) tonale = false;
+    if (!tonale && !direction && Avatar.actif()) { await Avatar.dire(rendu, { volume, variation, nom }); return; }   // le robot virtuel parle
     if (!rendu.parler) { await attendre(rendu.duree_estimee_ms); return; }     // film muet : le texte s'affiche, le corps joue
     if (tonale) return this.tonale(rendu, j);
-    const dispo = "speechSynthesis" in window && this.voix.length;
+    const dispo = "speechSynthesis" in window && (this.voix.length || voixObjet);
     for (const seg of rendu.segments) {
       if (j !== this.jeton) return;
       if (dispo) {
         await new Promise((fin) => {
           const u = new SpeechSynthesisUtterance(seg.texte);
-          u.lang = "fr-CA"; const v = this.pour(indexVoix); if (v) u.voice = v;
-          u.rate = rendu.debit; u.pitch = rendu.hauteur; u.volume = volume ?? rendu.volume;
-          const garde = setTimeout(fin, 1500 + seg.texte.length * 120 / rendu.debit);
+          const v = voixObjet || this.pour(indexVoix); u.lang = (v && v.lang) || "fr-CA"; if (v) u.voice = v;
+          const debit = seg.debit ?? rendu.debit;
+          u.rate = debit; u.pitch = seg.hauteur ?? rendu.hauteur; u.volume = volume ?? rendu.volume;
+          const garde = setTimeout(fin, 1500 + seg.texte.length * 120 / debit);
           u.onend = u.onerror = () => { clearTimeout(garde); fin(); };
           speechSynthesis.speak(u);
         });
       } else {
-        await attendre(Math.max(300, seg.texte.split(/\s+/).length * 330 / rendu.debit));   // repli : temps estimé
+        await attendre(Math.max(300, seg.texte.split(/\s+/).length * 330 / (seg.debit ?? rendu.debit)));   // repli : temps estimé
       }
       if (seg.pause_apres_ms) await attendre(seg.pause_apres_ms);
     }
@@ -246,6 +250,79 @@ const Voix = {
   },
 };
 Voix.charger();
+
+/* ══════════ Voix de la direction d'exercices : six profils humains (web/voix-direction.js) ══════════ */
+const Direction = {
+  CLE: "robo-scene-voix-direction",
+  reglages: { profil: VoixDirection.DEFAUT, imposees: {}, localesSeulement: false, humaniser: true },
+  toutes: [], attribution: {},
+  init() {
+    try { Object.assign(this.reglages, JSON.parse(localStorage.getItem(this.CLE) || "{}")); } catch (e) {}
+    if (!VoixDirection.PROFILS.some((p) => p.id === this.reglages.profil)) this.reglages.profil = VoixDirection.DEFAUT;
+    $("#d-locales").checked = !!this.reglages.localesSeulement;
+    $("#d-humain").checked = this.reglages.humaniser !== false;
+    $("#d-locales").onchange = (e) => { this.reglages.localesSeulement = e.target.checked; this.sauver(); this.lireVoix(); };
+    $("#d-humain").onchange = (e) => { this.reglages.humaniser = e.target.checked; this.sauver(); };
+    $("#d-voix").onchange = (e) => {
+      if (e.target.value) this.reglages.imposees[this.reglages.profil] = e.target.value; else delete this.reglages.imposees[this.reglages.profil];
+      this.sauver(); this.lireVoix();
+    };
+    $("#d-ecouter").onclick = () => this.ecouter(this.reglages.profil);
+    $("#d-taire").onclick = () => Voix.annuler();
+    if (!("speechSynthesis" in window)) { $("#d-conseil").textContent = "Ce navigateur n'offre pas de synthèse vocale : les consignes s'afficheront sans être dites."; }
+    else { this.lireVoix(); try { speechSynthesis.addEventListener("voiceschanged", () => this.lireVoix()); } catch (e) {} setTimeout(() => this.lireVoix(), 800); }
+    this.afficher();
+  },
+  sauver() { try { localStorage.setItem(this.CLE, JSON.stringify(this.reglages)); } catch (e) {} },
+  lireVoix() {
+    try { this.toutes = speechSynthesis.getVoices() || []; } catch (e) { this.toutes = []; }
+    this.attribution = VoixDirection.attribuer(this.toutes, this.reglages);
+    this.afficher();
+  },
+  profil(id = this.reglages.profil) { return VoixDirection.PROFILS.find((p) => p.id === id); },
+  etiquette(v) {
+    if (!v) return "aucune voix française détectée";
+    const q = VoixDirection.qualite(v);
+    return `${v.name} — ${q.libelle}${VoixDirection.locale(v) ? "" : " · distante"}`;
+  },
+  choisir(id) { this.reglages.profil = id; this.sauver(); this.afficher(); },
+  afficher() {
+    const cour = this.reglages.profil;
+    $("#d-profils").innerHTML = VoixDirection.PROFILS.map((p) => {
+      const v = this.attribution[p.id];
+      return `<label class="voix-carte${p.id === cour ? " choisie" : ""}">
+        <input type="radio" name="d-profil" value="${p.id}"${p.id === cour ? " checked" : ""}>
+        <span class="voix-nom">${echapper(p.nom)} <span class="voix-role">${echapper(p.role)}</span></span>
+        <span class="voix-desc">${echapper(p.description)}</span>
+        <span class="voix-sys">${echapper(this.etiquette(v))}</span>
+        <button type="button" class="discret" data-ecoute="${p.id}" aria-label="Écouter ${echapper(p.nom)}">▶ Écouter</button>
+      </label>`;
+    }).join("");
+    $$("#d-profils input[name=d-profil]").forEach((r) => (r.onchange = () => this.choisir(r.value)));
+    $$("#d-profils [data-ecoute]").forEach((b) => (b.onclick = (e) => { e.preventDefault(); this.ecouter(b.dataset.ecoute); }));
+    const p = this.profil();
+    $("#d-nom").textContent = p.nom;
+    const imp = this.reglages.imposees[p.id] || "";
+    const liste = VoixDirection.classer(p, this.toutes, this.reglages);
+    $("#d-voix").innerHTML = `<option value="">automatique (la plus naturelle disponible)</option>` +
+      liste.map((v) => `<option value="${echapper(v.name)}"${v.name === imp ? " selected" : ""}>${echapper(this.etiquette(v))}</option>`).join("");
+    if (!("speechSynthesis" in window)) return;
+    const meilleur = Math.max(-1, ...Object.values(this.attribution).filter(Boolean).map((v) => VoixDirection.qualite(v).rang));
+    const distinctes = new Set(Object.values(this.attribution).filter(Boolean).map((v) => v.name)).size;
+    $("#d-conseil").textContent = !this.toutes.some((v) => /^fr/i.test(v.lang || "")) ? "Aucune voix française dans ce navigateur : installez-en une dans le système, puis rechargez la page."
+      : meilleur < 3 ? `${distinctes} voix distincte(s) pour six profils. Pour des voix plus humaines, installez des voix françaises « Premium » ou « Améliorée » (macOS : Réglages Système › Accessibilité › Contenu énoncé › Voix du système › Gérer les voix), puis rechargez la page ; Microsoft Edge propose aussi des voix neuronales en ligne.`
+      : `${distinctes} voix distincte(s) pour six profils ; voix de qualité naturelle détectée.`;
+  },
+  rendu(texte, id = this.reglages.profil, final = true) { return VoixDirection.rendre(texte, id, { humaniser: this.reglages.humaniser !== false, final }); },
+  async dire(texte, { final = true } = {}) {
+    await Voix.dire(this.rendu(texte, this.reglages.profil, final), { direction: true, voixObjet: this.attribution[this.reglages.profil] || null });
+  },
+  ecouter(id) {
+    Voix.annuler();
+    Voix.dire(this.rendu(VoixDirection.echantillon(id), id), { direction: true, voixObjet: this.attribution[id] || null });
+  },
+};
+Direction.init();
 
 /* ══════════ Écoute : détection d'activité vocale locale ══════════ */
 const Micro = {
@@ -402,7 +479,7 @@ const Formation = {
     for (const [i, s] of e.etapes.entries()) {
       if (this.guide !== jeton) return;
       $$("#f-fiche .etape").forEach((x) => x.classList.toggle("active", +x.dataset.i === i));
-      await Voix.dire(rendreSimple(s.texte), { indexVoix: 0 });
+      await Direction.dire(s.texte);
       const ms = (s.minutes || 0) * 60000, t0 = performance.now(), cell = $(`#f-fiche .etape[data-i="${i}"] .minuteur`);
       while (ms && performance.now() - t0 < ms) {
         if (this.guide !== jeton) return;
@@ -411,7 +488,8 @@ const Formation = {
         await attendre(250);
       }
     }
-    await Voix.dire(rendreSimple("Fin de l'exercice. Prenez un temps pour noter ce que vous avez observé."));
+    if (this.guide !== jeton) return;
+    await Direction.dire("Fin de l'exercice. Prenez un temps pour noter ce que vous avez observé.");
   },
   arreter() { this.guide = null; Voix.annuler(); envoyer("p_accompagner", { mode: "stop" }); },
 };
