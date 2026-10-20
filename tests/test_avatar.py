@@ -436,3 +436,22 @@ def test_contact_main_visage(tmp_path):
     assert temoin < -0.13                                  # sans correction : au niveau du cou (> 13 cm sous le centre de la tête)
     for cle, ecart in out.items():
         assert ecart < 0.02, (cle, ecart)                  # main posée sur le repère visé (± 2 cm), tête levée ou non
+
+
+# ── Ce que voit le robot : caméra des yeux et caméra réelle (comme le drone et le chien) ──
+def test_vue_du_robot_page_et_scene():
+    html = (WEB / "avatar.html").read_text(encoding="utf-8")
+    for ident in ("pip", "cam-virtuelle", "cam-reelle", "cam-surimp", "pip-taille", "pip-masquer", "pip-visible",
+                  "suivre-regard", "zoom", "b-photo", "b-rec", "cam-liste", "b-capture", "whep-url", "b-whep", "b-cam-fermer"):
+        assert f'id="{ident}"' in html, ident
+    assert 'data-onglet="camera"' in html and 'id="ong-camera"' in html
+    assert "jamais enregistré" in html                                   # garde-fou G-06 affiché
+    scene = (WEB / "avatar" / "scene.js").read_text(encoding="utf-8")
+    # même interface que les théâtres du drone et du chien, pour réutiliser web/drone/camera4k.js
+    assert "rendreCamera(rendu)" in scene and "majCameraYeux()" in scene and "salleDansLeChamp()" in scene
+    assert "h.layers.set(1)" in scene and "this.camera.layers.enable(1)" in scene   # halos d'édition hors de la vue du robot
+    app = (WEB / "avatar" / "app.js").read_text(encoding="utf-8")
+    assert 'from "../drone/camera4k.js"' in app and "vueRobot?.rendre()" in app
+    # le flux réel n'est jamais enregistré : seule la caméra virtuelle a un enregistreur
+    bloc = app[app.index("vueRobot = (() => {"):app.index("window.ROBOT_VIRTUEL.vue")]
+    assert "MediaRecorder" not in bloc and "cam.demarrerEnregistrement" in bloc and "flux.demarrer" not in bloc

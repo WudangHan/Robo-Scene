@@ -1,4 +1,7 @@
-/* Robo-Scène — plateau, éclairage, caméra et manipulation directe du robot virtuel. */
+/* Robo-Scène — plateau, éclairage, caméra et manipulation directe du robot virtuel.
+   Caméra des yeux : ce que voit le robot, rendue depuis le visage (entre les yeux, devant le nez), dans l'axe de la tête
+   ou du regard ; même interface que la caméra embarquée du drone et la caméra de tête du chien (rendreCamera), pour
+   réutiliser web/drone/camera4k.js (aperçu, image 4K, enregistrement de la vue virtuelle). */
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/OrbitControls.js";
 
@@ -47,6 +50,48 @@ function etiquette(texte) {
   m.rotation.x = -Math.PI / 2; return m;
 }
 
+/* Salle devant la scène : gradins en pente, allée centrale, sorties, fenêtre de régie. Peu coûteuse (instances, aucune
+   ombre) ; elle commence à 5,2 m du centre du plateau pour rester hors des cadrages prédéfinis, et donne à la caméra des
+   yeux ce que verrait un robot tourné vers le public. Les places sont vides : aucune personne n'est représentée. */
+function salle(s) {
+  const g = new THREE.Group(); g.name = "salle";
+  const rangs = 12, z0 = 5.2, pas = 0.9, pente = 0.2, largeur = 0.55;
+  const xs = []; for (let x = -5.5; x <= 5.51; x += largeur) if (Math.abs(x) > 0.65) xs.push(x);
+  const matSiege = new THREE.MeshStandardMaterial({ color: "#5a1420", roughness: 0.95 });
+  const matGradin = new THREE.MeshStandardMaterial({ color: "#1a1512", roughness: 1 });
+  const assise = new THREE.InstancedMesh(new THREE.BoxGeometry(0.48, 0.12, 0.46), matSiege, rangs * xs.length);
+  const dossier = new THREE.InstancedMesh(new THREE.BoxGeometry(0.48, 0.55, 0.08), matSiege, rangs * xs.length);
+  const m = new THREE.Matrix4(); let i = 0;
+  for (let r = 0; r < rangs; r++) {
+    const z = z0 + r * pas, y = r * pente;
+    const marche = new THREE.Mesh(new THREE.BoxGeometry(12.5, y + 0.02 || 0.02, pas), matGradin);
+    marche.position.set(0, (y + 0.02) / 2 - 0.25, z); g.add(marche);
+    for (const x of xs) {
+      m.makeTranslation(x, y - 0.25 + 0.45, z - 0.05); assise.setMatrixAt(i, m);
+      m.makeTranslation(x, y - 0.25 + 0.75, z + 0.24); dossier.setMatrixAt(i, m); i++;
+    }
+  }
+  g.add(assise, dossier);
+  const sol = new THREE.Mesh(new THREE.PlaneGeometry(14, 3), matGradin); sol.rotation.x = -Math.PI / 2; sol.position.set(0, -0.5, 3.9); g.add(sol);
+  const fond = z0 + rangs * pas + 0.4;
+  const mur = new THREE.Mesh(new THREE.PlaneGeometry(14, 6), new THREE.MeshStandardMaterial({ color: "#14100e", roughness: 1 }));
+  mur.position.set(0, 2.2, fond); mur.rotation.y = Math.PI; g.add(mur);
+  for (const sx of [-1, 1]) {
+    const lat = new THREE.Mesh(new THREE.PlaneGeometry(fond - 2.6, 6), mur.material);
+    lat.position.set(sx * 6.4, 2.2, (fond + 2.6) / 2); lat.rotation.y = -sx * Math.PI / 2; g.add(lat);
+  }
+  const lumineux = (w, h, c) => new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: c, toneMapped: false }));
+  const regie = lumineux(2.4, 0.6, "#3a4a66"); regie.position.set(0, rangs * pente + 1.7, fond - 0.01); regie.rotation.y = Math.PI; g.add(regie);
+  for (const [x, z] of [[-6.38, 4.6], [6.38, 4.6], [-3.5, fond - 0.02], [3.5, fond - 0.02]]) {
+    const e = lumineux(0.42, 0.16, "#2fd36b");
+    e.position.set(x, z === 4.6 ? 2.3 : rangs * pente + 2.1, z);
+    e.rotation.y = z === 4.6 ? -Math.sign(x) * Math.PI / 2 : Math.PI; g.add(e);
+  }
+  for (const z of [z0 + 2, z0 + 7.5]) { const l = new THREE.PointLight("#ffd9a8", 14, 12, 1.4); l.position.set(0, 4.4, z); g.add(l); }   // éclairage de service
+  s.add(g);
+  return g;
+}
+
 export class Scene {
   constructor(conteneur, humanoide, animateur) {
     this.h = humanoide; this.anim = animateur; this.conteneur = conteneur;
@@ -62,6 +107,9 @@ export class Scene {
     s.fog = new THREE.Fog("#07080b", 9, 18);
     this.camera = new THREE.PerspectiveCamera(32, 1, 0.05, 60);
     this.camera.position.set(0, 1.45, 4.2);
+    this.camera.layers.enable(1);                          // couche 1 : repères d'édition (halos), absents de la caméra des yeux
+    this.camYeux = new THREE.PerspectiveCamera(50, 16 / 9, 0.03, 60);
+    this.champH = 78; this.zoom = 1; this.suivreRegard = false;
     this.controles = new OrbitControls(this.camera, r.domElement);
     this.controles.target.set(0, 1.05, 0); this.controles.enableDamping = true; this.controles.dampingFactor = 0.08;
     this.controles.minDistance = 0.5; this.controles.maxDistance = 12; this.controles.maxPolarAngle = Math.PI * 0.52;
@@ -73,6 +121,7 @@ export class Scene {
     const rideau = new THREE.Mesh(new THREE.PlaneGeometry(9, 5), new THREE.MeshStandardMaterial({ map: textureRideau(), roughness: 1 }));
     rideau.position.set(0, 2.5, -3); rideau.receiveShadow = true; s.add(rideau);
     for (const [t, x, z] of [["COUR", 2.4, 1.7], ["JARDIN", -2.4, 1.7], ["LOINTAIN", 0, -2.4]]) { const e = etiquette(t); e.position.set(x, 0.003, z); s.add(e); }
+    this.salle = salle(s);
     // éclairage
     this.hemi = new THREE.HemisphereLight("#b9c3d6", "#2a2018", 0.42); s.add(this.hemi);
     this.face = new THREE.SpotLight("#fff1dc", 26, 14, 0.5, 0.55, 1.2); this.face.position.set(1.2, 4.8, 4.2); this.face.castShadow = true;
@@ -169,7 +218,7 @@ export class Scene {
     this.halos = [];
     this.selection = zone;
     if (zone) for (const m of this.h.zones) if (m.userData.zone === zone) {
-      const h = new THREE.Mesh(m.geometry, this.matHalo); h.scale.setScalar(1.07); h.renderOrder = 2; h.raycast = () => {};
+      const h = new THREE.Mesh(m.geometry, this.matHalo); h.scale.setScalar(1.07); h.renderOrder = 2; h.raycast = () => {}; h.layers.set(1);
       m.add(h); this.halos.push(h);
     }
     this.surSelection?.(zone);
@@ -203,4 +252,38 @@ export class Scene {
   }
   relache() { if (this.glisse) { this.glisse = null; this.controles.enabled = true; this.surFinManipulation?.(); } }
   capture() { return this.rendu.domElement.toDataURL("image/png"); }
+
+  /* ── Caméra des yeux ─────────────────────────────────── */
+  /* Position entre les yeux, juste devant le nez (le visage n'apparaît pas dans l'image) ; orientation de la tête,
+     roulis compris (l'horizon penche quand la tête s'incline), ou du regard si suivreRegard ; champ selon le zoom. */
+  majCameraYeux() {
+    const g = this.h.visage.g, c = this.camYeux;
+    g.updateWorldMatrix(true, false);
+    const pos = new THREE.Vector3(0, 0.012, 0.118).applyMatrix4(g.matrixWorld);
+    const q = new THREE.Quaternion(); g.getWorldQuaternion(q);
+    const dir = new THREE.Vector3(0, 0, 1);
+    if (this.suivreRegard) {
+      const r = this.h.visage.yeux[0].pivot.rotation;          // rotation.x = -tangage du regard, rotation.y = lacet
+      dir.applyEuler(new THREE.Euler(r.x, r.y, 0, "YXZ"));
+    }
+    dir.applyQuaternion(q);
+    c.position.copy(pos); c.up.set(0, 1, 0).applyQuaternion(q);
+    c.lookAt(pos.clone().add(dir));
+    const h = THREE.MathUtils.degToRad(this.champH) / this.zoom;
+    c.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(h / 2) / c.aspect)); c.updateProjectionMatrix();
+    c.updateMatrixWorld();
+  }
+  rendreCamera(rendu) {
+    this.majCameraYeux();
+    const f = this.scene.fog, avant = [f.near, f.far];
+    f.near = 16; f.far = 34;                               // le brouillard du cadrage de scène masquerait le fond de la salle
+    rendu.render(this.scene, this.camYeux);
+    [f.near, f.far] = avant;
+  }
+  /* La salle (au-delà du nez de scène, z > 2,6 m) est-elle dans le champ ? Avertissement pour la caméra réelle (G-06). */
+  salleDansLeChamp() {
+    const fr = new THREE.Frustum(), m = new THREE.Matrix4();
+    m.multiplyMatrices(this.camYeux.projectionMatrix, this.camYeux.matrixWorldInverse); fr.setFromProjectionMatrix(m);
+    return fr.intersectsBox(new THREE.Box3(new THREE.Vector3(-7, 0, 2.7), new THREE.Vector3(7, 2.2, 16)));
+  }
 }

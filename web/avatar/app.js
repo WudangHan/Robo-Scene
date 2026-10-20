@@ -9,6 +9,7 @@ import { Parole, estEcho } from "./parole.js";
 import { Imitation, lireEmotion } from "./imitation.js";
 import { EMOTIONS, prosodie } from "./emotions.js";
 import { interpreter, valider, EXEMPLES } from "./directives.js";
+import { CameraVirtuelle, FluxReel, dessinerCadre } from "../drone/camera4k.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -25,6 +26,7 @@ const parole = new Parole();
 const ditsRecemment = [];          // {texte, t} : phrases dites par le robot depuis 15 s (anti-écho de la dictée)
 let dicteeRef = null;              // renseigné plus bas (Dictee), avant toute parole
 const imitation = new Imitation();
+let vueRobot = null;               // ce que voit le robot (caméra des yeux et caméra réelle), défini plus bas
 humain.appliquerApparence(lireLS("robo-scene-avatar-apparence", {}));
 
 /* ══════════ Exposition minimale (tests et console de développement) ══════════ */
@@ -45,6 +47,7 @@ scene.avantImage = (dt, t) => {
   } else anim.imitation = null;
   anim.maj(dt, t, bouche);
   jumeau.maj();
+  vueRobot?.rendre();
 };
 let compteurLecture = 0;
 scene.demarrer();
@@ -684,6 +687,88 @@ function majLiaison() {
   $("#st-liaison").className = "pastille " + (actif ? "ok" : "neutre");
 }
 setInterval(majLiaison, 3000);
+
+/* ══════════ Ce que voit le robot : caméra des yeux (virtuelle) et caméra du robot réel ══════════
+   Même fonctionnement que la caméra embarquée du drone et la caméra de tête du chien (web/drone/camera4k.js).
+   Garde-fou G-06 : le flux réel est affiché seulement, jamais enregistré ; seule la vue virtuelle peut l'être. */
+vueRobot = (() => {
+  const cam = new CameraVirtuelle($("#cam-virtuelle"), scene);
+  const flux = new FluxReel($("#cam-reelle"));
+  const nb = (x) => x.toLocaleString("fr-CA", { maximumFractionDigits: 1 });
+  const fichier = (blob, nom) => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nom; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
+  const horodatage = () => new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  let source = "virtuelle", image = 0;
+  const R = lireLS("robo-scene-avatar-camera", {});
+  const sauver = () => ecrireLS("robo-scene-avatar-camera", { visible: $("#pip-visible").checked, regard: $("#suivre-regard").checked, tiers: $("#tiers").checked, whep: $("#whep-url").value.trim() });
+
+  const visible = (v) => { $("#pip").hidden = !v; $("#pip-visible").checked = v; sauver(); };
+  $("#pip-visible").checked = R.visible !== false; $("#pip").hidden = R.visible === false;
+  $("#pip-visible").onchange = (e) => visible(e.target.checked);
+  $("#pip-masquer").onclick = () => visible(false);
+  $("#pip-taille").onclick = () => $("#pip").classList.toggle("grand");
+  $("#suivre-regard").checked = !!R.regard; scene.suivreRegard = !!R.regard;
+  $("#suivre-regard").onchange = (e) => { scene.suivreRegard = e.target.checked; sauver(); };
+  $("#tiers").checked = R.tiers !== false; $("#tiers").onchange = sauver;
+  $("#whep-url").value = R.whep || "";
+  $("#zoom").oninput = (e) => { scene.zoom = +e.target.value; $("#zoom-val").textContent = `×${nb(scene.zoom)}`; };
+  $("#definition").onchange = () => { const [w, h] = $("#definition").value.split("x").map(Number); cam.regler(w, h); };
+
+  function majSource() {
+    source = $("input[name=source]:checked").value;
+    $("#pip").classList.toggle("superposee", source === "superposee");
+    $("#cam-reelle").hidden = source === "virtuelle"; $("#cam-virtuelle").hidden = source === "reelle";
+    $("#pip-titre").textContent = { virtuelle: "Caméra des yeux (virtuelle)", reelle: "Caméra du robot réel", superposee: "Réelle + virtuelle superposées" }[source];
+  }
+  $$("input[name=source]").forEach((r) => (r.onchange = majSource));
+  const choisir = (v) => { $(`input[name=source][value=${v}]`).checked = true; majSource(); };
+
+  $("#b-photo").onclick = async () => { const b = await cam.photo4K(); if (b) fichier(b, `vue_robot_virtuel_3840x2160_${horodatage()}.png`); };
+  $("#b-rec").onclick = async () => {
+    if (cam.enregistre) {
+      const b = await cam.arreterEnregistrement(); $("#b-rec").textContent = "● Enregistrer"; $("#b-rec").setAttribute("aria-pressed", "false");
+      if (b) fichier(b, `vue_robot_virtuel_${cam.definition.join("x")}_${horodatage()}.webm`);
+    } else {
+      try { cam.demarrerEnregistrement(30); $("#b-rec").textContent = "■ Arrêter"; $("#b-rec").setAttribute("aria-pressed", "true"); }
+      catch (e) { $("#cam-info").textContent = e.message; }
+    }
+  };
+  async function listerCameras() {
+    try {
+      const l = await FluxReel.cameras();
+      $("#cam-liste").innerHTML = `<option value="">Caméra USB du robot / carte de capture…</option>` + l.map((d, i) => `<option value="${echapper(d.deviceId)}">${echapper(d.label || `Source vidéo ${i + 1}`)}</option>`).join("");
+    } catch (e) { /* aucune source */ }
+  }
+  const info = (r) => { $("#cam-info").textContent = r.largeur ? `Flux réel : ${r.largeur} × ${r.hauteur}${r.ips ? ` à ${r.ips} i/s` : ""}${r.nom ? ` · ${r.nom}` : ""}` : "Flux ouvert, en attente d'images…"; };
+  $("#b-capture").onclick = async () => { try { info(await flux.ouvrirCapture($("#cam-liste").value || undefined)); choisir("reelle"); visible(true); listerCameras(); } catch (e) { $("#cam-info").textContent = e.message; } };
+  $("#b-whep").onclick = async () => {
+    const url = $("#whep-url").value.trim(); if (!url) return; sauver();
+    try { $("#cam-info").textContent = "Connexion WHEP…"; info(await flux.ouvrirWHEP(url)); choisir("reelle"); visible(true); } catch (e) { $("#cam-info").textContent = e.message; }
+  };
+  $("#b-cam-fermer").onclick = async () => { await flux.fermer(); $("#cam-info").textContent = "—"; choisir("virtuelle"); };
+  listerCameras(); majSource();
+
+  return {
+    cam, flux,
+    rendre() {
+      if ($("#pip").hidden || document.body.classList.contains("mode-scene")) { if (!cam.enregistre) return; }
+      image++;
+      if (source !== "reelle" && (image % 2 === 0 || cam.enregistre)) cam.rendre(); else if (source === "reelle") scene.majCameraYeux();
+      if (image % 6) return;
+      const c = $("#cam-surimp"), r = c.getBoundingClientRect(), k = Math.min(2, devicePixelRatio || 1);
+      if (!r.width) return;
+      if (c.width !== Math.round(r.width * k)) { c.width = Math.round(r.width * k); c.height = Math.round(r.height * k); }
+      const reel = source !== "virtuelle" && flux.source, rg = reel ? flux.reglages() : null;
+      const enr = cam.enregistre ? `REC ${Math.floor((performance.now() - cam.debutEnr) / 60000)}:${String(Math.floor(((performance.now() - cam.debutEnr) / 1000) % 60)).padStart(2, "0")}` : "";
+      dessinerCadre(c.getContext("2d"), c.width, c.height, {
+        tiers: $("#tiers").checked, rec: source === "reelle" ? "" : enr,
+        texte: reel ? `RÉEL · ${rg.largeur} × ${rg.hauteur}${rg.ips ? ` · ${rg.ips} i/s` : ""} · affichage seul`
+          : `VIRTUEL · ${scene.suivreRegard ? "regard" : "tête"} · aperçu ${cam.definition.join(" × ")} · ×${nb(scene.zoom)}`,
+        alerte: reel && scene.salleDansLeChamp() ? "Salle dans le champ — aucune captation (G-06)" : "",
+      });
+    },
+  };
+})();
+window.ROBOT_VIRTUEL.vue = vueRobot;
 
 /* Aide : premières directives */
 journal({ html: "Robot virtuel prêt. Donnez une directive écrite ou vocale, ou faites glisser une partie du corps." });

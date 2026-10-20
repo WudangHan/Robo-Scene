@@ -43,6 +43,15 @@
       <button id="btn-fenetre" title="Ouvrir la scène seule dans une fenêtre (second écran, projecteur)">Fenêtre</button>
       <button id="btn-scene" title="Plein écran sans panneaux (Échap pour sortir)">Mode scène</button>
     </div>
+    <figure class="pip" id="pip" aria-label="Ce que voit le robot">
+      <div class="pip-cadre">
+        <canvas id="cam-virtuelle" width="1280" height="720"></canvas>
+        <video id="cam-reelle" playsinline muted hidden></video>
+        <canvas id="cam-surimp"></canvas>
+      </div>
+      <figcaption><span id="pip-titre">Caméra des yeux (virtuelle)</span>
+        <span><button id="pip-taille" class="discret" title="Agrandir ou réduire la vue de la caméra">⤢</button><button id="pip-masquer" class="discret" title="Masquer la vue (onglet « Caméra » pour la rouvrir)">✕</button></span></figcaption>
+    </figure>
     <div class="etat-scene"><span id="replique-perso"></span><span id="etat-emotion">neutre</span></div>
     <p id="sous-titre" hidden></p>
   </section>
@@ -54,6 +63,7 @@
       <button role="tab" data-onglet="corps">Corps</button>
       <button role="tab" data-onglet="apparence">Apparence</button>
       <button role="tab" data-onglet="imitation">Imitation</button>
+      <button role="tab" data-onglet="camera">Caméra</button>
       <button role="tab" data-onglet="liaisons">Liaisons</button>
     </div>
 
@@ -183,6 +193,40 @@
     </div>
 
     <!-- ── Liaisons ── -->
+    <!-- ── Caméra : ce que voit le robot ── -->
+    <div class="panneau-onglet" id="ong-camera" role="tabpanel" hidden>
+      <label class="ligne petit"><input type="checkbox" id="pip-visible" checked> Afficher en incrustation ce que voit le robot</label>
+      <h3>Source affichée</h3>
+      <div class="ligne">
+        <label><input type="radio" name="source" value="virtuelle" checked> virtuelle</label>
+        <label><input type="radio" name="source" value="reelle"> réelle</label>
+        <label><input type="radio" name="source" value="superposee"> superposée (calage du jumeau)</label>
+      </div>
+      <h3>Caméra des yeux</h3>
+      <div class="ligne petit"><label for="zoom">Zoom</label><input type="range" id="zoom" min="1" max="4" step="0.1" value="1"><output id="zoom-val">×1,0</output></div>
+      <div class="ligne petit">
+        <label><input type="checkbox" id="suivre-regard"> suivre le regard des yeux (sinon : axe de la tête)</label>
+        <label><input type="checkbox" id="tiers" checked> grille des tiers</label>
+      </div>
+      <div class="ligne petit">
+        <label for="definition">Aperçu</label>
+        <select id="definition"><option value="1280x720">1280 × 720</option><option value="1920x1080">1920 × 1080</option><option value="3840x2160">3840 × 2160 (exigeant)</option></select>
+      </div>
+      <h3>Caméra virtuelle</h3>
+      <div class="ligne"><button id="b-photo">Image 4K (3840 × 2160)</button><button id="b-rec" aria-pressed="false">● Enregistrer</button></div>
+      <h3>Caméra du robot réel</h3>
+      <div class="ligne">
+        <select id="cam-liste" aria-label="Caméra du robot ou carte de capture"><option value="">Caméra USB du robot / carte de capture…</option></select>
+        <button id="b-capture">Ouvrir la caméra</button>
+      </div>
+      <div class="ligne">
+        <input id="whep-url" placeholder="http://127.0.0.1:8889/robot/whep" aria-label="Adresse WHEP">
+        <button id="b-whep">Lire le flux WHEP</button><button id="b-cam-fermer">Fermer</button>
+      </div>
+      <p id="cam-info" class="petit">—</p>
+      <div class="note petit">La vue virtuelle part d'entre les yeux et suit la tête du robot (roulis compris) ou, au choix, son regard. La caméra réelle se branche de deux façons : caméra USB du robot (ou carte de capture HDMI), vue comme une webcam, ou flux du robot (RTSP, SRT, ROS) relayé en WebRTC par MediaMTX et lu par WHEP. Le flux réel est <b>affiché seulement, jamais enregistré</b> (garde-fou G-06) ; un avertissement s'affiche quand la caméra du robot vise la salle.</div>
+    </div>
+
     <div class="panneau-onglet" id="ong-liaisons" role="tabpanel" hidden>
       <h3>Page Partenaire</h3>
       <label class="ligne petit"><input type="checkbox" id="liaison-partenaire" checked> Le robot virtuel donne la voix et le visage aux répliques du partenaire (répétition, variations, exercices) lorsque la page Partenaire est ouverte dans ce navigateur et que l'option « Robot virtuel » y est cochée.</label>
