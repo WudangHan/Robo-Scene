@@ -173,3 +173,16 @@ table.images td.vide { color: var(--doux); padding: 14px; }
 .bandeau-pont .petit { display: block; margin-top: 4px; opacity: .85; font-size: 12px; }
 .bandeau-simulation { background: #14222a; border-bottom-color: #2f6f8a; color: #d6eef7; }
 .liste-seq .seq.dynamique { border-color: #8a6d2c; }
+
+/* ── Dialogue parlé (robot, chien, drone) ── */
+.dialogue .dialogue-fil { max-height: 320px; font: 13px/1.5 var(--sans, system-ui); }
+.dialogue .dialogue-fil li { padding: 5px 0; }
+.dialogue .dialogue-fil li.humain b { color: var(--info); }
+.dialogue .dialogue-fil li.machine b { color: var(--accent); }
+.dialogue .dialogue-fil li.attente { opacity: .7; }
+.dialogue .dialogue-fil .moteur { color: var(--doux); font: 11px var(--mono); margin-left: 6px; }
+.dialogue .prop-dialogue { margin: 4px 0 2px 12px; padding: 6px 8px; border-left: 2px solid var(--accent); }
+.dialogue .prop-dialogue code { color: var(--info); }
+.dialogue .ignore { color: var(--alerte, #e66); }
+.dialogue select option.indispo { color: #888; }
+.dialogue .note { opacity: .8; }

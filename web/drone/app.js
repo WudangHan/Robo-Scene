@@ -7,7 +7,8 @@ import { compiler, CONDUITE_EXEMPLE } from "./conduite.js";
 import { point, verifier, verifierSegment } from "./geofence.js";
 import { CameraVirtuelle, FluxReel, UHD, dessinerCadre } from "./camera4k.js";
 import { flechesVersManche, pointRelatif } from "./commande.js";
-import { installerCommandes } from "./commandes_page.js";
+import { installerCommandes, decrire } from "./commandes_page.js";
+import { installerDialogue } from "../dialogue.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -438,6 +439,7 @@ function ouvrirPont() {
   pont.ws = ws;
   ws.onopen = () => {
     pont.ouvert = true; window.ROBO_PONT.ouvert(); journal("info", "Pont relié", "pont");
+    pont.dialogue?.pontOuvert();
     envoyer({ op: "drone_etat" }); envoyer({ op: "drone_interpretes", liste: interpretes });
     if (drone.mode !== "salle_vide") envoyer({ op: "drone_mode", mode: drone.mode, par: "" });
     else envoyer({ op: "drone_mode", mode: drone.mode, par: $("#salle-vide-par").value.trim() });
@@ -445,6 +447,7 @@ function ouvrirPont() {
   };
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (/^(ia_moteurs|ia_choix|dialogue|dialogue_refus|dialogue_oublier)$/.test(m.type)) { pont.dialogue?.recevoir(m); return; }
     if (m.type === "etat") return;           // télémétrie des robots (Console), sans objet ici
     if (m.type === "drone_etat") { pont.etat = m; majReel(); }
     else if (m.type === "drone_tel") { pont.tel = m; pont.telT = performance.now(); }
@@ -454,7 +457,7 @@ function ouvrirPont() {
     else if (m.type === "config") { if (pont.etat) { pont.etat.observateur = m.observateur; majReel(); } envoyer({ op: "drone_etat" }); }
   };
   ws.onclose = () => {
-    const etait = pont.ouvert; pont.ouvert = false; pont.etat = null; pont.tel = null; window.ROBO_PONT.ferme();
+    const etait = pont.ouvert; pont.ouvert = false; pont.etat = null; pont.tel = null; window.ROBO_PONT.ferme(); pont.dialogue?.pontFerme();
     if (etait) journal("avert", "Pont déconnecté", "pont");
     majReel(); setTimeout(ouvrirPont, 3000);
   };
@@ -582,6 +585,16 @@ const cmds = installerCommandes({
     return actions;
   },
 });
+
+/* ── Dialogue parlé avec une personne (moteur d'IA au choix, voix humaine) ── */
+pont.dialogue = installerDialogue({
+  conteneur: $("#dialogue"), domaine: "drone", nom: "le drone", profilDefaut: "claire",
+  envoyer: (m) => envoyer(m), reperes: () => Object.keys(salle.reperes), decrire, journal,
+  contexte: () => `${ETATS[drone.instantane().etat] || drone.instantane().etat}, altitude ${nb(drone.p[1])} m, mode « ${salle.modes[drone.mode].libelle} »${reelActif() ? ", drone réel relié" : ", drone virtuel"}`,
+  executerActions: (actions, libelle) => cmds.executerActions(actions, libelle),
+});
+cmds.dialogue = pont.dialogue;
+if (pont.ouvert) pont.dialogue.pontOuvert();
 
 /* ── Démarrage ───────────────────────────────────────────── */
 drone.mode = salle.modes[memo.lire("mode", "plateau")] ? memo.lire("mode", "plateau") : "plateau";

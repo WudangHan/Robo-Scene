@@ -23,10 +23,13 @@ export function decrire(a) {
 
 /* robot : "drone" | "chien" ; reperes : { nom: position } ; lancer(action) → false (refus : la file est vidée),
    { fin: () => booléen } (attendre), ou autre (action instantanée) ; preparer(actions) → actions (ex. décollage ajouté) ;
-   arreterTout() : arrêt ordinaire ; urgence() : ARRÊT ; journal(niveau, texte). */
+   arreterTout() : arrêt ordinaire ; urgence() : ARRÊT ; journal(niveau, texte).
+   Dialogue (facultatif, objet rendu par installerDialogue de ../dialogue.js, branché ensuite par cmds.dialogue = …) :
+   une phrase qui n'est pas une commande part à la conversation ; pendant que la machine parle, seuls « stop » et
+   « arrêt d'urgence » sont écoutés (le reste est l'écho de sa propre voix). */
 export function installerCommandes({ robot, reperes, lancer, preparer = (a) => a, arreterTout, urgence, journal }) {
   const $ = (s) => document.querySelector(s);
-  const file = []; let courante = null;
+  const file = []; let courante = null; let dialogue = null;
 
   function vider() { file.length = 0; courante = null; }
   function executerActions(actions, libelle) {
@@ -44,6 +47,7 @@ export function installerCommandes({ robot, reperes, lancer, preparer = (a) => a
     const qui = robot === "drone" ? "le drone" : "le chien";
     // une destination inexistante pour ce robot fait refuser toute la phrase : rien n'est exécuté à moitié
     if (r.absents?.length) { journal("refus", `${icone} « ${t} » refusée : repère inexistant pour ${qui} (« ${r.absents.join(" », « ")} »)`); return r; }
+    if (!r.actions.length && dialogue?.actif()) { dialogue.demander(t, source); return r; }
     if (!r.actions.length) { journal("refus", `${icone} « ${t} » : commande non comprise (voir les exemples)`); return r; }
     if (r.inconnu.length) journal("avert", `${icone} partie non comprise, ignorée : « ${r.inconnu.join(" / ")} »`);
     executerActions(r.actions, `${icone} « ${t} »`);
@@ -66,7 +70,16 @@ export function installerCommandes({ robot, reperes, lancer, preparer = (a) => a
   /* ── Interface ── */
   const bouton = $("#b-parler"), etat = $("#voix-etat"), interim = $("#voix-interim");
   const ecoute = new EcouteVocale({
-    surTexte: (t) => { interim.textContent = ""; executer(t, "voix"); },
+    surTexte: (t) => {
+      interim.textContent = "";
+      if (dialogue?.parle()) {                  // demi-duplex : la machine parle, seul l'arrêt passe
+        const r = interpreter(t, robot, reperes);
+        if (r.actions.some((a) => a.type === "urgence" || a.type === "arreter")) { dialogue.taire(); executer(t, "voix"); }
+        return;
+      }
+      if (dialogue?.estEcho(t)) { journal("info", `🎙 écho de la voix de la machine ignoré : « ${t} »`); return; }
+      executer(t, "voix");
+    },
     surInterim: (t) => { interim.textContent = t ? `… ${t}` : ""; },
     surEtat: (e, msg) => {
       const actif = e === "ecoute";
@@ -88,5 +101,6 @@ export function installerCommandes({ robot, reperes, lancer, preparer = (a) => a
     if (e.key.toLowerCase() === "v" && !e.repeat && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !bouton.disabled) { e.preventDefault(); bouton.click(); }
   });
 
-  return { executer, executerActions, pas, vider, ecoute, get occupe() { return !!courante || file.length > 0; } };
+  return { executer, executerActions, pas, vider, ecoute, get occupe() { return !!courante || file.length > 0; },
+    get dialogue() { return dialogue; }, set dialogue(d) { dialogue = d; } };
 }

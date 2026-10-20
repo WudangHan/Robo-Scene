@@ -8,7 +8,8 @@ import { CONDUITE_EXEMPLE, cibleRegard, compiler } from "./conduite.js";
 import { hauteurSol, pointSol, verifierSol, verifierTrajet } from "./sol.js";
 import { CameraVirtuelle, FluxReel, UHD, dessinerCadre } from "../drone/camera4k.js";
 import { flechesVersManche, pointRelatif } from "../drone/commande.js";
-import { installerCommandes } from "../drone/commandes_page.js";
+import { installerCommandes, decrire } from "../drone/commandes_page.js";
+import { installerDialogue } from "../dialogue.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -397,12 +398,14 @@ function ouvrirPont() {
   pont.ws = ws;
   ws.onopen = () => {
     pont.ouvert = true; window.ROBO_PONT.ouvert(); journal("info", "Pont relié", "pont");
+    pont.dialogue?.pontOuvert();
     envoyer({ op: "chien_etat" }); envoyer({ op: "chien_interpretes", liste: interpretes });
     envoyer({ op: "chien_mode", mode: chien.mode, par: chien.mode === "salle_vide" ? $("#salle-vide-par").value.trim() : "" });
     majReel();
   };
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (/^(ia_moteurs|ia_choix|dialogue|dialogue_refus|dialogue_oublier)$/.test(m.type)) { pont.dialogue?.recevoir(m); return; }
     if (m.type === "etat" || m.type === "drone_tel") return;
     if (m.type === "chien_etat") { pont.etat = m; majReel(); }
     else if (m.type === "chien_tel") pont.tel = m;
@@ -412,7 +415,7 @@ function ouvrirPont() {
     else if (m.type === "config") envoyer({ op: "chien_etat" });
   };
   ws.onclose = () => {
-    const etait = pont.ouvert; pont.ouvert = false; pont.etat = null; pont.tel = null; window.ROBO_PONT.ferme();
+    const etait = pont.ouvert; pont.ouvert = false; pont.etat = null; pont.tel = null; window.ROBO_PONT.ferme(); pont.dialogue?.pontFerme();
     if (etait) journal("avert", "Pont déconnecté", "pont");
     majReel(); setTimeout(ouvrirPont, 3000);
   };
@@ -546,6 +549,16 @@ const cmds = installerCommandes({
     return actions;
   },
 });
+
+/* ── Dialogue parlé avec une personne (moteur d'IA au choix, voix humaine) ── */
+pont.dialogue = installerDialogue({
+  conteneur: $("#dialogue"), domaine: "chien", nom: "le chien", profilDefaut: "sophie",
+  envoyer: (m) => envoyer(m), reperes: () => Object.keys(salle.sol.reperes), decrire, journal,
+  contexte: () => `${ETATS[chien.instantane().etat] || chien.instantane().etat}, mode « ${MODES[chien.mode]} »${pont.ouvert && pont.etat?.adaptateur ? ", chien réel relié" : ", chien virtuel"}`,
+  executerActions: (actions, libelle) => cmds.executerActions(actions, libelle),
+});
+cmds.dialogue = pont.dialogue;
+if (pont.ouvert) pont.dialogue.pontOuvert();
 
 /* ── Démarrage ───────────────────────────────────────────── */
 chien.mode = MODES[memo.lire("mode", "plateau")] ? memo.lire("mode", "plateau") : "plateau";

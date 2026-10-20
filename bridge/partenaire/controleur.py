@@ -514,12 +514,13 @@ class Partenaire:
 
     # ── Robot virtuel ───────────────────────────────────────
     async def op_avatar_etat(self, m):
-        dispo = self.agents.disponible("commande")
-        return {"moteur": self.agents.service.moteur("commande") if dispo else "déterministe",
+        dispo = self.agents.service is not None and self.agents.service.disponible("commande", domaine="robot")
+        return {"moteur": self.agents.service.moteur("commande", domaine="robot") if dispo else "déterministe",
                 "schema_version": avatar_mod.schema().get("version")}
 
     async def op_avatar_interpreter(self, m):
-        service = self.agents.service if self.agents.disponible("commande") else None
+        service = self.agents.service if (self.agents.service is not None and
+                                          self.agents.service.disponible("commande", domaine="robot")) else None
         r = await avatar_mod.interpreter(service, m.get("texte", ""), m.get("etat"))
         self._journal("avatar_interpretation", texte=r["texte"], moteur=r["moteur"], confiance=r["confiance"],
                       actions=r["actions"], rejets=[x["motif"] for x in r["rejets"]], justification=r["justification"],

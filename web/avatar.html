@@ -65,6 +65,7 @@
       <button role="tab" data-onglet="apparence">Apparence</button>
       <button role="tab" data-onglet="imitation">Imitation</button>
       <button role="tab" data-onglet="camera">Caméra</button>
+      <button role="tab" data-onglet="dialogue">Dialogue</button>
       <button role="tab" data-onglet="liaisons">Liaisons</button>
     </div>
 
@@ -232,6 +233,11 @@
       <div class="note petit">La vue virtuelle part d'entre les yeux et suit la tête du robot (roulis compris) ou, au choix, son regard. La caméra réelle se branche de deux façons : caméra USB du robot (ou carte de capture HDMI), vue comme une webcam ; flux du robot (RTSP, SRT, ROS) relayé en WebRTC par MediaMTX et lu par WHEP ; ou flux MJPEG du robot (TonyPi : serveur de Hiwonder ou pilote embarqué, port 8080). Le flux réel est <b>affiché seulement, jamais enregistré</b> (garde-fou G-06) ; un avertissement s'affiche quand la caméra du robot vise la salle.</div>
     </div>
 
+    <div class="panneau-onglet" id="ong-dialogue" role="tabpanel" hidden>
+      <h3>Parler avec le robot</h3>
+      <p class="petit">« 🎙 Dicter » (onglet Directives) et le champ de directive servent aussi au dialogue : une directive comprise s'exécute, toute autre phrase reçoit une réponse dite par le robot, avec sa voix et ses lèvres (réglages de voix : onglet Émotions et parole).</p>
+      <div id="dialogue"></div>
+    </div>
     <div class="panneau-onglet" id="ong-liaisons" role="tabpanel" hidden>
       <h3>Page Partenaire</h3>
       <label class="ligne petit"><input type="checkbox" id="liaison-partenaire" checked> Le robot virtuel donne la voix et le visage aux répliques du partenaire (répétition, variations, exercices) lorsque la page Partenaire est ouverte dans ce navigateur et que l'option « Robot virtuel » y est cochée.</label>

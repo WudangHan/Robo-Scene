@@ -159,3 +159,19 @@ tête (`pwm:1` tangage, `pwm:2` lacet) : 500–2500 µs pour 180°.
 Marche : `drive` (l, r) → `go_forward` (l ≈ r > 0,15), `back` (l ≈ r < −0,15), `turn_right` (l > r), `turn_left`, en
 boucle jusqu'à l'arrêt ou au chien de garde de 500 ms. Chute : angle de la centrale autour de l'axe y de la carte
 (critère du relevé automatique de Hiwonder) proche de 0° (avant) ou de 180° (arrière) pendant 1 s.
+
+## Dialogue parlé et moteurs d'IA
+
+Pages Robot virtuel, Chien et Drone → pont (WebSocket `/ws`) ; `domaine` ∈ `robot`, `chien`, `drone` (et `defaut`
+pour le choix du moteur).
+
+| Op | Champs | Réponse |
+|---|---|---|
+| `ia_moteurs` | — | `{type: "ia_moteurs", moteurs: [{id, libelle, fournisseur, version, disponible, motif, si02?}], choix, reseau_local}` |
+| `ia_choisir` | `domaine`, `moteur` (`auto`, famille, `local:<modèle>`) | diffusion `{type: "ia_choix", choix}` ; refus : `dialogue_refus` |
+| `dialogue` | `ref`, `domaine`, `texte` (≤ 800 car.), `reperes`, `contexte` | `{type: "dialogue", ref, reponse, actions, rejets, moteur, fournisseur, si, ecarts, trace, erreur?}` |
+| `dialogue_oublier` | `domaine` | `{type: "dialogue_oublier", domaine}` |
+
+`actions` ne contient que le vocabulaire fermé de la machine, revalidé par le pont ; la page les exécute seulement
+après validation humaine. Les types `urgence`, `coupure` et `go` sont toujours écartés.
+

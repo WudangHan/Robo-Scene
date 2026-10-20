@@ -68,8 +68,8 @@ class Agent:
 
     @property
     def moteur(self) -> str:
-        if self.service is not None and self.service.disponible("commande"):
-            return self.service.moteur("commande")
+        if self.service is not None and self.service.disponible("commande", domaine="robot"):
+            return self.service.moteur("commande", domaine="robot")
         return "regles"
 
     async def proposer(self, consigne: str, etat: dict[str, Any], limites: dict[str, Any],
@@ -93,7 +93,7 @@ class Agent:
             try:
                 r = await self.service.generer("commande", SYSTEME_FERME if ferme else SYSTEME_ANGLES, prompt,
                                                temperature=float(self.cfg.get("temperature", 0.2)),
-                                               max_tokens=int(self.cfg.get("max_tokens", 600)))
+                                               max_tokens=int(self.cfg.get("max_tokens", 600)), domaine="robot")
                 prop = _extraire_json(r.texte)
                 prop["moteur"] = f"{r.fournisseur}:{r.modele_exact}"
                 prop["brut"] = r.texte

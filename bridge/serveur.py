@@ -24,6 +24,7 @@ from urllib.parse import urlparse
 from aiohttp import WSMsgType, web
 
 from .gouvernance import Gouvernance, VerrouGouvernance
+from .dialogue import Dialogue
 from .ia import ACTIONS_FERMEES, Agent
 from .journal import Seance
 from .modeles import ServiceModeles
@@ -51,6 +52,7 @@ class Controleur:
         ds = Path(cfg.get("flotte", {}).get("dossier_sequences") or (RACINE / "sequences"))
         self.dossier_sequences = ds if ds.is_absolute() else RACINE / ds
         self.service = ServiceModeles(cfg.get("modeles", {}), self.donnees)
+        self.dialogue = Dialogue(self.service)
         # ── Flotte ──
         self.robots: dict[str, RobotConnecte] = {}
         d0 = depuis_config_console(cfg)
@@ -688,6 +690,9 @@ class Controleur:
         if isinstance(op, str) and op.startswith("p_"):
             await self._traiter_partenaire(ws, m)
             return
+        if op in ("ia_moteurs", "ia_choisir", "dialogue", "dialogue_oublier"):
+            await self._traiter_dialogue(ws, m)
+            return
         if isinstance(op, str) and op.startswith("drone_"):
             await self._traiter_drone(ws, m)
             return
@@ -901,6 +906,36 @@ class Controleur:
         except (KeyError, ValueError, TypeError) as exc:
             await ws.send_json({"type": "chien_refus", "op": op, "msg": f"Message mal formé ({op}) : {exc}"})
 
+    async def _traiter_dialogue(self, ws: web.WebSocketResponse, m: dict[str, Any]) -> None:
+        """Choix du moteur d'IA par machine et dialogue parlé (robot, chien, drone)."""
+        op, ref = m["op"], m.get("ref")
+        try:
+            if op == "ia_moteurs":
+                await ws.send_json({"type": "ia_moteurs", "ref": ref, "moteurs": await asyncio.to_thread(self.service.moteurs),
+                                    "choix": dict(self.service.choix), "reseau_local": self.service.reseau_local})
+            elif op == "ia_choisir":
+                domaine = str(m.get("domaine", "defaut"))
+                avant = self.service.choix.get(domaine)
+                moteur = await asyncio.to_thread(self.service.choisir, domaine, str(m.get("moteur", "auto")))
+                self.seance.evenement("choix_moteur_ia", domaine=domaine, avant=avant, moteur=moteur,
+                                      version=self.service.moteur("rapide", domaine=domaine))
+                await self.log(f"Moteur d'IA pour {domaine} : {moteur}")
+                await self.diffuser({"type": "ia_choix", "choix": dict(self.service.choix)})
+            elif op == "dialogue_oublier":
+                self.dialogue.oublier(m.get("domaine"))
+                await ws.send_json({"type": "dialogue_oublier", "ref": ref, "domaine": m.get("domaine")})
+            else:
+                r = await self.dialogue.repondre(str(m.get("domaine", "")), m.get("texte", ""),
+                                                 reperes=m.get("reperes"), contexte=m.get("contexte"))
+                # minimisation : le journal garde le moteur et les longueurs, pas le texte de l'échange
+                self.seance.evenement("dialogue", domaine=r["domaine"], moteur=r["moteur"], famille=r.get("famille"),
+                                      longueur_question=len(r["texte"]), longueur_reponse=len(r["reponse"]),
+                                      actions_proposees=len(r["actions"]), rejets=len(r["rejets"]),
+                                      erreur=r.get("erreur"), ecarts=r.get("ecarts"))
+                await ws.send_json({"type": "dialogue", "ref": ref, **r})
+        except (KeyError, ValueError, TypeError) as exc:
+            await ws.send_json({"type": "dialogue_refus", "ref": ref, "op": op, "msg": str(exc)})
+
     async def _traiter_partenaire(self, ws: web.WebSocketResponse, m: dict[str, Any]) -> None:
         op = m["op"]
         try:
@@ -1055,8 +1090,30 @@ def main() -> None:
         cfg["robot"]["transport"] = "sim"
         cfg["_forcer_sim"] = True
     port = a.port or cfg["serveur"]["port"]
-    print(f"ROBO-SCÈNE → http://{cfg['serveur']['hote']}:{port}  (robot de la console : {cfg['robot']['transport']})")
-    web.run_app(creer_app(cfg), host=cfg["serveur"]["hote"], port=port, print=None)
+    ssl_ctx = contexte_https(cfg["serveur"], RACINE)
+    print(f"ROBO-SCÈNE → {'https' if ssl_ctx else 'http'}://{cfg['serveur']['hote']}:{port}  "
+          f"(robot de la console : {cfg['robot']['transport']})")
+    web.run_app(creer_app(cfg), host=cfg["serveur"]["hote"], port=port, print=None, ssl_context=ssl_ctx)
+
+
+def contexte_https(serveur: dict[str, Any], racine: Path) -> "ssl.SSLContext | None":
+    """HTTPS facultatif du pont ([serveur] certificat et cle). Une tablette ou un téléphone relié par Wi-Fi n'obtient
+    le microphone (dialogue parlé, commandes vocales) que dans un contexte sécurisé : https://, ou 127.0.0.1 sur
+    l'ordinateur du pont lui-même. Sans certificat, le pont reste en http (comportement antérieur)."""
+    import ssl
+    cert, cle = str(serveur.get("certificat") or ""), str(serveur.get("cle") or "")
+    if not cert and not cle:
+        return None
+    if not (cert and cle):
+        raise SystemExit("[serveur] : certificat ET cle sont requis pour servir en https")
+    chemins = [Path(x) if Path(x).is_absolute() else racine / x for x in (cert, cle)]
+    for c in chemins:
+        if not c.is_file():
+            raise SystemExit(f"[serveur] : fichier introuvable : {c}")
+    ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    ctx.load_cert_chain(str(chemins[0]), str(chemins[1]))
+    return ctx
 
 
 if __name__ == "__main__":

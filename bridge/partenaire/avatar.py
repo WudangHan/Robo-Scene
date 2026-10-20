@@ -161,7 +161,8 @@ async def interpreter(service: Any, texte: str, etat: dict[str, Any] | None) -> 
     moteur = "modèle"
     try:
         # température seule (jamais avec top_p) ; le routeur de sensibilité du service s'applique (D03)
-        r = await service.generer("commande", SYSTEME, contenu, temperature=0.2, max_tokens=900, json_attendu=True)
+        r = await service.generer("commande", SYSTEME, contenu, temperature=0.2, max_tokens=900, json_attendu=True,
+                                  domaine="robot")
         moteur = r.modele_exact or r.modele_demande
         trace = {**r.trace(), "famille": r.famille}
         d = _extraire_json(r.texte)

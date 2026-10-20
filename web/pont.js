@@ -9,7 +9,9 @@
 "use strict";
 window.ROBO_PONT = (() => {
   const CLE = "robo-scene-pont";
-  const local = location.protocol === "http:" || ["127.0.0.1", "localhost"].includes(location.hostname);
+  // servie par le pont : http, ou https sur l'ordinateur du pont ou une adresse du réseau local (tablette en Wi-Fi)
+  const prive = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.)/.test(location.hostname) || /\.local$/i.test(location.hostname);
+  const local = location.protocol === "http:" || ["127.0.0.1", "localhost", "[::1]"].includes(location.hostname) || prive;
   let url = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
   if (!local) {
     let memo = null;

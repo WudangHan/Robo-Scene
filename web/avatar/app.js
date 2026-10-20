@@ -10,6 +10,7 @@ import { Imitation, lireEmotion } from "./imitation.js";
 import { EMOTIONS, prosodie } from "./emotions.js";
 import { interpreter, valider, EXEMPLES } from "./directives.js";
 import { CameraVirtuelle, FluxReel, dessinerCadre } from "../drone/camera4k.js";
+import { installerDialogue } from "../dialogue.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -179,6 +180,8 @@ async function executerTexte(texte, origine = "écrit") {
   texte = String(texte || "").trim();
   if (!texte) return;
   const r = interpreter(texte, SCHEMA);
+  // rien de compris comme directive et dialogue actif : la phrase s'adresse au robot, qui répond
+  if (!r.actions.length && r.ignores.length && pont.dialogue?.actif()) { pont.dialogue.demander(texte, origine === "vocal" ? "voix" : "texte"); return; }
   const notes = [...new Set(r.actions.filter((a) => a.corrige || a.approx).map((a) => (a.corrige ? `lu « ${a.corrige} »` : `compris comme « ${a.approx} »`)))];
   const sugg = (c) => (r.suggestions?.[c]?.length ? r.suggestions[c] : EXEMPLES.slice(0, 0)).slice(0, 3);
   const li = journal({ html: `<b>${echapper(texte)}</b> <small>(${origine})</small><div class="actions">${r.actions.map((a) => `<code>${echapper(resume(a))}</code>`).join(" ")}</div>`
@@ -588,10 +591,11 @@ const pont = {
   connecter() {
     const P = window.ROBO_PONT; if (!P) return;
     try { this.ws = new WebSocket(P.url); } catch (e) { return; }
-    this.ws.onopen = () => { this.ouvert = true; P.ouvert(); this.envoyer("p_avatar_etat"); majPont(); };
-    this.ws.onclose = () => { this.ouvert = false; this.ia = false; P.ferme(); majPont(); setTimeout(() => this.connecter(), 2500); };
+    this.ws.onopen = () => { this.ouvert = true; P.ouvert(); this.envoyer("p_avatar_etat"); this.dialogue?.pontOuvert(); majPont(); };
+    this.ws.onclose = () => { this.ouvert = false; this.ia = false; P.ferme(); this.dialogue?.pontFerme(); majPont(); setTimeout(() => this.connecter(), 2500); };
     this.ws.onmessage = (ev) => {
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (/^(ia_moteurs|ia_choix|dialogue|dialogue_refus|dialogue_oublier)$/.test(m.type)) { this.dialogue?.recevoir(m); return; }
       if (m.type === "config") { this.cfg = m; majPont(); }
       else if (m.type === "etat") { this.estop = !!(m.arret ?? m.estop); jumeau.surEtat(m); }
       else if (m.type === "p_avatar_etat") { this.ia = !!m.moteur && m.moteur !== "déterministe"; $("#moteur-ia").textContent = m.moteur; majPont(); }
@@ -610,6 +614,18 @@ const pont = {
   },
   journaliser(ev) { if ($("#journaliser").checked) this.envoyer("p_avatar_journal", { evenement: ev }); },
 };
+/* Dialogue parlé : le robot répond avec sa propre voix (lèvres synchronisées) ; ses propositions de gestes,
+   de poses ou de déplacements sont revalidées ici (schema.json) et attendent la validation d'une personne. */
+pont.dialogue = installerDialogue({
+  conteneur: $("#dialogue"), domaine: "robot", nom: "le robot", hautParleur: true,
+  envoyer: ({ op, ...d }) => { pont.envoyer(op, d); return pont.ouvert; },
+  decrire: (a) => resume(a),
+  journal: (niveau, texte) => journal({ html: echapper(texte), classe: niveau === "avert" ? "avert" : "" }),
+  contexte: () => `émotion ${anim.emotion.nom}, position sur le plateau x ${anim.racine.x.toFixed(1)} m, z ${anim.racine.z.toFixed(1)} m`,
+  parler: (t) => parler(t), parle: () => parole.actif, taire: () => { parole.annuler(); sousTitre(""); },
+  executerActions: (actions) => { const { actions: ok } = valider(actions, SCHEMA); if (ok.length) executer(ok, { source: "dialogue" }); },
+});
+if (pont.ouvert) pont.dialogue.pontOuvert();
 function majPont() {
   $("#st-pont").textContent = pont.ouvert ? `Pont : relié${pont.cfg ? ` · ${pont.cfg.robot}` : ""}` : "Pont : non relié";
   $("#st-pont").className = "pastille " + (pont.ouvert ? "ok" : "neutre");

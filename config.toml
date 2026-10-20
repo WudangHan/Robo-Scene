@@ -6,6 +6,11 @@
 [serveur]
 hote = "127.0.0.1"        # 0.0.0.0 pour piloter depuis une tablette du même réseau (voir README, section sécurité)
 port = 8765
+# HTTPS facultatif (dialogue parlé depuis une tablette ou un téléphone en Wi-Fi : le navigateur n'y donne le micro
+# qu'en https). Ex. avec mkcert : « mkcert -install » puis « mkcert 192.168.1.20 robo-scene.local » ; installer aussi
+# l'autorité de mkcert sur la tablette. Laisser vide pour rester en http (l'ordinateur du pont garde le micro sur 127.0.0.1).
+certificat = ""
+cle = ""
 # Pages hébergées autorisées à se connecter au pont (en plus des pages servies localement)
 origines_autorisees = ["https://robo-scene.netlify.app"]
 
@@ -71,7 +76,9 @@ dossier = "donnees"                # données locales (hors dépôt) : traces, q
 
 [modeles]
 # Décision D13 : version la plus récente adoptée au DÉBUT de chaque séance, jamais en cours de séance, consignée.
-# Clés lues dans l'environnement : ANTHROPIC_API_KEY, OPENAI_API_KEY. Sans clé : voies déterministes.
+# Clés lues dans l'environnement : ANTHROPIC_API_KEY (Claude), OPENAI_API_KEY (GPT), XAI_API_KEY (Grok),
+# GEMINI_API_KEY ou GOOGLE_API_KEY (Gemini ; projet AVEC facturation seulement : le niveau gratuit autorise Google
+# à employer les échanges et à les faire relire par des personnes). Sans clé : voies déterministes.
 fournisseur_prefere = "anthropic"  # "openai" pour placer GPT en premier
 # SI-02 désigné le 2026-10-16 d'après l'évaluation à l'aveugle du 2026-10-12 (n = 131, SI-02_synthese) :
 #   M2 Luciole-8B-Instruct-1.1 : français 4,18/5, jouabilité 3,88/5, stéréotype 0,09 (aucun niveau 2), JSON 100 %, 3,5 s
@@ -87,12 +94,25 @@ local = "luciole-8b-instruct-1.1"            # LM Studio : OpenLLM-France, GGUF 
 local_secours = "apertus-8b-instruct-2509-si02"   # LM Studio : le GGUF évalué lui-même (bartowski Q4_K_M, gabarit simple)
 local_provisoire = false
 url_local = "http://127.0.0.1:1234"
+# LM Studio sur un autre ordinateur du réseau Wi-Fi local (ex. url_local = "http://192.168.1.20:1234", option
+# « Serve on Local Network » de LM Studio) : mettre reseau_local = true. Seules les adresses privées (192.168.x.x,
+# 10.x.x.x, 172.16-31.x.x, *.local) sont alors permises ; tout autre hôte reste refusé (D03, VP-14). Le contenu
+# sensible voyage alors en clair sur le Wi-Fi de la salle : réseau WPA2/WPA3 fermé exigé.
+reseau_local = false
 plafond_jetons_seance = 200000
 [modeles.roles]                    # familles par rôle, dans l'ordre de préférence
-ecriture = ["claude-opus", "gpt-sol"]
-analyse  = ["claude-opus", "gpt-sol"]
-rapide   = ["claude-sonnet", "gpt-terra", "gpt-luna"]   # gpt-terra : adopté dès qu'un GPT-6 Terra sera publié
-commande = ["claude-sonnet", "gpt-terra", "gpt-luna"]
+ecriture = ["claude-opus", "gpt-sol", "gemini-argon", "grok"]
+analyse  = ["claude-opus", "gpt-sol", "gemini-argon", "grok"]
+rapide   = ["claude-sonnet", "gpt-terra", "gpt-luna", "gemini-flash", "grok"]   # gpt-terra : adopté dès qu'un GPT-6 Terra sera publié
+commande = ["claude-sonnet", "gpt-terra", "gpt-luna", "gemini-flash", "grok"]
+# Moteur choisi par machine (modifiable dans l'onglet Dialogue des pages Robot virtuel, Chien et Drone) :
+# "auto" (ordre des rôles), une famille (claude-opus, claude-sonnet, gpt-sol, gpt-luna, grok, gemini-argon,
+# gemini-flash) ou "local:<identifiant LM Studio>". Le choix ne lève jamais l'aiguillage D03.
+[modeles.choix]
+defaut = "auto"
+robot = "auto"
+chien = "auto"
+drone = "auto"
 
 [flotte]
 dossier_profils = "robots"         # un fichier .toml par robot (AiNex, Reachy Mini, ROS 2, MQTT, OSC, HTTP, externe)

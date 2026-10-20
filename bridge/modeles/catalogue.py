@@ -18,6 +18,15 @@ gpt-6.1-sol et gpt-6-luna (OpenAI, guide « Using GPT-6 »). Vérification du 12
 n'est publié (seul existe gpt-5.6-terra, de la génération précédente) ; la famille « gpt-terra » est donc
 déclarée « en attente » : elle n'est jamais employée tant qu'aucun identifiant de génération 6 ou plus n'apparaît
 dans la liste du fournisseur, puis elle est adoptée automatiquement au début de la séance suivante.
+
+Ajout du 20 octobre 2026 (demande du chercheur : Grok et Gemini en plus de Claude et de ChatGPT) :
+* Grok (xAI) : famille « grok », identifiants grok-N(.M) ; référence grok-4.7 (guide « Grok 4.7 », docs.x.ai,
+  mis à jour le 10 oct. 2026) ; API https://api.x.ai/v1, clé XAI_API_KEY ;
+* Gemini (Google) : familles « gemini-argon » (modèle le plus capable ; gemini-4-argon, disponible le 13 oct. 2026)
+  et « gemini-flash » (rapide ; gemini-3.8-flash, disponible le 2 sept. 2026) d'après les notes de version du
+  Gemini API ; API generativelanguage.googleapis.com, clé GEMINI_API_KEY (ou GOOGLE_API_KEY).
+Ces familles suivent la même veille que les autres ; elles viennent après Claude et GPT dans l'ordre par défaut des
+rôles, et l'opératrice peut les choisir explicitement par domaine (robot, chien, drone).
 """
 from __future__ import annotations
 
@@ -36,12 +45,13 @@ from ..tls import contexte as _tls
 @dataclass(frozen=True)
 class Famille:
     cle: str
-    fournisseur: str            # anthropic | openai | local (LM Studio ou Ollama)
+    fournisseur: str            # anthropic | openai | xai | google | local (LM Studio ou Ollama)
     motif: str | None           # expression régulière des identifiants de la famille (alias, sans date)
     reference: str              # version de référence si la veille est impossible
     systeme: str                # code du registre G.5
     libelle: str
     generation_min: int = 0     # génération minimale acceptée (0 : toute version de la famille)
+    mineure_decimale: bool = False   # « 4.20 » se lit 4,20 < 4,7 (numérotation de xAI : grok-4.20 précède grok-4.7)
 
 
 FAMILLES: dict[str, Famille] = {
@@ -55,27 +65,40 @@ FAMILLES: dict[str, Famille] = {
                          "SI-08", "GPT Terra (OpenAI)", generation_min=6),
     "gpt-luna": Famille("gpt-luna", "openai", r"^gpt-(\d+)(?:\.(\d+))?-luna$", "gpt-6-luna",
                         "SI-08", "GPT Luna (OpenAI)"),
+    "grok": Famille("grok", "xai", r"^grok-(\d+)(?:\.(\d+))?$", "grok-4.7", "SI-09", "Grok (xAI)", generation_min=4,
+                    mineure_decimale=True),
+    "gemini-argon": Famille("gemini-argon", "google", r"^gemini-(\d+)(?:\.(\d+))?-argon$", "gemini-4-argon",
+                            "SI-10", "Gemini Argon (Google)"),
+    "gemini-flash": Famille("gemini-flash", "google", r"^gemini-(\d+)(?:\.(\d+))?-flash$", "gemini-3.8-flash",
+                            "SI-10", "Gemini Flash (Google)", generation_min=3),
     "local": Famille("local", "local", None, "luciole-8b-instruct-1.1", "SI-02",
                      "Modèle local (LM Studio)"),
 }
 
 # Rôles : ordre de préférence des familles ; le premier fournisseur disponible est retenu.
 ROLES_DEFAUT: dict[str, list[str]] = {
-    "ecriture": ["claude-opus", "gpt-sol"],     # atelier P1, scènes, monologues, dialogues
-    "analyse": ["claude-opus", "gpt-sol"],      # analyse dramaturgique, conseiller, régisseur IA
-    "rapide": ["claude-sonnet", "gpt-terra", "gpt-luna"],    # variations, surtitres, tâches courtes
-    "commande": ["claude-sonnet", "gpt-terra", "gpt-luna"],  # gestes nommés (bibliothèque fermée)
+    "ecriture": ["claude-opus", "gpt-sol", "gemini-argon", "grok"],     # atelier P1, scènes, monologues, dialogues
+    "analyse": ["claude-opus", "gpt-sol", "gemini-argon", "grok"],      # analyse dramaturgique, conseiller, régisseur IA
+    "rapide": ["claude-sonnet", "gpt-terra", "gpt-luna", "gemini-flash", "grok"],    # variations, surtitres
+    "commande": ["claude-sonnet", "gpt-terra", "gpt-luna", "gemini-flash", "grok"],  # gestes nommés (bibliothèque fermée)
 }
 
-CLES_API = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
+CLES_API = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY", "xai": "XAI_API_KEY", "google": "GEMINI_API_KEY"}
+CLES_SECOURS = {"google": "GOOGLE_API_KEY"}          # nom de variable également reconnu par Google
 
 
-def version(identifiant: str, famille: Famille) -> tuple[int, int] | None:
+def cle_api(fournisseur: str) -> str:
+    return os.environ.get(CLES_API.get(fournisseur, ""), "") or os.environ.get(CLES_SECOURS.get(fournisseur, ""), "")
+
+
+def version(identifiant: str, famille: Famille) -> tuple[int, float] | None:
     if not famille.motif:
         return None
     m = re.match(famille.motif, identifiant)
     if not m or int(m.group(1)) < famille.generation_min:
         return None
+    if famille.mineure_decimale:
+        return int(m.group(1)), float("0." + m.group(2)) if m.group(2) else 0.0
     return int(m.group(1)), int(m.group(2) or 0)
 
 
@@ -107,7 +130,25 @@ def lister_openai(cle: str) -> list[str]:
     return [m["id"] for m in d.get("data", [])]
 
 
-LISTEURS: dict[str, Callable[[str], list[str]]] = {"anthropic": lister_anthropic, "openai": lister_openai}
+def lister_xai(cle: str) -> list[str]:
+    d = _get_json("https://api.x.ai/v1/models", {"Authorization": f"Bearer {cle}"})
+    return [m["id"] for m in d.get("data", [])]
+
+
+def lister_google(cle: str) -> list[str]:
+    ids, jeton = [], ""
+    for _ in range(10):
+        url = "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000" + (f"&pageToken={jeton}" if jeton else "")
+        d = _get_json(url, {"x-goog-api-key": cle})
+        ids += [m["name"].split("/", 1)[-1] for m in d.get("models", []) if m.get("name")]
+        jeton = d.get("nextPageToken") or ""
+        if not jeton:
+            break
+    return ids
+
+
+LISTEURS: dict[str, Callable[[str], list[str]]] = {"anthropic": lister_anthropic, "openai": lister_openai,
+                                                   "xai": lister_xai, "google": lister_google}
 
 
 class Catalogue:
@@ -140,15 +181,15 @@ class Catalogue:
     def disponible(self, fournisseur: str) -> bool:
         if fournisseur in ("local", "ollama"):
             return True
-        return bool(os.environ.get(CLES_API.get(fournisseur, ""), ""))
+        return bool(cle_api(fournisseur))
 
     def resoudre(self, seance: str) -> dict[str, str]:
         """Fixe, pour la séance qui commence, la version de chaque famille. À appeler une fois par séance."""
         self.notes = []
         listes: dict[str, list[str] | None] = {}
-        for f in ("anthropic", "openai"):
-            cle = os.environ.get(CLES_API[f], "")
-            if not cle or self.politique == "epinglee":
+        for f in CLES_API:
+            cle = cle_api(f)
+            if not cle or self.politique == "epinglee" or f not in self.listeurs:
                 listes[f] = None
                 continue
             try:
@@ -202,6 +243,6 @@ class Catalogue:
 
     def resume(self) -> dict[str, Any]:
         return {"politique": self.politique, "resolus": self.resolus or self.etat.get("courants", {}),
-                "disponibles": {f: self.disponible(f) for f in ("anthropic", "openai")},
+                "disponibles": {f: self.disponible(f) for f in CLES_API},
                 "roles": {r: self.familles_pour(r) for r in self.roles},
                 "notes": self.notes, "historique": self.etat.get("historique", [])[-10:]}

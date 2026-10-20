@@ -1,4 +1,5 @@
-"""Clients des fournisseurs : Anthropic (API Messages), OpenAI (API Responses), LM Studio ou Ollama (local).
+"""Clients des fournisseurs : Anthropic (API Messages), OpenAI (API Responses), xAI (Grok, Chat Completions),
+Google (Gemini, generateContent), LM Studio ou Ollama (local).
 
 Chaque client consigne ce qui a été DEMANDÉ et ce qui a été réellement APPLIQUÉ, et signale l'écart
 (fonction A-08 du cahier) : un paramètre ignoré ou retiré par compatibilité n'est jamais passé sous silence.
@@ -143,6 +144,89 @@ class ClientOpenAI:
                        int(u.get("output_tokens", 0)), demandes, appliques, ecarts)
 
 
+class ClientXAI:
+    """Grok par l'API de xAI (https://api.x.ai/v1, Chat Completions, compatible avec le format d'OpenAI ; docs.x.ai,
+    consulté le 20 oct. 2026). La documentation de Grok 4.7 ne mentionne ni température ni plafond de sortie pour ce
+    point d'accès : les deux sont envoyés (paramètres du format OpenAI) et consignés comme demandés ; le modèle
+    renvoyé par le service est inscrit tel quel."""
+    fournisseur = "xai"
+    URL = "https://api.x.ai/v1/chat/completions"
+
+    def __init__(self, cle: str, delai: float = 120.0, transport=None):
+        self.cle, self.delai, self.transport = cle, delai, transport or _post
+
+    def generer(self, modele: str, systeme: str, contenu: str, *, temperature: float | None = None,
+                top_p: float | None = None, max_tokens: int = 1500, json_attendu: bool = False, **_: Any) -> Reponse:
+        demandes = {k: v for k, v in {"temperature": temperature, "top_p": top_p, "max_tokens": max_tokens}.items()
+                    if v is not None}
+        corps: dict[str, Any] = {"model": modele, "stream": False, "max_tokens": max_tokens,
+                                 "messages": [{"role": "system", "content": systeme}, {"role": "user", "content": contenu}]}
+        ecarts: list[str] = []
+        if temperature is not None:
+            corps["temperature"] = temperature
+        if top_p is not None:
+            corps["top_p"] = top_p
+        if json_attendu:
+            corps["response_format"] = {"type": "json_object"}
+        r = self.transport(self.URL, corps, {"Authorization": f"Bearer {self.cle}"}, self.delai)
+        msg = ((r.get("choices") or [{}])[0]).get("message", {}) or {}
+        u = r.get("usage", {}) or {}
+        appliques = {k: corps[k] for k in ("temperature", "top_p", "max_tokens") if k in corps}
+        return Reponse(msg.get("content") or "", "xai", "SI-09", modele, r.get("model", modele),
+                       int(u.get("prompt_tokens", 0)), int(u.get("completion_tokens", 0)), demandes, appliques, ecarts)
+
+
+def gemini_sans_echantillonnage(modele: str) -> bool:
+    """Vrai pour Argon et pour tout Gemini de version 3.6 ou plus (température et top_p ignorés ou refusés)."""
+    if "argon" in modele:
+        return True
+    m = re.match(r"^gemini-(\d+)(?:\.(\d+))?", modele)
+    return bool(m) and (int(m.group(1)), int(m.group(2) or 0)) >= (3, 6)
+
+
+class ClientGoogle:
+    """Gemini par l'API Gemini de Google (models.generateContent, en-tête x-goog-api-key ; ai.google.dev, consulté le
+    20 oct. 2026). Pour Gemini 4 Argon, la page « Latest model » demande de retirer temperature, top_p et top_k
+    (ignorés) ; selon une source secondaire (AI Weekly, 22 juil. 2026), ils le sont aussi depuis Gemini 3.6 Flash et
+    les générations suivantes renverraient une erreur 400. Par prudence, ils ne sont envoyés qu'aux modèles antérieurs
+    à 3.6 ; l'écart est consigné (A-08)."""
+    fournisseur = "google"
+    URL = "https://generativelanguage.googleapis.com/v1beta/models/{modele}:generateContent"
+
+    def __init__(self, cle: str, delai: float = 120.0, transport=None):
+        self.cle, self.delai, self.transport = cle, delai, transport or _post
+
+    def generer(self, modele: str, systeme: str, contenu: str, *, temperature: float | None = None,
+                top_p: float | None = None, max_tokens: int = 1500, json_attendu: bool = False, **_: Any) -> Reponse:
+        demandes = {k: v for k, v in {"temperature": temperature, "top_p": top_p, "max_tokens": max_tokens}.items()
+                    if v is not None}
+        config: dict[str, Any] = {"maxOutputTokens": max_tokens}
+        ecarts: list[str] = []
+        sans_echantillonnage = gemini_sans_echantillonnage(modele)
+        for k, cle in (("temperature", "temperature"), ("top_p", "topP")):
+            v = demandes.get(k)
+            if v is None:
+                continue
+            if sans_echantillonnage:
+                ecarts.append(f"{k} retiré : ignoré par {modele} (documentation du Gemini API)")
+            else:
+                config[cle] = v
+        if json_attendu:
+            config["responseMimeType"] = "application/json"
+        corps = {"systemInstruction": {"parts": [{"text": systeme}]},
+                 "contents": [{"role": "user", "parts": [{"text": contenu}]}], "generationConfig": config}
+        r = self.transport(self.URL.format(modele=modele), corps, {"x-goog-api-key": self.cle}, self.delai)
+        cand = (r.get("candidates") or [{}])[0]
+        texte = "".join(p.get("text", "") for p in (cand.get("content") or {}).get("parts", []) if not p.get("thought"))
+        if not texte and cand.get("finishReason") not in (None, "STOP"):
+            ecarts.append(f"réponse vide (finishReason : {cand.get('finishReason')})")
+        u = r.get("usageMetadata", {}) or {}
+        appliques = {"max_tokens": max_tokens, **({"temperature": config["temperature"]} if "temperature" in config else {}),
+                     **({"top_p": config["topP"]} if "topP" in config else {})}
+        return Reponse(texte, "google", "SI-10", modele, r.get("modelVersion", modele),
+                       int(u.get("promptTokenCount", 0)), int(u.get("candidatesTokenCount", 0)), demandes, appliques, ecarts)
+
+
 class ClientLocal:
     """SI-02 : modèle ouvert servi sur cette machine par LM Studio (défaut) ou Ollama.
 
@@ -150,7 +234,7 @@ class ClientLocal:
     """
 
     def __init__(self, modele: str, url: str | None = None, delai: float = 180.0, transport=None,
-                 secours: str | None = None, lister=None, api: str = "lmstudio"):
+                 secours: str | None = None, lister=None, api: str = "lmstudio", reseau_local: bool = False):
         from .. import _modules  # noqa: F401
         from atelier_p1.modeles import API_LOCALES, NOMS_SERVEURS, verifier_local
         self.api = (api or "lmstudio").lower()
@@ -160,9 +244,10 @@ class ClientLocal:
         self.principal, self.url, self.delai = modele, (url or API_LOCALES[self.api]).rstrip("/"), delai
         self.secours = secours or None
         self.modele = modele                       # modèle effectivement servi (le secours si le principal manque)
-        self.refus = verifier_local(modele, self.url) if modele else ["aucun modèle local configuré"]
+        self.reseau_local = bool(reseau_local)
+        self.refus = verifier_local(modele, self.url, self.reseau_local) if modele else ["aucun modèle local configuré"]
         # Un secours non conforme (cloud, remote, hôte distant) est écarté sans invalider le modèle principal.
-        self.refus_secours = verifier_local(self.secours, self.url) if self.secours else []
+        self.refus_secours = verifier_local(self.secours, self.url, self.reseau_local) if self.secours else []
         self.transport = transport or _post
         self._lister = lister or self._liste
 

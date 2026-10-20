@@ -65,6 +65,7 @@
       <button role="tab" data-onglet="camera">Caméra 4K</button>
       <button role="tab" data-onglet="zones">Zones</button>
       <button role="tab" data-onglet="reel">Drone réel</button>
+      <button role="tab" data-onglet="dialogue">Dialogue</button>
       <button role="tab" data-onglet="journal">Journal</button>
     </div>
 
@@ -211,6 +212,13 @@
       <div class="note petit">Le pont applique, avant toute commande, les mêmes zones que le drone virtuel, les plafonds de vitesse, l'observateur de sécurité (déclaré dans la Console), la liste de contrôle signée et un chien de garde : si cette page se tait, le drone passe en stationnaire après 1 s puis atterrit après 4 s. L'ARRÊT de n'importe quelle page de la plateforme pose le drone. La coupure des moteurs, distincte, exige une confirmation.</div>
     </div>
 
+    <!-- ── Dialogue ── -->
+    <div class="panneau-onglet" id="ong-dialogue" role="tabpanel" hidden>
+      <h3>Parler avec le drone</h3>
+      <p class="petit">Le bouton « 🎙 Parler » (touche <kbd>V</kbd>) et le champ de commande servent aussi au dialogue : une commande s'exécute, toute autre phrase reçoit une réponse parlée.</p>
+      <div id="dialogue"></div>
+    </div>
+
     <!-- ── Journal ── -->
     <div class="panneau-onglet" id="ong-journal" role="tabpanel" hidden>
       <ol id="journal" class="flux"></ol>
@@ -231,6 +239,7 @@
 
 <script src="/static/i18n.js"></script>
 <script src="/static/pont.js"></script>
+<script src="/static/voix-direction.js"></script>
 <script type="module" src="/static/drone/app.js"></script>
 </body>
 </html>

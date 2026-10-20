@@ -55,6 +55,22 @@ systemes:
     mesures: "Aiguillage D03 ; paramètres appliqués consignés (A-08) ; version consignée par génération"
     version_courante: gpt-6.1-sol ; gpt-6-luna
     statut: "Inscrit à la politique G.5 v1.2 (signée le 12 oct. 2026) ; fiche F-08 v1.0 établie le 12 oct. 2026 ; store=false à chaque appel ; GPT-6 Terra en attente de publication"
+  SI-09:
+    nom: "Grok par l'API de xAI (famille Grok 4.x, puis la plus récente publiée)"
+    fournisseur: F-10
+    usage: "Dialogue parlé et commandes du robot, du chien et du drone, au choix de l'opératrice ; données NON sensibles seulement (D03)"
+    risque: modere
+    mesures: "Aiguillage D03 avant le choix du moteur ; vocabulaire fermé et revalidation des actions ; validation humaine ; journal sans texte des échanges"
+    version_courante: grok-4.7
+    statut: "Ajouté au code le 2026-10-20 ; inscription à la politique G.5 et fiche fournisseur F-10 à établir avant tout usage avec des personnes participantes. Selon la FAQ entreprise de xAI, les entrées et sorties de l'API ne servent pas à l'entraînement et sont supprimées sous 30 jours ; ne pas adhérer aux programmes de crédits contre partage de données."
+  SI-10:
+    nom: "Gemini par l'API Gemini de Google (familles Argon et Flash)"
+    fournisseur: F-11
+    usage: "Mêmes usages que SI-09 ; données NON sensibles seulement (D03)"
+    risque: modere
+    mesures: "Aiguillage D03 ; clé d'un projet avec facturation SEULEMENT (services payants) ; paramètres appliqués consignés (température et top_p ignorés par Argon : écart consigné, A-08)"
+    version_courante: gemini-4-argon ; gemini-3.8-flash
+    statut: "Ajouté au code le 2026-10-20 ; inscription à la politique G.5 et fiche fournisseur F-11 à établir. Conditions additionnelles de l'API Gemini (maj. 2026-04-28) : services gratuits = échanges employés par Google et relus par des personnes, d'où l'interdiction du niveau gratuit ; services payants = pas d'emploi pour améliorer les produits, journalisation limitée dans le temps."
 
 fournisseurs:
   F-01: Anthropic
@@ -63,4 +79,6 @@ fournisseurs:
   F-04: "Éditeurs des modèles candidats à SI-02 ; whisper.cpp"
   F-07: "Hiwonder (AiNex)"
   F-09: "LM Studio (Element Labs) — serveur local de SI-02 depuis le 2026-10-16 ; fiche fournisseur à établir"
+  F-10: "xAI (Grok) — fiche fournisseur à établir"
+  F-11: "Google (API Gemini, services payants) — fiche fournisseur à établir"
   F-08: "OpenAI — fiche v1.0 du 12 oct. 2026 (G5_Fiche_fournisseur_F-08_OpenAI_v1.0.docx)"

@@ -166,10 +166,10 @@ class _Service:
     def __init__(self, texte=None, erreur=None):
         self.texte, self.erreur, self.appel = texte, erreur, None
 
-    def disponible(self, role="analyse"):
+    def disponible(self, role="analyse", domaine=None):
         return True
 
-    def moteur(self, role="analyse"):
+    def moteur(self, role="analyse", domaine=None):
         return "claude-sonnet-5-5"
 
     async def generer(self, role, systeme, contenu, **kw):

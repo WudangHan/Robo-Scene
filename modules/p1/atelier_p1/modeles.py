@@ -116,7 +116,20 @@ class ModeleDistant:
 HOTES_LOCAUX = {"127.0.0.1", "localhost", "::1"}
 
 
-def verifier_local(modele: str, url: str) -> list[str]:
+def hote_reseau_prive(hote: str) -> bool:
+    """Adresse d'un réseau privé (RFC 1918, liens locaux IPv6) ou nom mDNS « .local » : un poste de l'équipe joint
+    par le Wi-Fi de la salle, jamais un service sur Internet."""
+    import ipaddress
+    if hote.endswith(".local"):
+        return True
+    try:
+        ip = ipaddress.ip_address(hote)
+    except ValueError:
+        return False
+    return (ip.is_private or ip.is_link_local) and not ip.is_loopback and not ip.is_unspecified
+
+
+def verifier_local(modele: str, url: str, reseau_prive: bool = False) -> list[str]:
     """Motifs pour lesquels SI-02 ne serait PAS un traitement local (liste vide = conforme à D03 et G.6).
 
     Deux fuites possibles sans que le code appelant le sache : un serveur de modèles (LM Studio ou Ollama)
@@ -125,7 +138,9 @@ def verifier_local(modele: str, url: str) -> list[str]:
     """
     motifs = []
     hote = (urllib.parse.urlsplit(url).hostname or "").lower()
-    if hote not in HOTES_LOCAUX:
+    # reseau_prive (option [modeles] reseau_local = true, décision consignée) : LM Studio d'un autre poste de l'équipe
+    # sur le réseau Wi-Fi local de la salle ; un hôte public reste refusé.
+    if hote not in HOTES_LOCAUX and not (reseau_prive and hote_reseau_prive(hote)):
         motifs.append(f"serveur de modèles non local ({hote or 'hôte illisible'})")
     if RE_DISTANT.search(modele or ""):
         motifs.append(f"modèle « {modele} » exécuté hors de cette machine (étiquette cloud ou remote, VP-14)")

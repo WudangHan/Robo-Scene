@@ -280,6 +280,38 @@ traitement local (`processLocally`, avec téléchargement unique du modèle de l
 d'écouter sinon ; décochée, le navigateur peut envoyer l'audio à un service distant. Aucun son n'est enregistré par la
 plateforme. Essais : `tests/test_commandes.py`.
 
+## Dialogue parlé et moteurs d'IA (robot, chien, drone)
+
+Le robot humanoïde, le chien et le drone conversent avec une personne (onglet **Dialogue** des pages Robot virtuel,
+Chien et Drone). On parle au micro (🎙 Dicter ou 🎙 Parler, touche <kbd>V</kbd>) ou l'on écrit : une phrase comprise
+comme une commande s'exécute comme d'habitude ; toute autre phrase part au pont (`bridge/dialogue.py`), qui la confie
+au moteur choisi **pour cette machine**, et la machine répond à voix haute (voix humaines de `web/voix-direction.js` ;
+le robot garde sa propre voix, lèvres synchronisées, et peut aussi parler par le haut-parleur du TonyPi Pro relié).
+
+| Moteur | Clé ou réglage | Registre |
+|---|---|---|
+| Claude (Opus, Sonnet) | `ANTHROPIC_API_KEY` | SI-01 |
+| GPT (Sol, Luna, Terra) | `OPENAI_API_KEY` | SI-08 |
+| Grok (xAI) | `XAI_API_KEY` | SI-09 |
+| Gemini (Argon, Flash) | `GEMINI_API_KEY` ou `GOOGLE_API_KEY` (projet avec facturation seulement) | SI-10 |
+| Tout modèle chargé dans LM Studio | `url_local` ; `reseau_local = true` pour un autre ordinateur du Wi-Fi | SI-02 si c'est le modèle désigné |
+
+- « Automatique » suit l'ordre des rôles de `[modeles.roles]` ; le choix par machine se règle dans la page ou dans
+  `[modeles.choix]`, et chaque changement est consigné au journal de séance (moteur, version).
+- L'aiguillage **D03 précède toujours le choix** : un contenu sensible va au modèle local désigné (SI-02), ou il est refusé.
+- Les gestes et déplacements que le modèle propose appartiennent à un vocabulaire fermé, sont revalidés par le pont
+  (types, bornes, repères existants) et attendent le clic **Valider** d'une personne ; « stop » et « arrêt d'urgence »
+  restent traités par la page, même pendant que la machine parle (demi-duplex, écho de sa propre voix écarté).
+- Mémoire courte (six tours par machine, effaçable) ; le journal garde le moteur et les longueurs, jamais le texte.
+- Sans moteur disponible, une voie déterministe répond aux formules usuelles (bonjour, merci, au revoir…).
+
+**Wi-Fi.** Les robots se relient au pont par le Wi-Fi (TonyPi Pro : 192.168.149.1 en point d'accès, ou le réseau de
+la salle ; chien et drone : leurs adaptateurs). Une tablette ou un téléphone peut ouvrir les pages du pont
+(`hote = "0.0.0.0"`, réseau isolé de la scène) ; le navigateur n'y accorde le micro qu'en **https** : renseigner
+`certificat` et `cle` dans `[serveur]` (par exemple avec mkcert, dont l'autorité doit aussi être installée sur la
+tablette). LM Studio peut tourner sur un autre ordinateur du même Wi-Fi (« Serve on Local Network », `url_local`
+vers son adresse privée, `reseau_local = true`) ; tout hôte public reste refusé. Essais : `tests/test_dialogue.py`.
+
 ## Documentation et version en ligne
 
 Version publiée : **2.3.3** (16 octobre 2026), en ligne sur <https://robo-scene.netlify.app> ; les deux documents de référence se téléchargent aussi depuis la page **Aide** (<https://robo-scene.netlify.app/aide>, dossier `web/aide/`).
@@ -289,6 +321,7 @@ Version publiée : **2.3.3** (16 octobre 2026), en ligne sur <https://robo-scene
 - `docs/Guide_chien_de_scene_ROBO-SCENE_v1.2.docx` — chien de scène (O-14) : quadrupède virtuel, postures et allures, souris, flèches et voix, conduite, sol praticable, passage au chien réel
 - `docs/Repertoire_commandes_gestes_robot_ROBO-SCENE_v1.0_2026-10-16.docx` — répertoire exhaustif des commandes vocales, des 70 gestes, des 11 poses et des mouvements induits du robot, et des bibliothèques fermées des robots physiques
 - `docs/Rapport_mise_en_oeuvre_audit_ROBO-SCENE_2026-10-16.docx` — mise en œuvre de l'audit indépendant : correctifs, vérifications, décisions résiduelles
+- `docs/Guide_dialogue_moteurs_IA_ROBO-SCENE_v1.0.docx` — dialogue parlé du robot, du chien et du drone, moteurs d'IA au choix (Claude, GPT, Grok, Gemini, LM Studio), Wi-Fi
 - `docs/Guide_partenaire_ROBO-SCENE.docx` — partenaire de théâtre
 - `docs/Guide_robot_virtuel_ROBO-SCENE.docx` — robot virtuel humanoïde
 
