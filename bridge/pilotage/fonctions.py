@@ -44,8 +44,9 @@ FONCTIONS: list[dict[str, Any]] = [
      "reste": "Observateur rémunéré présent"},
     {"id": "R-05", "etat": E, "code": "bridge/scene", "test": "tests/test_plateforme.py", "reste": "Conduite d'essai en salle"},
     {"id": "R-06", "etat": R, "code": "bridge/plateforme.py (écho)", "test": "tests/test_plateforme.py", "reste": ""},
-    {"id": "R-07", "etat": E, "code": "bridge/robots/pilotes ; robots/*.toml ; sdk/", "test": "tests/test_robots.py",
-     "reste": "Validation sur chaque plateforme matérielle"},
+    {"id": "R-07", "etat": E, "code": "bridge/robots/pilotes ; robots/*.toml ; sdk/ ; bridge/robots/tonypi.py",
+     "test": "tests/test_robots.py ; tests/test_tonypi.py",
+     "reste": "Validation sur chaque plateforme matérielle (TonyPi Pro : relevé du sens des 14 axes « a_verifier »)"},
     {"id": "R-08", "etat": R, "code": "bridge/gouvernance/incidents.py", "test": "tests/test_robots.py", "reste": ""},
     # 3.4 Spectateur
     {"id": "S-01", "etat": R, "code": "modules/p3/p3_spectateur", "test": "modules/p3/tests", "reste": ""},

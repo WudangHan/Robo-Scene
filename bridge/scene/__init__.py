@@ -105,7 +105,9 @@ class Scene:
         return asyncio.run_coroutine_threadsafe(coro, self.loop)
 
     def gestes_connus(self) -> set[str]:
-        return {n for r in self.ctl.robots.values() for n in r.biblio.lister()}
+        """Séquences de la bibliothèque fermée, plus les gestes natifs déclarés (« natif:<nom> », ex. natif:bow)."""
+        return ({n for r in self.ctl.robots.values() for n in r.biblio.lister()}
+                | {f"natif:{g}" for r in self.ctl.robots.values() for g in r.desc.gestes_natifs})
 
     # ── Chargement ──────────────────────────────────────────
     def charger(self, *, chemin: str | Path | None = None, texte: str | None = None) -> dict[str, Any]:
@@ -183,7 +185,10 @@ class Scene:
 
     async def _geste(self, nom: str, robot: str | None, repere: str) -> None:
         try:
-            await self.ctl.jouer_sequence(nom, f"conduite:{repere}", robot)
+            if nom.startswith("natif:"):
+                await self.ctl.cmd_geste_natif(nom[6:], f"conduite:{repere}", robot)
+            else:
+                await self.ctl.jouer_sequence(nom, f"conduite:{repere}", robot)
             self.journal(f"Geste « {nom} » ({robot or self.ctl.actif_id}) au repère {repere}")
         except CommandeRefusee as exc:
             self.journal(f"⚠ Geste refusé au repère {repere} : {exc}")
@@ -219,6 +224,20 @@ class Scene:
                     rob = self.ctl.robots.get(rid)
                     if rob is None:
                         ligne.update(etat="robot absent")
+                    elif str(a.valeur).startswith("natif:"):
+                        g = str(a.valeur)[6:]
+                        ok = g in rob.desc.gestes_natifs
+                        from ..robots.pilotes.ligne_json import _images_importees
+                        im = _images_importees(rob.desc, g) or []
+                        duree = sum(float(i.get("ms", 0)) for i in im) / 1000 or 2.0
+                        ligne.update(robot=rid, statut="natif", duree_s=round(duree, 2), fin_s=round(a.delai + duree, 2),
+                                     etat="jouable" if ok else "refusé", simulation=not rob.reel,
+                                     motif="geste natif du robot (liste fermée du profil)" if ok else "geste natif non déclaré",
+                                     dynamique=g in rob.desc.gestes_dynamiques)
+                        if not ok:
+                            problemes.append(f"Repère {r.numero} : « {a.valeur} » n'est pas déclaré pour {rid}")
+                        occupation.setdefault(rid, []).append((a.delai, a.delai + duree, a.valeur))
+                        fin_repere = max(fin_repere, a.delai + duree)
                     else:
                         try:
                             seq = rob.biblio.lire(a.valeur)

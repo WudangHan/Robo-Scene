@@ -47,6 +47,7 @@
       <div class="pip-cadre">
         <canvas id="cam-virtuelle" width="1280" height="720"></canvas>
         <video id="cam-reelle" playsinline muted hidden></video>
+        <img id="cam-mjpeg" alt="" hidden>
         <canvas id="cam-surimp"></canvas>
       </div>
       <figcaption><span id="pip-titre">Caméra des yeux (virtuelle)</span>
@@ -223,8 +224,12 @@
         <input id="whep-url" placeholder="http://127.0.0.1:8889/robot/whep" aria-label="Adresse WHEP">
         <button id="b-whep">Lire le flux WHEP</button><button id="b-cam-fermer">Fermer</button>
       </div>
+      <div class="ligne">
+        <input id="mjpeg-url" placeholder="http://192.168.149.1:8080/?action=stream" aria-label="Adresse du flux MJPEG">
+        <button id="b-mjpeg">Lire le flux MJPEG</button>
+      </div>
       <p id="cam-info" class="petit">—</p>
-      <div class="note petit">La vue virtuelle part d'entre les yeux et suit la tête du robot (roulis compris) ou, au choix, son regard. La caméra réelle se branche de deux façons : caméra USB du robot (ou carte de capture HDMI), vue comme une webcam, ou flux du robot (RTSP, SRT, ROS) relayé en WebRTC par MediaMTX et lu par WHEP. Le flux réel est <b>affiché seulement, jamais enregistré</b> (garde-fou G-06) ; un avertissement s'affiche quand la caméra du robot vise la salle.</div>
+      <div class="note petit">La vue virtuelle part d'entre les yeux et suit la tête du robot (roulis compris) ou, au choix, son regard. La caméra réelle se branche de deux façons : caméra USB du robot (ou carte de capture HDMI), vue comme une webcam ; flux du robot (RTSP, SRT, ROS) relayé en WebRTC par MediaMTX et lu par WHEP ; ou flux MJPEG du robot (TonyPi : serveur de Hiwonder ou pilote embarqué, port 8080). Le flux réel est <b>affiché seulement, jamais enregistré</b> (garde-fou G-06) ; un avertissement s'affiche quand la caméra du robot vise la salle.</div>
     </div>
 
     <div class="panneau-onglet" id="ong-liaisons" role="tabpanel" hidden>
@@ -235,8 +240,8 @@
       <h3>Jumeau du robot physique</h3>
       <p class="petit" id="jumeau-info">—</p>
       <label class="ligne petit"><input type="checkbox" id="jumeau-reflet" disabled> Refléter le robot physique (lecture seule : le robot virtuel suit la télémétrie)</label>
-      <label class="ligne petit"><input type="checkbox" id="jumeau-pilote" disabled> Piloter le robot physique avec le robot virtuel (tronc → Base, bras droit → Épaule et Coude, tête → Tête ; via la couche de sécurité)</label>
-      <p class="petit">Correspondance proposée par conception, à ajuster selon la mécanique du robot. L'arrêt de cette page envoie aussi l'arrêt d'urgence au pont.</p>
+      <label class="ligne petit"><input type="checkbox" id="jumeau-pilote" disabled> Piloter le robot physique avec le robot virtuel (axes listés par le profil du robot — TonyPi Pro : tête, bras, mains — ; couleur des yeux selon l'émotion ; via la couche de sécurité)</label>
+      <p class="petit">Un robot dont les axes portent les noms des degrés de liberté du robot virtuel (TonyPi Pro) lui correspond axe par axe, en degrés relatifs à la position debout ; les jambes sont reflétées mais jamais pilotées d'ici (équilibre). Robot à quatre servos : correspondance proposée par conception. L'arrêt de cette page envoie aussi l'arrêt d'urgence au pont.</p>
     </div>
   </aside>
 </main>

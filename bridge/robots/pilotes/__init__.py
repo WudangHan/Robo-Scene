@@ -10,10 +10,11 @@ from .mqtt import PiloteMQTT
 from .osc import PiloteOSC
 from .reachy_mini import PiloteReachyMini
 from .rosbridge import PiloteRosbridge
+from .tonypi_rpc import PiloteTonyPiRPC
 
 TYPES: dict[str, type[Pilote]] = {c.type: c for c in (
     PiloteLigneJSON, PiloteHiwonderBus, PiloteRosbridge, PiloteMQTT, PiloteOSC, PiloteHTTP, PiloteReachyMini,
-    PiloteExterne)}
+    PiloteExterne, PiloteTonyPiRPC)}
 
 DESCRIPTIONS = {
     "ligne_json": "JSON par ligne — série USB, TCP, UDP, WebSocket ou simulation (ESP32, Arduino, Pico, Teensy…)",
@@ -23,6 +24,7 @@ DESCRIPTIONS = {
     "osc": "Open Sound Control (Max, Pure Data, TouchDesigner, Isadora, QLab)",
     "http": "Interface REST d'un robot (gabarits de requêtes et pointeurs JSON)",
     "reachy_mini": "Reachy Mini par sa trousse Python (pose de tête, corps, antennes)",
+    "tonypi_rpc": "Hiwonder TonyPi par son serveur JSON-RPC (port 9030) : rien à installer sur le robot",
     "externe": "Programme pilote dans n'importe quel langage (Python, JavaScript, C++, Rust…), par stdin/stdout",
 }
 

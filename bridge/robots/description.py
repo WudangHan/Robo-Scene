@@ -30,6 +30,8 @@ class Articulation:
     id: Any = None                 # identifiant natif (n° de servo, nom de joint ROS, axe SDK…)
     zero: float | None = None      # position native correspondant à 0 (ex. 500 pas pour un servo Hiwonder)
     sens: int = 1                  # +1 ou −1 selon le montage
+    pas_par_unite: float | None = None   # pas natifs par unité (défaut : selon le type de servo du pilote)
+    a_verifier: bool = False       # sens ou bornes déduits, à confirmer par relevé sur le robot
 
 
 @dataclass
@@ -51,6 +53,11 @@ class DescriptionRobot:
     simulation: bool = False                       # True : robot simulé (aucun matériel)
     actif: bool = True                             # False : profil d'exemple, non connecté au démarrage
     bibliotheque: str = "json"                     # json (sequences/) ou p2 (YAML du Reachy Mini)
+    gestes_dynamiques: list[str] = field(default_factory=list)   # gestes natifs qui déplacent le robot (marche…)
+    jumeau: dict[str, Any] = field(default_factory=dict)          # correspondance avec le robot virtuel humanoïde
+    camera: dict[str, Any] = field(default_factory=dict)          # flux vidéo du robot (mjpeg, whep)
+    libelles_gestes: dict[str, str] = field(default_factory=dict) # libellés français des gestes natifs
+    sequences: str | None = None                   # dossier de séquences partagé (sinon : l'identifiant du robot)
     notes: str = ""
     source: str = ""
 
@@ -74,7 +81,8 @@ class DescriptionRobot:
         return {"id": self.id, "nom": self.nom, "pilote": self.pilote, "langage": self.langage,
                 "articulations": len(self.articulations), "propulsion": self.propulsion,
                 "simulation": self.simulation, "actif": self.actif, "capacites": self.capacites, "gestes_natifs": self.gestes_natifs,
-                "rayon_exclusion_m": self.rayon_exclusion_m, "notes": self.notes}
+                "rayon_exclusion_m": self.rayon_exclusion_m, "notes": self.notes,
+                "gestes_dynamiques": self.gestes_dynamiques}
 
 
 def depuis_dict(d: dict[str, Any], source: str = "") -> DescriptionRobot:
@@ -97,7 +105,10 @@ def depuis_dict(d: dict[str, Any], source: str = "") -> DescriptionRobot:
         batterie_min_v=sec.get("batterie_min_v"), rayon_exclusion_m=sec.get("rayon_exclusion_m"),
         capacites=list(r.get("capacites", [])), gestes_natifs=list(r.get("gestes_natifs", [])),
         simulation=bool(r.get("simulation", False)), actif=bool(r.get("actif", True)),
-        bibliotheque=r.get("bibliotheque", "json"), notes=r.get("notes", ""), source=source)
+        bibliotheque=r.get("bibliotheque", "json"), notes=r.get("notes", ""), source=source,
+        gestes_dynamiques=list(r.get("gestes_dynamiques", [])), jumeau=dict(d.get("jumeau", {})),
+        camera=dict(d.get("camera", {})), libelles_gestes=dict(d.get("libelles_gestes", {})),
+        sequences=r.get("sequences"))
 
 
 def charger(chemin: str | Path) -> DescriptionRobot:

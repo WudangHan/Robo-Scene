@@ -59,9 +59,27 @@ export class CameraVirtuelle {
   }
 }
 
-/* Sources vidéo réelles. Aucun enregistrement : l'élément <video> ne fait qu'afficher. */
+/* Sources vidéo réelles. Aucun enregistrement : l'élément <video> (ou <img> pour un flux MJPEG) ne fait qu'afficher. */
 export class FluxReel {
-  constructor(video) { this.video = video; this.flux = null; this.pc = null; this.session = null; this.source = null; }
+  constructor(video, image = null) { this.video = video; this.image = image; this.flux = null; this.pc = null; this.session = null; this.source = null; }
+
+  /* Flux MJPEG (multipart/x-mixed-replace), tel celui du TonyPi (http://robot:8080/?action=stream) : affiché par un
+     élément <img>. Une page en ligne (https) ne peut pas l'afficher depuis un robot en http (contenu mixte). */
+  async ouvrirMJPEG(url) {
+    await this.fermer();
+    if (!this.image) throw new Error("Lecture MJPEG non prévue sur cette page");
+    if (location.protocol === "https:" && url.startsWith("http:")) {
+      throw new Error("Page en ligne (https) et flux du robot en http : le navigateur bloque ce « contenu mixte ». Ouvrez la version locale de la page (servie par le pont).");
+    }
+    await new Promise((ok, ko) => {
+      const fin = setTimeout(() => ko(new Error("Flux MJPEG muet après 6 s (adresse, réseau ou caméra occupée)")), 6000);
+      this.image.onload = () => { clearTimeout(fin); ok(); };
+      this.image.onerror = () => { clearTimeout(fin); ko(new Error("Flux MJPEG injoignable")); };
+      this.image.src = url;
+    });
+    this.source = "mjpeg";
+    return this.reglages();
+  }
 
   static async cameras() {
     if (!navigator.mediaDevices?.enumerateDevices) return [];
@@ -80,6 +98,7 @@ export class FluxReel {
   }
 
   reglages() {
+    if (this.source === "mjpeg") return { largeur: this.image.naturalWidth || 0, hauteur: this.image.naturalHeight || 0, ips: null, nom: "MJPEG" };
     const piste = this.flux?.getVideoTracks?.()[0];
     const s = piste?.getSettings?.() || {};
     return { largeur: s.width || this.video.videoWidth || 0, hauteur: s.height || this.video.videoHeight || 0,
@@ -122,6 +141,7 @@ export class FluxReel {
     this.pc?.close(); this.pc = null;
     this.flux?.getTracks().forEach((t) => t.stop()); this.flux = null;
     this.video.srcObject = null; this.source = null;
+    if (this.image) { this.image.onload = this.image.onerror = null; this.image.removeAttribute("src"); }
   }
 }
 

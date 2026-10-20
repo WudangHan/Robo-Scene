@@ -29,11 +29,13 @@
     "hanche_g.rotation":   {"min": -40, "max": 40,  "groupe": "jambe_g",  "libelle": "Hanche gauche — rotation"},
     "genou_g.flexion":     {"min": 0,   "max": 140, "groupe": "jambe_g",  "libelle": "Genou gauche — flexion"},
     "cheville_g.flexion":  {"min": -40, "max": 45,  "groupe": "jambe_g",  "libelle": "Cheville gauche — flexion (+ : pointe)"},
+    "cheville_g.roulis":   {"min": -25, "max": 35,  "groupe": "jambe_g",  "libelle": "Cheville gauche — roulis (+ : inversion, plante vers l'intérieur)"},
     "hanche_d.flexion":    {"min": -30, "max": 125, "groupe": "jambe_d",  "libelle": "Hanche droite — flexion"},
     "hanche_d.abduction":  {"min": -20, "max": 50,  "groupe": "jambe_d",  "libelle": "Hanche droite — abduction"},
     "hanche_d.rotation":   {"min": -40, "max": 40,  "groupe": "jambe_d",  "libelle": "Hanche droite — rotation"},
     "genou_d.flexion":     {"min": 0,   "max": 140, "groupe": "jambe_d",  "libelle": "Genou droit — flexion"},
-    "cheville_d.flexion":  {"min": -40, "max": 45,  "groupe": "jambe_d",  "libelle": "Cheville droite — flexion (+ : pointe)"}
+    "cheville_d.flexion":  {"min": -40, "max": 45,  "groupe": "jambe_d",  "libelle": "Cheville droite — flexion (+ : pointe)"},
+    "cheville_d.roulis":   {"min": -25, "max": 35,  "groupe": "jambe_d",  "libelle": "Cheville droite — roulis (+ : inversion, plante vers l'intérieur)"}
   },
   "groupes": {
     "tete": "Tête et cou", "tronc": "Tronc", "bassin": "Bassin",

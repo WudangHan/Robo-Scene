@@ -14,6 +14,18 @@ from ... import transports
 from .base import Pilote
 
 
+def _images_importees(desc, nom: str) -> list | None:
+    """Images d'un geste natif importé dans la bibliothèque (sequences/<robot>/hw_<nom>.json), pour la simulation."""
+    import json
+    from pathlib import Path
+    p = Path(__file__).resolve().parents[3] / "sequences" / (desc.sequences or desc.id) / f"hw_{nom}.json"
+    try:
+        images = json.loads(p.read_text(encoding="utf-8"))["images"]
+    except (OSError, ValueError, KeyError):
+        return None
+    return images if all(len(i.get("deg", [])) == len(desc.articulations) for i in images) else None
+
+
 class PiloteLigneJSON(Pilote):
     type = "ligne_json"
 
@@ -34,7 +46,9 @@ class PiloteLigneJSON(Pilote):
             self.t = TransportWebSocket(c["url"])
         else:
             self.t = transports.TransportSimule(len(desc.articulations), desc.repos, desc.propulsion,
-                                                desc.chien_de_garde_ms)
+                                                desc.chien_de_garde_ms, gestes_natifs=desc.gestes_natifs,
+                                                images_geste=lambda nom: _images_importees(desc, nom),
+                                                vbat=12.6 if (desc.batterie_min_v or 0) > 8.2 else 8.2)   # LiPo 3S (AiNex, TonyPi) ou 2S
         self.nom = mode
 
     async def ouvrir(self) -> None:

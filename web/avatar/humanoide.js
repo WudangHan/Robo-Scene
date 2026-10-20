@@ -307,6 +307,7 @@ export class Humanoide {
       h.rotation.set(-R(v(`hanche_${s}.flexion`)), x * R(v(`hanche_${s}.rotation`)), x * R(v(`hanche_${s}.abduction`) + 1.5));
       O[`genou_${s}`].rotation.x = R(v(`genou_${s}.flexion`));
       O[`cheville_${s}`].rotation.x = R(v(`cheville_${s}.flexion`));
+      O[`cheville_${s}`].rotation.z = -x * R(v(`cheville_${s}.roulis`));   // roulis (inversion +), comme la cheville du TonyPi
     }
     O.tabouret.visible = !!extra.tabouret;
     if (extra.ancrage !== false && !extra.tabouret) this.ancrer(P, extra);

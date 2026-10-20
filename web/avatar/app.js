@@ -615,43 +615,89 @@ function majPont() {
   $("#st-pont").className = "pastille " + (pont.ouvert ? "ok" : "neutre");
   $("#recours-claude").disabled = !pont.ia;
   $("#etat-claude").textContent = pont.ia ? "disponible" : pont.ouvert ? "pont relié, aucun modèle disponible (règles seulement)" : "pont non relié";
-  const compatible = jumeau.compatible();
-  $("#jumeau-reflet").disabled = $("#jumeau-pilote").disabled = !pont.ouvert || !compatible;
-  $("#jumeau-info").textContent = !pont.cfg ? "—" : `Robot actif : ${pont.cfg.robot || pont.cfg.robot_id || "?"} — articulations : ${pont.cfg.noms.join(", ")}.`
-    + (compatible ? "" : " La correspondance proposée ne vaut que pour un robot à quatre servos Base, Épaule, Coude, Tête ; le jumeau est désactivé pour ce robot.");
+  const mode = jumeau.mode();
+  $("#jumeau-reflet").disabled = $("#jumeau-pilote").disabled = !pont.ouvert || !mode;
+  const c = pont.cfg;
+  $("#jumeau-info").textContent = !c ? "—" : `Robot actif : ${c.robot || c.robot_id || "?"} — ${c.noms.length} articulations.`
+    + (mode === "noms" ? ` Correspondance par nom d'axe : ${jumeau.indices().length} axes reflétés, ${jumeau.pilotes().length} pilotables`
+        + ` (${(c.jumeau?.piloter || []).length ? "liste du profil" : "tous"}).`
+        + ((c.a_verifier || []).length ? ` Sens et bornes à confirmer par relevé pour ${c.a_verifier.length} axe(s).` : "")
+      : mode === "bras4" ? " Correspondance : tronc → Base, bras droit → Épaule et Coude, tête → Tête."
+      : " Aucun axe du robot ne correspond à un degré de liberté du robot virtuel ; le jumeau est désactivé.");
+  if (c?.camera?.mjpeg && !$("#mjpeg-url").value) $("#mjpeg-url").value = c.camera.mjpeg;
 }
-/* Jumeau : correspondance entre les 4 servos du robot (Base, Épaule, Coude, Tête) et le robot virtuel
-   (Inférence de conception, modifiable) : écart au repos pour Base → rotation du tronc, Épaule → flexion de
-   l'épaule droite, Tête → rotation de la tête ; écart au minimum pour Coude → flexion du coude droit. */
+/* Jumeau du robot physique. Deux correspondances :
+   - « noms » : chaque axe du robot qui porte le nom d'un degré de liberté du robot virtuel (ex. TonyPi Pro :
+     epaule_d.flexion, genou_g.flexion…) lui correspond directement, en degrés relatifs à la position debout
+     (0 = debout pour les deux) ; tous ces axes sont reflétés, et seuls ceux de `jumeau.piloter` (profil) sont pilotés —
+     pour un bipède, la tête, les bras et les mains, l'équilibre restant aux gestes natifs ;
+   - « bras4 » : robot historique à 4 servos (Base, Épaule, Coude, Tête), correspondance de conception (Inférence). */
 const jumeau = {
-  reflet: false, pilote: false, dernierEnvoi: 0, dernier: null,
-  compatible() {
-    const n = (pont.cfg?.noms || []).map((x) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
-    return n.length === 4 && ["base", "epaule", "coude", "tete"].every((x, i) => n[i].startsWith(x));
+  reflet: false, pilote: false, dernierEnvoi: 0, dernier: null, couleur: null,
+  mode() {
+    const c = pont.cfg; if (!c) return null;
+    if (c.noms.some((n) => SCHEMA.dofs[n])) return "noms";
+    const n = c.noms.map((x) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase());
+    return n.length === 4 && ["base", "epaule", "coude", "tete"].every((x, i) => n[i].startsWith(x)) ? "bras4" : null;
+  },
+  compatible() { return !!this.mode(); },
+  indices() { return (pont.cfg?.noms || []).map((n, i) => (SCHEMA.dofs[n] ? i : -1)).filter((i) => i >= 0); },
+  pilotes() {
+    const liste = pont.cfg?.jumeau?.piloter;
+    return this.indices().filter((i) => !liste || !liste.length || liste.includes(pont.cfg.noms[i]));
   },
   surEtat(m) {
-    if (!this.reflet || !Array.isArray(m.deg) || !this.compatible()) return;
-    const { repos, min_deg: mn } = pont.cfg, d = m.deg;
+    if (!this.reflet || !Array.isArray(m.deg)) return;
+    const mode = this.mode(), c = pont.cfg, d = m.deg;
+    if (mode === "noms") { for (const i of this.indices()) if (d[i] != null) anim.definir(c.noms[i], d[i]); return; }
+    if (mode !== "bras4") return;
+    const { repos, min_deg: mn } = c;
     if (d[0] != null) anim.definir("tronc.rotation", d[0] - repos[0]);
     if (d[1] != null) anim.definir("epaule_d.flexion", d[1] - repos[1]);
     if (d[2] != null) anim.definir("coude_d.flexion", d[2] - mn[2]);
     if (d[3] != null) anim.definir("tete.rotation", d[3] - repos[3]);
   },
   maj() {
-    if (!this.pilote || !pont.ouvert || !this.compatible() || pont.estop) return;
+    const mode = this.mode();
+    if (!this.pilote || !pont.ouvert || !mode || pont.estop) return;
     const t = performance.now(); if (t - this.dernierEnvoi < 200) return;
-    const { repos, min_deg: mn, max_deg: mx } = pont.cfg, v = anim.val;
-    const brut = [repos[0] + v["tronc.rotation"], repos[1] + v["epaule_d.flexion"], mn[2] + v["coude_d.flexion"], repos[3] + v["tete.rotation"]];
-    const deg = brut.slice(0, pont.cfg.noms.length).map((x, i) => Math.round(Math.max(mn[i], Math.min(mx[i], x))));
-    if (this.dernier && deg.every((x, i) => Math.abs(x - this.dernier[i]) < 1)) return;
+    const c = pont.cfg, { min_deg: mn, max_deg: mx } = c, v = anim.val;
+    let deg;
+    if (mode === "noms") {
+      const pil = new Set(this.pilotes());
+      deg = c.noms.map((n, i) => (pil.has(i) ? Math.round(Math.max(mn[i], Math.min(mx[i], v[n] ?? 0))) : null));
+    } else {
+      const { repos } = c;
+      const brut = [repos[0] + v["tronc.rotation"], repos[1] + v["epaule_d.flexion"], mn[2] + v["coude_d.flexion"], repos[3] + v["tete.rotation"]];
+      deg = brut.map((x, i) => Math.round(Math.max(mn[i], Math.min(mx[i], x))));
+    }
+    if (this.dernier && deg.every((x, i) => x === this.dernier[i] || (x != null && this.dernier[i] != null && Math.abs(x - this.dernier[i]) < 1))) return;
     this.dernier = deg; this.dernierEnvoi = t;
-    pont.envoyer("articulations", { deg, ms: 250, origine: "avatar", robot: pont.cfg.robot_id });
+    pont.envoyer("articulations", { deg, ms: 250, origine: "avatar", robot: c.robot_id });
+  },
+  /* Couleur des « yeux » du robot (DEL) selon l'émotion du robot virtuel : choix de conception (Inférence),
+     inspiré des associations couleur–émotion courantes au théâtre ; l'intensité dose la luminosité. */
+  COULEURS: { neutre: [200, 200, 200], "colère": [255, 30, 20], joie: [255, 190, 40], tristesse: [40, 90, 255],
+    peur: [150, 60, 255], tendresse: [255, 120, 170], "mépris": [140, 200, 40], surprise: [40, 230, 255],
+    ironie: [255, 140, 0], lassitude: [90, 110, 140], assurance: [255, 255, 255], "dégoût": [60, 170, 60] },
+  emotion() {
+    if (!this.pilote || !pont.ouvert || !(pont.cfg?.capacites || []).includes("lumiere") || pont.estop) return;
+    const e = anim.emotion, base = this.COULEURS[e.nom] || this.COULEURS.neutre;
+    const k = e.nom === "neutre" ? 0.6 : 0.35 + 0.065 * Math.min(10, e.intensite || 0);
+    const rgb = base.map((x) => Math.round(x * k));
+    if (this.couleur && rgb.every((x, i) => Math.abs(x - this.couleur[i]) < 8)) return;
+    this.couleur = rgb;
+    pont.envoyer("robot_lumiere", { rgb, origine: "avatar", robot: pont.cfg.robot_id });
   },
 };
+anim.surChangement(() => jumeau.emotion());
 $("#jumeau-reflet").onchange = (e) => { jumeau.reflet = e.target.checked; if (e.target.checked) { jumeau.pilote = false; $("#jumeau-pilote").checked = false; } };
 $("#jumeau-pilote").onchange = (e) => {
-  if (e.target.checked && !confirm("Le bras droit, le tronc et la tête du robot virtuel vont piloter le robot physique (les commandes passent par la couche de sécurité du pont). Vérifiez que la scène est dégagée. Continuer ?")) { e.target.checked = false; return; }
-  jumeau.pilote = e.target.checked; jumeau.dernier = null;
+  const quoi = jumeau.mode() === "noms" ? `${jumeau.pilotes().length} axes (${pont.cfg.noms.filter((_, i) => jumeau.pilotes().includes(i)).join(", ")})`
+    : "le bras droit, le tronc et la tête";
+  if (e.target.checked && !confirm(`Le robot virtuel va piloter le robot physique : ${quoi}. Les commandes passent par la couche de sécurité du pont. Vérifiez que la scène est dégagée. Continuer ?`)) { e.target.checked = false; return; }
+  jumeau.pilote = e.target.checked; jumeau.dernier = null; jumeau.couleur = null;
+  if (jumeau.pilote) jumeau.emotion();
   if (e.target.checked) { jumeau.reflet = false; $("#jumeau-reflet").checked = false; }
   journal({ html: `Pilotage du robot physique par le robot virtuel ${jumeau.pilote ? "activé" : "désactivé"}.`, classe: jumeau.pilote ? "avert" : "" });
 };
@@ -693,7 +739,7 @@ setInterval(majLiaison, 3000);
    Garde-fou G-06 : le flux réel est affiché seulement, jamais enregistré ; seule la vue virtuelle peut l'être. */
 vueRobot = (() => {
   const cam = new CameraVirtuelle($("#cam-virtuelle"), scene);
-  const flux = new FluxReel($("#cam-reelle"));
+  const flux = new FluxReel($("#cam-reelle"), $("#cam-mjpeg"));
   const nb = (x) => x.toLocaleString("fr-CA", { maximumFractionDigits: 1 });
   const fichier = (blob, nom) => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nom; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
   const horodatage = () => new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -716,7 +762,9 @@ vueRobot = (() => {
   function majSource() {
     source = $("input[name=source]:checked").value;
     $("#pip").classList.toggle("superposee", source === "superposee");
-    $("#cam-reelle").hidden = source === "virtuelle"; $("#cam-virtuelle").hidden = source === "reelle";
+    const mj = flux.source === "mjpeg";
+    $("#cam-reelle").hidden = source === "virtuelle" || mj; $("#cam-mjpeg").hidden = source === "virtuelle" || !mj;
+    $("#cam-virtuelle").hidden = source === "reelle";
     $("#pip-titre").textContent = { virtuelle: "Caméra des yeux (virtuelle)", reelle: "Caméra du robot réel", superposee: "Réelle + virtuelle superposées" }[source];
   }
   $$("input[name=source]").forEach((r) => (r.onchange = majSource));
@@ -743,6 +791,10 @@ vueRobot = (() => {
   $("#b-whep").onclick = async () => {
     const url = $("#whep-url").value.trim(); if (!url) return; sauver();
     try { $("#cam-info").textContent = "Connexion WHEP…"; info(await flux.ouvrirWHEP(url)); choisir("reelle"); visible(true); } catch (e) { $("#cam-info").textContent = e.message; }
+  };
+  $("#b-mjpeg").onclick = async () => {
+    const url = $("#mjpeg-url").value.trim(); if (!url) return;
+    try { $("#cam-info").textContent = "Connexion au flux MJPEG…"; info(await flux.ouvrirMJPEG(url)); choisir("reelle"); visible(true); } catch (e) { $("#cam-info").textContent = e.message; }
   };
   $("#b-cam-fermer").onclick = async () => { await flux.fermer(); $("#cam-info").textContent = "—"; choisir("virtuelle"); };
   listerCameras(); majSource();

@@ -17,3 +17,5 @@ modules/p1/eval_si02/
 # Documents de travail et index qui en sont extraits : jamais versionnés (dépôt public, G.6)
 partenaire/sources/
 partenaire/index/
+# Gestes convertis des groupes d'actions de Hiwonder (aucune licence déclarée) : propres à chaque installation
+sequences/tonypi-pro/hw_*.json

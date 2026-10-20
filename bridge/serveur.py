@@ -64,7 +64,7 @@ class Controleur:
                 if d.actif and d.id not in self.robots:
                     if cfg.get("_forcer_sim"):
                         d.simulation = True
-                    self.robots[d.id] = RobotConnecte(d, self.dossier_sequences / d.id, self.donnees)
+                    self.robots[d.id] = RobotConnecte(d, self.dossier_sequences / (d.sequences or d.id), self.donnees)
         self.actif_id = fl.get("actif") if fl.get("actif") in self.robots else d0.id
         # ── IA supervisée ──
         self.ia_cfg = dict(cfg["ia"])
@@ -181,6 +181,11 @@ class Controleur:
             "observateur": self.observateur, "flotte": [x.resume() for x in self.robots.values()],
             "profils": [d.resume() for d in self.profils_disponibles],
             "statuts_sequences": self.statuts_sequences(),
+            "capacites": r.desc.capacites,
+            "gestes_natifs": [{"nom": g, "libelle": r.desc.libelles_gestes.get(g, g), "dynamique": g in r.desc.gestes_dynamiques}
+                              for g in r.desc.gestes_natifs],
+            "jumeau": r.desc.jumeau, "camera": r.desc.camera,
+            "a_verifier": [a.nom for a in r.desc.articulations if a.a_verifier],
         }
 
     # ── Réception depuis un robot ─────────────────────────────
@@ -202,6 +207,82 @@ class Controleur:
                 await self.log(f"[{r.id}] Le nombre d'axes du robot diffère de son profil !", "alerte")
         elif t == "err":
             await self.log(f"[{r.id}] {msg.get('msg')}", "info" if msg.get("niveau") == "info" else "alerte")
+        elif t == "evt":
+            await self._sur_evenement_robot(r, msg)
+        elif t == "lien" and msg.get("etat") == "perdu":
+            await self.log(f"[{r.id}] Liaison perdue : {msg.get('msg', '')}", "alerte")
+
+    async def _sur_evenement_robot(self, r: RobotConnecte, msg: dict[str, Any]) -> None:
+        """Événements ponctuels du robot (PROTOCOLE.md v2.1) : geste natif, marche, chute, toucher, bouton, manette.
+        Tous sont consignés et relayés aux pages (déclencheurs de scène) ; une chute arrête toute la flotte, et le
+        relevé reste une décision humaine (geste natif « stand_up_front » ou « stand_up_back » après réarmement)."""
+        typ = str(msg.get("type", ""))[:30]
+        donnees = {k: v for k, v in msg.items() if k not in ("t", "type") and isinstance(v, (str, int, float, bool, list, dict, type(None)))}
+        self.seance.evenement("robot_evenement", robot=r.id, type=typ, **donnees)
+        if typ == "geste":
+            if msg.get("etat") == "debut":
+                r.geste_natif = msg.get("nom")
+            elif msg.get("nom") == getattr(r, "geste_natif", None):
+                r.geste_natif = None
+                await self.log(f"[{r.id}] Geste natif « {msg.get('nom')} » : {msg.get('etat')}")
+        elif typ == "chute":
+            r.etat["chute"] = msg.get("sens")
+            await self.arret_urgence(f"chute du robot {r.id} ({msg.get('sens', '?')})", origine="robot")
+            await self.log(f"[{r.id}] Chute détectée ({msg.get('sens')}) : flotte arrêtée. Vérifier le robot, réarmer, "
+                           f"puis jouer le relevé « {msg.get('releve', 'stand_up_front')} » si la personne responsable le décide.",
+                           "alerte")
+        elif typ in ("toucher", "bouton", "manette"):
+            await self.log(f"[{r.id}] Événement : {typ}")
+        await self.diffuser({"type": "robot_evenement", "robot": r.id, "evenement": typ, **donnees})
+
+    # ── Capacités natives des robots (gestes natifs, voix, lumières) ─
+    async def cmd_geste_natif(self, nom: str, origine: str, robot: str | None = None) -> None:
+        """Geste natif : seulement un nom de la liste fermée du profil ; arrêt d'urgence, observateur et zone
+        d'exclusion vérifiés ; un robot tombé n'accepte que son relevé."""
+        r = self._r(robot)
+        r.securite._verifier_arme()
+        nom = str(nom or "")
+        if nom not in r.desc.gestes_natifs:
+            raise CommandeRefusee(f"« {nom} » n'est pas un geste natif déclaré pour {r.id} (liste fermée du profil)")
+        self._exiger_observateur(r)
+        if r.etat.get("chute") and nom not in ("stand_up_front", "stand_up_back"):
+            raise CommandeRefusee(f"{r.id} est tombé ({r.etat['chute']}) : seul le relevé est permis")
+        dyn = nom in r.desc.gestes_dynamiques
+        if dyn and r.reel and r.desc.rayon_exclusion_m and r.etat.get("dist") is not None \
+                and r.etat["dist"] < r.desc.rayon_exclusion_m * 100:
+            raise CommandeRefusee(f"Obstacle à {r.etat['dist']:.0f} cm, dans la zone d'exclusion de {r.id} : geste "
+                                  f"« {nom} » refusé")
+        self._arreter_sequence(r.id)
+        await r.envoyer({"t": "geste", "nom": nom})
+        if nom in ("stand_up_front", "stand_up_back"):
+            r.etat["chute"] = None
+        self.seance.compter("commandes")
+        self.seance.evenement("cmd", type="geste_natif", robot=r.id, origine=origine, nom=nom, dynamique=dyn)
+        await self.log(f"[{r.id}] Geste natif « {r.desc.libelles_gestes.get(nom, nom)} » ({origine})")
+
+    async def cmd_geste_natif_arret(self, robot: str | None = None) -> None:
+        r = self._r(robot)
+        await r.envoyer({"t": "geste_arret"})
+        self.seance.evenement("cmd", type="geste_natif_arret", robot=r.id)
+
+    async def cmd_dire(self, texte: str, origine: str, robot: str | None = None) -> None:
+        r = self._r(robot)
+        r.securite._verifier_arme()
+        texte = str(texte or "").strip()[:500]
+        if not texte:
+            return
+        if "dire" not in r.desc.capacites:
+            raise CommandeRefusee(f"{r.id} ne déclare pas de voix embarquée")
+        await r.envoyer({"t": "dire", "texte": texte})
+        self.seance.evenement("cmd", type="dire", robot=r.id, origine=origine, texte=texte)
+
+    async def cmd_lumiere(self, rgb: list, origine: str, robot: str | None = None) -> None:
+        r = self._r(robot)
+        if "lumiere" not in r.desc.capacites:
+            raise CommandeRefusee(f"{r.id} ne déclare pas de lumières")
+        rgb = [max(0, min(255, int(x))) for x in list(rgb or [0, 0, 0])[:3]]
+        await r.envoyer({"t": "lumiere", "rgb": rgb})
+        self.seance.evenement("cmd", type="lumiere", robot=r.id, origine=origine, rgb=rgb)
 
     # ── Envoi de commandes (toujours via la sécurité du robot visé) ─
     async def _envoyer(self, msg: dict[str, Any], robot: str | None = None) -> None:
@@ -348,7 +429,7 @@ class Controleur:
             await self.robots[rid].arreter()
         from dataclasses import replace
         d = replace(d, simulation=bool(simulation) or bool(self.cfg.get("_forcer_sim")))
-        r = RobotConnecte(d, self.dossier_sequences / d.id, self.donnees)
+        r = RobotConnecte(d, self.dossier_sequences / (d.sequences or d.id), self.donnees)
         if any(x.securite.arret_urgence for x in self.robots.values()):
             r.securite.declencher_arret("flotte à l'arrêt")
         self.robots[rid] = r
@@ -473,7 +554,7 @@ class Controleur:
             texte, self.etat,
             {"min_deg": self.limites.min_deg, "max_deg": self.limites.max_deg,
              "repos": self.limites.repos, "propulsion_active": self.limites.propulsion_active},
-            self.lister_sequences(), regle)
+            self.lister_sequences() + [f"natif:{g}" for g in self.robot.desc.gestes_natifs], regle)
         conf_verif, motif = self._verifier_proposition(prop)
         prop["confiance_declaree"] = prop["confiance"]
         prop["confiance_verification"] = conf_verif
@@ -514,6 +595,11 @@ class Controleur:
             return 0.0, "Aucune action proposée"
         if a == "repos":
             return 1.0, "Position de repos (connue et sûre)"
+        if a == "sequence" and str(p.get("nom", "")).startswith("natif:"):
+            g = str(p["nom"])[6:]
+            if g not in self.robot.desc.gestes_natifs:
+                return 0.0, "Geste natif hors de la liste fermée du profil"
+            return 1.0, "Geste natif déclaré par le profil (liste fermée)"
         if a == "sequence":
             if p.get("nom") not in self.lister_sequences():
                 return 0.0, "Séquence inexistante"
@@ -563,6 +649,8 @@ class Controleur:
         elif a == "propulsion":
             await self.cmd_propulsion(float(p.get("g", 0)), float(p.get("d", 0)), origine,
                                       min(3000.0, float(p.get("ms", 1000))), prop["robot"])
+        elif a == "sequence" and str(p["nom"]).startswith("natif:"):
+            await self.cmd_geste_natif(str(p["nom"])[6:], origine, prop["robot"])
         elif a == "sequence":
             await self.jouer_sequence(p["nom"], origine, prop["robot"])
         elif a == "repos":
@@ -621,6 +709,14 @@ class Controleur:
                 await self.cmd_articulations(deg, float(m.get("ms", 0)), "manuel", rob)
             elif op == "propulsion":
                 await self.cmd_propulsion(float(m["g"]), float(m["d"]), "manette", 400, rob)
+            elif op == "geste_natif":
+                await self.cmd_geste_natif(m.get("nom", ""), str(m.get("origine", "manuel"))[:20], rob)
+            elif op == "geste_natif_arret":
+                await self.cmd_geste_natif_arret(rob)
+            elif op == "robot_dire":
+                await self.cmd_dire(m.get("texte", ""), str(m.get("origine", "manuel"))[:20], rob)
+            elif op == "robot_lumiere":
+                await self.cmd_lumiere(m.get("rgb"), str(m.get("origine", "manuel"))[:20], rob)
             elif op == "repos":
                 self._arreter_sequence(rob)
                 await self.cmd_articulations(list(self._r(rob).limites.repos), 1500, "manuel", rob)

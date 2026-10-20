@@ -72,6 +72,19 @@
       <button id="btn-seq-stop">Arrêter la séquence</button>
       <span class="petit" id="seq-en-cours"></span>
     </div>
+    <div id="bloc-natifs" hidden>
+      <h3>Gestes natifs du robot <small>(liste fermée du profil ; ⚖ = marche ou équilibre)</small></h3>
+      <div class="liste-seq" id="liste-natifs"></div>
+      <div class="ligne"><button id="btn-natif-stop">Interrompre le geste natif</button><span class="petit" id="natif-en-cours"></span></div>
+      <div class="ligne" id="bloc-yeux" hidden>
+        <label for="yeux">Yeux (DEL)</label><input type="color" id="yeux" value="#c8c8c8">
+        <button id="btn-yeux">Appliquer</button>
+      </div>
+      <form class="ligne" id="form-dire" hidden>
+        <input id="dire-texte" maxlength="500" placeholder="Phrase dite par le robot (voix embarquée)" aria-label="Phrase dite par le robot">
+        <button type="submit">Dire</button>
+      </form>
+    </div>
     <h3>Éditeur</h3>
     <div class="ligne">
       <input id="seq-nom" placeholder="Nom de la séquence" maxlength="40">

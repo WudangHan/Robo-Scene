@@ -41,7 +41,8 @@ class TransportSimule(Transport):
     nom = "sim"
 
     def __init__(self, n_articulations: int, repos: list[float], propulsion: bool,
-                 chien_de_garde_ms: int = 500, periode_ms: int = 50):
+                 chien_de_garde_ms: int = 500, periode_ms: int = 50, gestes_natifs: list[str] | None = None,
+                 images_geste=None, vbat: float = 8.2):
         self.n = n_articulations
         self.deg = list(map(float, repos))
         self.depart = list(self.deg)
@@ -51,7 +52,7 @@ class TransportSimule(Transport):
         self.roues = [0.0, 0.0]
         self.propulsion = propulsion
         self.pose = [0.0, 0.0, 0.0]  # x (m), y (m), cap (rad) sur un plateau de 4 × 3 m
-        self.vbat = 8.2
+        self.vbat = self.vbat0 = vbat           # tension pleine charge simulée (8,2 V : robot ESP32 ; 12,6 V : TonyPi)
         self.estop = False
         self.dernier_msg = time.monotonic()
         self.cdg = chien_de_garde_ms / 1000
@@ -59,6 +60,27 @@ class TransportSimule(Transport):
         self._file: asyncio.Queue[dict] = asyncio.Queue()
         self._tache: asyncio.Task | None = None
         self.t_debut = time.monotonic()
+        # Gestes natifs simulés (v2) : images converties des groupes d'actions du robot, si l'installation les a
+        # importées (outils/hiwonder_tonypi.py) ; sinon, une pause de 1,5 s tient lieu de geste.
+        self.gestes_natifs = list(gestes_natifs or [])
+        self.images_geste = images_geste
+        self._geste: asyncio.Task | None = None
+        self.yeux: list[int] | None = None
+
+    async def _jouer_geste(self, nom: str) -> None:
+        images = (self.images_geste(nom) if self.images_geste else None) or []
+        await self._file.put({"t": "evt", "type": "geste", "nom": nom, "etat": "debut", "simule": True})
+        try:
+            if not images:
+                await asyncio.sleep(1.5)
+            for im in images:
+                self.depart, self.cible = list(self.deg), [float(x) for x in im["deg"]]
+                self.duree, self.t0 = max(0.02, float(im.get("ms", 500)) / 1000), time.monotonic()
+                await asyncio.sleep(self.duree)
+            await self._file.put({"t": "evt", "type": "geste", "nom": nom, "etat": "fin", "simule": True})
+        except asyncio.CancelledError:
+            await self._file.put({"t": "evt", "type": "geste", "nom": nom, "etat": "interrompu", "simule": True})
+            raise
 
     async def ouvrir(self) -> None:
         self._tache = asyncio.create_task(self._boucle())
@@ -74,6 +96,8 @@ class TransportSimule(Transport):
         if t == "hello":
             await self._file.put(self._info())
         elif t == "estop":
+            if self._geste and not self._geste.done():
+                self._geste.cancel()
             self.estop = True
             self.roues = [0.0, 0.0]
             self.depart = list(self.deg)
@@ -81,9 +105,26 @@ class TransportSimule(Transport):
             self.duree = 0.0
         elif t == "reset":
             self.estop = False
-        elif self.estop and t in ("servos", "drive"):
+        elif self.estop and t in ("servos", "drive", "geste"):
             await self._file.put({"t": "err", "msg": "estop"})
+        elif t == "geste":
+            nom = str(msg.get("nom", ""))
+            if nom not in self.gestes_natifs:
+                await self._file.put({"t": "err", "msg": f"geste natif inconnu : {nom}"})
+                return
+            if self._geste and not self._geste.done():
+                self._geste.cancel()
+            self._geste = asyncio.create_task(self._jouer_geste(nom))
+        elif t == "geste_arret":
+            if self._geste and not self._geste.done():
+                self._geste.cancel()
+        elif t == "lumiere":
+            self.yeux = [int(x) for x in (msg.get("rgb") or [0, 0, 0])[:3]]
+        elif t in ("dire", "afficher"):
+            pass                                   # simulation : la page affiche et dit elle-même
         elif t == "servos":
+            if self._geste and not self._geste.done():
+                self._geste.cancel()
             self.depart = list(self.deg)
             self.cible = [float(x) for x in msg["deg"]]
             self.duree = max(0.0, float(msg.get("ms", 0))) / 1000
@@ -122,7 +163,7 @@ class TransportSimule(Transport):
             self.pose = [x, y, th]
             # Batterie : décharge lente, plus rapide en mouvement
             charge = 0.00002 + 0.0004 * (abs(vl) + abs(vr))
-            self.vbat = max(6.0, self.vbat - charge * dt * 20)
+            self.vbat = max(self.vbat0 * 0.73, self.vbat - charge * dt * 20)
             dist = self._distance_mur(x, y, th)
             await self._file.put({
                 "t": "tel",

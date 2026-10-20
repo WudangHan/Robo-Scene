@@ -172,3 +172,4 @@ table.images td.vide { color: var(--doux); padding: 14px; }
 .bandeau-pont a.bouton:hover, .bandeau-pont a.bouton:focus-visible { background: #ffd88a; }
 .bandeau-pont .petit { display: block; margin-top: 4px; opacity: .85; font-size: 12px; }
 .bandeau-simulation { background: #14222a; border-bottom-color: #2f6f8a; color: #d6eef7; }
+.liste-seq .seq.dynamique { border-color: #8a6d2c; }

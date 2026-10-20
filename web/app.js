@@ -56,6 +56,7 @@ function recevoir(e) {
     case "journal": journal(m); break;
     case "sequences": listerSequences(m.liste); break;
     case "sequence": chargerBrouillon(m.sequence); break;
+    case "robot_evenement": surEvenementRobot(m); break;
     case "ia_proposition": propositions.set(m.id, m); rendrePropositions(); break;
     case "ia_statut": if (propositions.has(m.id)) { propositions.get(m.id).statut = m.statut; rendrePropositions(); } break;
   }
@@ -78,6 +79,7 @@ function appliquerConfig(c) {
   $("#ia-auto").textContent = c.execution_auto ? "exécution auto au-dessus du seuil" : "validation humaine requise";
   $("#ia-auto").className = "pastille " + (c.execution_auto ? "avert" : "ok");
   $("#bloc-propulsion").hidden = !c.propulsion;
+  listerNatifs(c);
   if (!premiere) return;
   // Curseurs
   const zone = $("#curseurs");
@@ -105,7 +107,9 @@ function appliquerConfig(c) {
   t.innerHTML = c.noms.map((n, i) => `<div class="tuile"><div class="etiq">${n}</div><div class="val" id="t${i}">—</div></div>`).join("")
     + `<div class="tuile"><div class="etiq">Distance avant</div><div class="val" id="t-dist">—</div></div>
        <div class="tuile"><div class="etiq">Batterie</div><div class="val" id="t-vbat">—</div></div>
-       <div class="tuile"><div class="etiq">Roues G / D</div><div class="val" id="t-roues">—</div></div>`;
+       <div class="tuile"><div class="etiq">${(c.capacites || []).includes("gestes_natifs") ? "Marche G / D" : "Roues G / D"}</div><div class="val" id="t-roues">—</div></div>`
+    + ((c.capacites || []).includes("imu") ? `<div class="tuile"><div class="etiq">Tangage / roulis</div><div class="val" id="t-imu">—</div></div>
+       <div class="tuile"><div class="etiq">Équilibre</div><div class="val" id="t-chute">—</div></div>` : "");
   $("#legende").innerHTML = c.noms.map((n, i) => `<span><i style="background:${COULEURS[i % 8]}"></i>${n}</span>`).join("")
     + `<span><i style="background:#e7e9ee"></i>Distance (cm)</span>`;
   // En-tête de l'éditeur
@@ -140,6 +144,8 @@ function surEtat(m) {
   });
   $("#t-dist").textContent = m.dist != null ? `${Number(m.dist).toFixed(0)} cm` : "—";
   $("#t-vbat").textContent = m.vbat != null ? `${Number(m.vbat).toFixed(2)} V` : "—";
+  if ($("#t-imu")) $("#t-imu").textContent = m.imu ? `${m.imu.tangage}° / ${m.imu.roulis}°` : "—";
+  if ($("#t-chute")) { $("#t-chute").textContent = m.chute ? `TOMBÉ (${m.chute})` : "debout"; $("#t-chute").style.color = m.chute ? "var(--alerte)" : ""; }
   $("#t-roues").textContent = m.drive ? `${(+m.drive[0]).toFixed(2)} / ${(+m.drive[1]).toFixed(2)}` : "—";
   const b = $("#st-batt");
   b.textContent = m.vbat != null ? `${Number(m.vbat).toFixed(2)} V` : "— V";
@@ -361,6 +367,28 @@ function listerSequences(liste) {
     z.appendChild(s);
   });
 }
+/* ── Gestes natifs, yeux, voix embarquée (robots qui les déclarent : TonyPi Pro…) ── */
+function listerNatifs(c) {
+  const gestes = c.gestes_natifs || [], cap = c.capacites || [];
+  $("#bloc-natifs").hidden = !gestes.length;
+  $("#bloc-yeux").hidden = !cap.includes("lumiere");
+  $("#form-dire").hidden = !cap.includes("dire");
+  $("#liste-natifs").innerHTML = gestes.map((g) => `<span class="seq${g.dynamique ? " dynamique" : ""}"><button data-natif="${echapper(g.nom)}" title="${echapper(g.nom)}${g.dynamique ? " — marche ou équilibre : zone dégagée" : ""}">${g.dynamique ? "⚖ " : "▶ "}${echapper(g.libelle)}</button></span>`).join("");
+  document.querySelectorAll("#liste-natifs [data-natif]").forEach((b) => (b.onclick = () => {
+    const g = gestes.find((x) => x.nom === b.dataset.natif);
+    if (g?.dynamique && !c.simulation && !confirm(`« ${g.libelle} » déplace le robot ou sollicite son équilibre. La zone est-elle dégagée ?`)) return;
+    envoyer("geste_natif", { nom: b.dataset.natif });
+  }));
+}
+function surEvenementRobot(m) {
+  if (m.evenement === "geste") $("#natif-en-cours").textContent = m.etat === "debut" ? `en cours : ${m.nom}` : "";
+  if (m.evenement === "chute") journal({ niveau: "alerte", msg: `Chute du robot ${m.robot} (${m.sens}). Après vérification et réarmement : geste « ${m.releve} ».` });
+  else if (["toucher", "bouton", "manette"].includes(m.evenement)) journal({ niveau: "info", msg: `Robot ${m.robot} : ${m.evenement}` });
+}
+$("#btn-natif-stop").onclick = () => envoyer("geste_natif_arret");
+$("#btn-yeux").onclick = () => { const h = $("#yeux").value; envoyer("robot_lumiere", { rgb: [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) }); };
+$("#form-dire").onsubmit = (e) => { e.preventDefault(); const t = $("#dire-texte").value.trim(); if (t) { envoyer("robot_dire", { texte: t }); $("#dire-texte").value = ""; } };
+
 function chargerBrouillon(seq) {
   $("#seq-nom").value = seq.nom;
   brouillon = seq.images.map((im) => ({ deg: im.deg.slice(), ms: im.ms ?? 800, pause_ms: im.pause_ms ?? 0 }));

@@ -48,6 +48,14 @@ Python, JavaScript (Node), C++ et Arduino (`sdk/`), toutes conformes au langage 
 Un même geste nommé se joue sur chaque robot validé ; un brouillon est refusé sur robot réel, et les statuts
 intermédiaires jouent à demi-vitesse.
 
+**Hiwonder TonyPi Pro** (humanoïde de 20 axes) : profil `robots/tonypi_pro.toml` (degrés relatifs à la position debout ;
+bornes tirées des 116 groupes d'actions officiels ; sens à confirmer par relevé) et deux liaisons — le pilote embarqué
+`sdk/python/tonypi_embarque.py` (tout le robot : gestes natifs, marche, chute, capteurs, DEL, voix, flux MJPEG) ou, sans
+rien installer, le serveur JSON-RPC de Hiwonder (`robots/tonypi_pro_rpc.toml`). Gestes natifs dans la Console, la
+conduite (`natif:<nom>`) et l'IA supervisée (par leur nom, liste fermée) ; le robot virtuel reflète les 20 axes et
+pilote la tête, les bras et les mains ; `outils/hiwonder_tonypi.py` convertit les groupes d'actions `.d6a` en
+séquences et inversement. Guide : `web/aide/Guide_TonyPi_Pro_ROBO-SCENE_v1.0.docx`.
+
 ### Lancer la plateforme
 
 ```bash

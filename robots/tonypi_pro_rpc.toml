@@ -1,0 +1,291 @@
+# Hiwonder TonyPi Pro — liaison SANS INSTALLATION par le serveur JSON-RPC de Hiwonder (port 9030, service tonypi.service).
+# Mêmes articulations, mêmes bornes, mêmes gestes et même bibliothèque que robots/tonypi_pro.toml (voir ses sources) ;
+# limites de ce mode : mains (17, 18) refusées par le serveur, ni batterie, ni centrale inertielle, ni capteurs, ni voix.
+# Profil inactif au démarrage : l'activer depuis la Console (« Activer un profil ») ; un seul des deux profils TonyPi
+# doit être relié au robot à la fois.
+
+[robot]
+id = "tonypi-pro-rpc"
+nom = "TonyPi Pro (JSON-RPC)"
+pilote = "tonypi_rpc"
+langage = "python"
+simulation = true            # jusqu'au relevé servo par servo (sens, bornes) à réception du robot
+actif = false
+sequences = "tonypi-pro"
+capacites = ["camera", "gestes_natifs"]
+notes = "Bipède : l'arrêt fige les servos à leur position (jamais de coupure du couple) et interrompt le geste natif en cours ; la marche n'existe que par les gestes natifs de Hiwonder."
+gestes_natifs = [
+  "stand", "stand_slow", "wave", "bow", "chest", "twist", "squat", "left_hand", "right_hand", "lift_left_hand",
+  "wing_chun", "left_uppercut", "right_uppercut", "left_shot_fast", "right_shot_fast", "left_kick", "right_kick",
+  "stepping", "go_forward", "go_forward_one_step", "go_forward_one_small_step", "back", "back_one_step",
+  "turn_left", "turn_right", "turn_left_small_step", "turn_right_small_step", "left_move", "right_move",
+  "stand_up_front", "stand_up_back",
+]
+gestes_dynamiques = [
+  "squat", "twist", "wing_chun", "left_shot_fast", "right_shot_fast", "left_kick", "right_kick", "stepping",
+  "go_forward", "go_forward_one_step", "go_forward_one_small_step", "back", "back_one_step", "turn_left", "turn_right",
+  "turn_left_small_step", "turn_right_small_step", "left_move", "right_move", "stand_up_front", "stand_up_back",
+]
+
+[libelles_gestes]
+stand = "Debout"
+stand_slow = "Debout (lent)"
+wave = "Saluer de la main"
+bow = "Révérence"
+chest = "Célébrer"
+twist = "Torsion du buste"
+squat = "S'accroupir"
+left_hand = "Lever la main gauche"
+right_hand = "Lever la main droite"
+lift_left_hand = "Montrer de la main gauche"
+wing_chun = "Garde (wing chun)"
+left_uppercut = "Crochet du gauche"
+right_uppercut = "Crochet du droit"
+left_shot_fast = "Frapper du pied gauche"
+right_shot_fast = "Frapper du pied droit"
+left_kick = "Coup de pied latéral gauche"
+right_kick = "Coup de pied latéral droit"
+stepping = "Marcher sur place"
+go_forward = "Avancer"
+go_forward_one_step = "Un pas en avant"
+go_forward_one_small_step = "Un petit pas en avant"
+back = "Reculer"
+back_one_step = "Un pas en arrière"
+turn_left = "Tourner à gauche"
+turn_right = "Tourner à droite"
+turn_left_small_step = "Petit virage à gauche"
+turn_right_small_step = "Petit virage à droite"
+left_move = "Pas chassé à gauche"
+right_move = "Pas chassé à droite"
+stand_up_front = "Se relever (tombé en avant)"
+stand_up_back = "Se relever (tombé en arrière)"
+
+[propulsion]
+active = true                # la « propulsion » du TonyPi est sa marche : avancer, reculer, tourner (gestes natifs)
+
+[connexion]
+url = "http://192.168.149.1:9030"   # serveur JSON-RPC de Hiwonder
+periode_lecture_s = 1.0
+
+[camera]
+mjpeg = "http://192.168.149.1:8080/?action=stream"   # serveur MJPEG du robot (Hiwonder ou pilote embarqué)
+
+[securite]
+vitesse_max_deg_s = 90.0
+chien_de_garde_ms = 500
+batterie_min_v = 10.0        # documentation Hiwonder : recharger sous 10 V (pleine charge 12,6 V)
+rayon_exclusion_m = 1.0
+propulsion_max = 1.0          # seuils de marche du pilote : 0,15 (arrêt) ; la vitesse reste celle des gestes natifs
+
+# Correspondance avec le robot virtuel humanoïde (page « Robot virtuel ») : un axe du robot porte le nom d'un degré de
+# liberté du robot virtuel ; `piloter` liste les axes que le robot virtuel peut commander (les jambes en sont exclues :
+# l'équilibre d'un bipède relève des gestes natifs) ; tous les axes sont reflétés.
+[jumeau]
+piloter = ["tete.flexion", "tete.rotation", "epaule_g.flexion", "epaule_g.abduction", "coude_g.flexion",
+           "epaule_d.flexion", "epaule_d.abduction", "coude_d.flexion", "main_g.fermeture", "main_d.fermeture"]
+
+[[articulations]]
+nom = "cheville_g.roulis"
+id = 1
+min = -25.2
+max = 34.1
+repos = 0.0
+zero = 500
+sens = 1
+a_verifier = true   # sens à relever
+
+[[articulations]]
+nom = "cheville_g.flexion"
+id = 2
+min = -103.0
+max = 81.6
+repos = 0.0
+zero = 390
+sens = -1
+a_verifier = true   # flexion dorsale + (accroupi), déduite
+
+[[articulations]]
+nom = "genou_g.flexion"
+id = 3
+min = -120.0
+max = 110.4
+repos = 0.0
+zero = 500
+sens = 1
+a_verifier = true   # flexion + (accroupi), déduite
+
+[[articulations]]
+nom = "hanche_g.flexion"
+id = 4
+min = -114.0
+max = 61.7
+repos = 0.0
+zero = 600
+sens = 1
+a_verifier = true   # flexion + (accroupi), déduite
+
+[[articulations]]
+nom = "hanche_g.abduction"
+id = 5
+min = -30.0
+max = 60.0
+repos = 0.0
+zero = 500
+sens = 1
+a_verifier = true   # sens à relever
+
+[[articulations]]
+nom = "coude_g.flexion"
+id = 6
+min = -108.0
+max = 85.2
+repos = 0.0
+zero = 575
+sens = 1
+a_verifier = false   # flexion + (« lift_left_hand »)
+
+[[articulations]]
+nom = "epaule_g.abduction"
+id = 7
+min = -24.0
+max = 162.0
+repos = 0.0
+zero = 800
+sens = -1
+a_verifier = false   # abduction + (« sit_ups », bras le long du corps à 800)
+
+[[articulations]]
+nom = "epaule_g.flexion"
+id = 8
+min = -58.3
+max = 174.0
+repos = 0.0
+zero = 725
+sens = -1
+a_verifier = false   # flexion + (« left_hand » lève le bras gauche)
+
+[[articulations]]
+nom = "cheville_d.roulis"
+id = 9
+min = -16.8
+max = 32.2
+repos = 0.0
+zero = 500
+sens = -1
+a_verifier = true   # sens à relever
+
+[[articulations]]
+nom = "cheville_d.flexion"
+id = 10
+min = -112.8
+max = 81.6
+repos = 0.0
+zero = 610
+sens = 1
+a_verifier = true   # miroir de 2
+
+[[articulations]]
+nom = "genou_d.flexion"
+id = 11
+min = -120.0
+max = 110.4
+repos = 0.0
+zero = 500
+sens = -1
+a_verifier = true   # miroir de 3
+
+[[articulations]]
+nom = "hanche_d.flexion"
+id = 12
+min = -114.0
+max = 62.2
+repos = 0.0
+zero = 400
+sens = -1
+a_verifier = true   # miroir de 4
+
+[[articulations]]
+nom = "hanche_d.abduction"
+id = 13
+min = -29.8
+max = 60.2
+repos = 0.0
+zero = 500
+sens = -1
+a_verifier = true   # sens à relever
+
+[[articulations]]
+nom = "coude_d.flexion"
+id = 14
+min = -108.0
+max = 94.1
+repos = 0.0
+zero = 425
+sens = -1
+a_verifier = false   # miroir de 6 (« wave »)
+
+[[articulations]]
+nom = "epaule_d.abduction"
+id = 15
+min = -24.0
+max = 162.0
+repos = 0.0
+zero = 200
+sens = 1
+a_verifier = false   # miroir de 7
+
+[[articulations]]
+nom = "epaule_d.flexion"
+id = 16
+min = -58.6
+max = 174.0
+repos = 0.0
+zero = 275
+sens = 1
+a_verifier = false   # flexion + (« right_hand », « wave »)
+
+[[articulations]]
+nom = "main_g.fermeture"
+unite = "%"
+id = 17
+min = 0.0
+max = 100.0
+repos = 0.0
+zero = 500
+sens = 1
+pas_par_unite = 2.6
+a_verifier = true   # fermeture vers 760 (« apriltag_track ») déduite
+
+[[articulations]]
+nom = "main_d.fermeture"
+unite = "%"
+id = 18
+min = 0.0
+max = 100.0
+repos = 0.0
+zero = 500
+sens = -1
+pas_par_unite = 2.6
+a_verifier = true   # miroir de 17 (enveloppe officielle : 240 à 500)
+
+[[articulations]]
+nom = "tete.flexion"
+id = "pwm:1"
+min = -30.0
+max = 50.0
+repos = 0.0
+zero = 1500
+sens = -1
+pas_par_unite = 11.111
+a_verifier = true   # + = regarder vers le bas (robot virtuel) ; 1800 µs regarde vers le haut (FaceDetect.py)
+
+[[articulations]]
+nom = "tete.rotation"
+id = "pwm:2"
+min = -70.0
+max = 70.0
+repos = 0.0
+zero = 1435
+sens = 1
+pas_par_unite = 11.111
+a_verifier = true   # milieu 1435 µs (servo_config.yaml) ; sens à relever

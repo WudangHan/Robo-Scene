@@ -31,6 +31,7 @@ class RobotConnecte:
         self.propulsion_jusqua = 0.0
         self.seq_tache: asyncio.Task | None = None
         self.seq_nom: str | None = None
+        self.geste_natif: str | None = None     # geste natif en cours (événements du robot)
         self.alerte_batt = False
         self.tache: asyncio.Task | None = None
         self.biblio = (BibliothequeP2() if desc.bibliotheque == "p2"
@@ -55,7 +56,7 @@ class RobotConnecte:
 
     def resume(self) -> dict[str, Any]:
         return {**self.desc.resume(), "lien": self.lien, "arret": self.securite.arret_urgence,
-                "sequence": self.seq_nom, "vbat": self.etat.get("vbat"),
+                "sequence": self.seq_nom, "geste_natif": self.geste_natif, "vbat": self.etat.get("vbat"),
                 "pilote_effectif": "simulation" if self.desc.simulation else self.desc.pilote}
 
     async def boucle(self, sur_message: Callable[["RobotConnecte", dict], Awaitable[None]],

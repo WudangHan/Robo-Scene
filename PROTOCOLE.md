@@ -1,4 +1,4 @@
-# Langage de commande unifié ROBO-SCÈNE (v2.0)
+# Langage de commande unifié ROBO-SCÈNE (v2.1)
 
 Un seul langage pour tous les robots, quels que soient leur marque, le langage dans lequel leur pilote est écrit et
 le canal qui les relie au pont. La v2 étend la v1 sans la modifier : un micrologiciel v1 reste pleinement compatible.
@@ -17,6 +17,9 @@ Un objet JSON **par ligne** (terminée par `\n`), encodé en UTF-8.
 | `reset`  | —                               | Lever le verrou (refusé si un bouton d'arrêt local est enfoncé). |
 | `geste`  | `nom` *(v2, facultatif)*        | Jouer un geste natif du robot (si le robot en déclare). |
 | `dire`   | `texte` *(v2, facultatif)*      | Synthèse vocale embarquée (si le robot en dispose). |
+| `geste_arret` | — *(v2.1)*                 | Interrompre le geste natif en cours, sans verrou d'arrêt. |
+| `lumiere` | `rgb` : [r, g, b] 0–255, `ou` *(v2.1, facultatif)* | Lumières du robot (« yeux », DEL de la carte). |
+| `afficher` | `texte` ou `motif` *(v2.1, facultatif)* | Afficheur du robot (matrice de points). |
 
 ## Du robot vers le pont
 
@@ -25,6 +28,10 @@ Un objet JSON **par ligne** (terminée par `\n`), encodé en UTF-8.
 | `info` | `nom`, `fw`, `servos` (N), `propulsion` (booléen), `articulations` *(v2, noms)* | Au démarrage et sur `hello`. |
 | `tel`  | `ms`, `deg` (N valeurs), `drive` [l, r], `vbat` (V), `dist` (cm), `estop` (booléen), `pose` [x, y, cap] *(facultatif)*, `estimee` *(v2 : vrai si `deg` est une cible et non une mesure)* | 20 Hz. |
 | `err`  | `msg`, `niveau` *(v2, facultatif : « info »)* | Sur commande refusée ou illisible. |
+| `evt`  | `type` : `geste` (`nom`, `etat` : debut, fin, interrompu), `marche` (`mode`), `chute` (`sens`, `releve`), `toucher`, `bouton`, `manette` *(v2.1)* | Ponctuel. Une `chute` arrête toute la flotte ; le relevé reste une décision humaine. |
+
+Champs facultatifs v2.1 : `info.gestes` (gestes natifs), `tel.imu` {`tangage`, `roulis`} (degrés), `tel.chute`
+(`avant`, `arriere` ou absent). Un robot v2.0 ignore les messages v2.1 qu'il ne connaît pas.
 
 ## Règles de sécurité imposées à tout pilote
 
@@ -47,6 +54,7 @@ actionneurs (ISO 13850 ; IEC 60204-1 pour sa réalisation électrique).
 | `osc` | Open Sound Control (`/robot/servos`, `/robot/tel`…) | Max, Pure Data, TouchDesigner, Isadora, QLab |
 | `http` | API REST (gabarits de requêtes, pointeurs JSON) | robots à interface web |
 | `reachy_mini` | trousse Python du Reachy Mini | Reachy Mini (pose de tête, corps, antennes) |
+| `tonypi_rpc` | JSON-RPC 2.0 en HTTP vers le serveur de Hiwonder (port 9030) | Hiwonder TonyPi Pro sans installation (servos 1–16, tête, gestes natifs, marche) |
 | `externe` | programme pilote sur stdin/stdout | pilote écrit en **n'importe quel langage** |
 
 ## Trousses de développement (sdk/)
@@ -134,3 +142,20 @@ Pont → page : `chien_tel` (10 Hz : `p` `[x, y, z]`, `v`, `lacet`, `batterie`, 
   `kwkL`, `kwkR`, `kbk`, `d`).
 - **ligne_json** (UDP) : `{"t": "chien", "cmd": "vitesse" (avant, gauche, lacet_vitesse) | "posture" (nom) | "couper"}` ;
   retour `{"t": "tel", "p": [x, y, z], "lacet": …, "etat": …, "posture": …, "batterie": …}`.
+
+## Hiwonder TonyPi Pro
+
+Profil `robots/tonypi_pro.toml` : 20 axes nommés comme les degrés de liberté du robot virtuel (`epaule_d.flexion`,
+`genou_g.flexion`, `cheville_g.roulis`, `main_d.fermeture`, `tete.rotation`…), en **degrés relatifs à la position debout
+officielle** (groupe « stand » ; 0 partout = debout), mains en % de fermeture. Conversion (`bridge/robots/tonypi.py`) :
+position native = `zero + sens × valeur × pas_par_unite` ; servos de bus 1–18 : 1000 pas pour 240° ; servos PWM de la
+tête (`pwm:1` tangage, `pwm:2` lacet) : 500–2500 µs pour 180°.
+
+| Liaison | Côté robot | Ce qui passe |
+|---|---|---|
+| `ligne_json` TCP 3333 | `sdk/python/tonypi_embarque.py` (SDK Hiwonder, carte contrôleur `/dev/ttyAMA0` à 1 Mbit/s ; arrêter d'abord `tonypi.service`) | 20 axes, `geste` (groupes d'actions de la liste fermée), `drive` → marche native, `estop` (arrêt du bus : servos figés), `dire`, `lumiere`, télémétrie (batterie, `imu`, `dist`, `chute`), `evt` (chute, toucher, bouton, manette), flux MJPEG `--camera 8080` |
+| `tonypi_rpc` | serveur JSON-RPC de Hiwonder, déjà lancé au démarrage | servos 1–16 (`SetBusServoPulse`), tête (`set_pwm_servo`), `RunAction`, `StopActionGroup` ; positions 1–15 relues (`GetBusServosPulse`) |
+
+Marche : `drive` (l, r) → `go_forward` (l ≈ r > 0,15), `back` (l ≈ r < −0,15), `turn_right` (l > r), `turn_left`, en
+boucle jusqu'à l'arrêt ou au chien de garde de 500 ms. Chute : angle de la centrale autour de l'axe y de la carte
+(critère du relevé automatique de Hiwonder) proche de 0° (avant) ou de 180° (arrière) pendant 1 s.

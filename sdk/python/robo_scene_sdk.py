@@ -51,9 +51,32 @@ class PiloteRobot:
         """Geste natif du robot ; renvoyer False s'il n'existe pas."""
         return False
 
+    def arreter_geste(self) -> None:
+        """Interrompre le geste natif en cours (v2.1), sans verrou d'arrêt."""
+
+    def dire(self, texte: str) -> bool:
+        """Synthèse vocale embarquée (v2) ; renvoyer False si le robot n'en dispose pas."""
+        return False
+
+    def lumiere(self, m: dict[str, Any]) -> bool:
+        """Lumières du robot (v2.1) : m["rgb"] = [r, g, b] (0–255), m.get("ou") ; False si non pris en charge."""
+        return False
+
+    def afficher(self, m: dict[str, Any]) -> bool:
+        """Afficheur du robot (v2.1) : m["texte"] ou m["motif"] ; False si non pris en charge."""
+        return False
+
+    def info_extra(self) -> dict[str, Any]:
+        """Champs ajoutés au message « info » (gestes natifs, capacités…)."""
+        return {}
+
     def lire_etat(self) -> dict[str, Any]:
         """Télémétrie supplémentaire (vbat, dist, pose…) ; par défaut, rien."""
         return {}
+
+    def evenement(self, type_: str, **donnees: Any) -> None:
+        """Événement ponctuel vers le pont (v2.1) : chute, toucher, bouton, manette, geste_fin…"""
+        self._envoyer({"t": "evt", "type": type_, "ms": int((time.monotonic() - self._t0) * 1000), **donnees})
 
     # ── Mécanique commune ───────────────────────────────────
     def _envoyer(self, d: dict[str, Any]) -> None:
@@ -62,7 +85,7 @@ class PiloteRobot:
 
     def info(self) -> dict[str, Any]:
         return {"t": "info", "nom": self.nom, "fw": f"sdk-python-{self.version}", "servos": len(self.articulations),
-                "propulsion": self.propulsion, "articulations": [a[0] for a in self.articulations]}
+                "propulsion": self.propulsion, "articulations": [a[0] for a in self.articulations], **self.info_extra()}
 
     def traiter(self, ligne: str) -> None:
         ligne = ligne.strip()
@@ -82,7 +105,7 @@ class PiloteRobot:
             self.figer()
         elif t == "reset":
             self.estop = False
-        elif t in ("servos", "drive", "geste") and self.estop:
+        elif t in ("servos", "drive", "geste", "dire") and self.estop:
             self._envoyer({"t": "err", "msg": "estop"})
         elif t == "servos":
             deg = m.get("deg", [])
@@ -98,6 +121,17 @@ class PiloteRobot:
         elif t == "geste":
             if not self.geste(str(m.get("nom", ""))):
                 self._envoyer({"t": "err", "msg": f"geste natif inconnu : {m.get('nom')}"})
+        elif t == "geste_arret":
+            self.arreter_geste()
+        elif t == "dire":
+            if not self.dire(str(m.get("texte", ""))[:500]):
+                self._envoyer({"t": "err", "msg": "synthèse vocale embarquée indisponible", "niveau": "info"})
+        elif t == "lumiere":
+            if not self.lumiere(m):
+                self._envoyer({"t": "err", "msg": "lumières non prises en charge", "niveau": "info"})
+        elif t == "afficher":
+            if not self.afficher(m):
+                self._envoyer({"t": "err", "msg": "afficheur non pris en charge", "niveau": "info"})
 
     def _boucle_tel(self, actif: Callable[[], bool]) -> None:
         while actif():
