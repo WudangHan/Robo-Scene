@@ -57,10 +57,22 @@ function distance(t, defaut) {
 
 function angle(t, defaut = 90) {
   if (/demi-tour|demi tour/.test(t)) return 180;
+  if (/trois quarts? de tour/.test(t)) return 270;
   if (/quart de tour/.test(t)) return 90;
-  if (W(String.raw`\b(tour complet|un tour)\b`).test(t)) return 360;
+  if (W(String.raw`\b(tour complet|sur (toi|vous)[- ]m[eê]me)\b`).test(t)) return 360;
+  if (W(String.raw`\btours?\b`).test(t)) return 360 * (nombre(t) ?? 1);          // « un tour », « deux tours »
   const n = nombre(t);
   return n === null ? defaut : n;
+}
+
+/* Rotations de plus de 120° découpées en étapes égales : la régulation du lacet suit le plus court chemin, de sorte
+   qu'un tour complet, ou trois quarts de tour, doivent être parcourus par étapes dans le sens demandé. */
+export function decouperRotations(actions) {
+  return actions.flatMap((a) => {
+    if (a.type !== "tourner" || Math.abs(a.angle) <= 120) return [a];
+    const n = Math.ceil(Math.abs(a.angle) / 120), pas = a.angle / n;
+    return Array.from({ length: n }, () => ({ type: "tourner", angle: Math.round(pas * 1000) / 1000 }));
+  });
 }
 
 /* Repère nommé reconnu dans la phrase (« centre », « cour », « avant-scène », « salle centre »…). */
@@ -73,8 +85,18 @@ const ALIAS = [
   [String.raw`\b(milieu|centre) de l'?allée\b`, "allee_milieu"], [String.raw`\bfond de l'?allée\b`, "allee_fond"],
   [String.raw`\b(devant le premier rang|avant-salle|avant salle)\b`, "avant_salle_centre"], [String.raw`\b(ta marque|la marque|départ|point de départ)\b`, "depart"],
   [String.raw`\b(passage du cadre|sous le cadre|le cadre)\b`, "cadre_passage"], [String.raw`\b(entrée de la salle|entrée en salle)\b`, "salle_entree"],
-  [String.raw`\bcentre en haut\b|\bau-dessus du centre\b`, "centre_haut"],
+  [String.raw`\bcentre (en )?haut\b|\bau-dessus du centre\b`, "centre_haut"],
 ];
+
+/* Repère nommé dans la phrase mais inexistant pour ce robot (ex. l'escalier pour le drone) : nom lu, sinon null. */
+export function repereAbsent(t, reperes) {
+  for (const [src, k] of ALIAS) { const m = t.match(W(src)); if (m && !reperes[k]) return m[0]; }
+  const trouve = repereDans(t, reperes) || "";
+  const NOTIONS = [[String.raw`\bl?'?escaliers?( (côté )?(cour|jardin))?\b`, "escalier"], [String.raw`\bl?'?allée\b`, "allee"],
+    [String.raw`\b(premier rang|avant[- ]salle)\b`, "avant_salle"], [String.raw`\bl?'?aire( de d[ée]collage)?\b`, "aire"]];
+  for (const [src, cle] of NOTIONS) { const m = t.match(W(src)); if (m && !trouve.includes(cle)) return m[0]; }
+  return null;
+}
 
 export function repereDans(t, reperes) {
   for (const [src, k] of ALIAS) if (reperes[k] && W(src).test(t)) return k;
@@ -102,11 +124,39 @@ const DIRECTIONS = [
 export function interpreter(texte, robot, reperes = {}) {
   const t0 = normaliser(texte);
   const actions = [], inconnu = [];
+  const absents = [];
   for (const t of t0.split(W(String.raw`\s*(?:,\s*)?\bpuis\b\s*|\s*,\s*et ensuite\s*|\s*;\s*`)).filter(Boolean)) {
-    const a = phrase(t, robot, reperes);
-    if (a) actions.push(...(Array.isArray(a) ? a : [a])); else inconnu.push(t);
+    const seg = [];
+    for (const u of scinder(t, robot, reperes)) {
+      const a = phrase(u, robot, reperes);
+      if (a?.type === "absent") { absents.push(a.nom); inconnu.push(u); }
+      else if (a) seg.push(...(Array.isArray(a) ? a : [a])); else inconnu.push(u);
+    }
+    // sans « puis », une allure qualifie la marche du même segment (« va au centre joyeux ») : elle passe devant
+    actions.push(...seg.filter((a) => a.type === "allure"), ...seg.filter((a) => a.type !== "allure"));
   }
-  return { actions, inconnu };
+  return { actions, inconnu, absents };
+}
+
+/* Ordres enchaînés sans « puis » (« va au centre joyeux », « lève-toi et va au centre ») : le segment est coupé devant
+   un verbe ou un mot d'ordre sans ambiguïté, à condition que chaque partie soit comprise seule. L'arrêt d'urgence
+   n'est jamais découpé : le segment entier devient un ARRÊT. */
+const DECLENCHEURS = {
+  commun: String.raw`\b(va|allez|rends-toi|déplace-toi|avance|avancez|recule|reculez|tourne|tournez|pivote|pivotez|demi-tour|regarde|vise|filme|reviens|rentre)\b`,
+  drone: String.raw`\b(décolle|décollez|envole-toi|atterris|atterrissez|pose-toi|posez-vous|monte|montez|descends|descendez)\b`,
+  chien: String.raw`\b(lève-toi|leve-toi|relève-toi|debout|couché|couche-toi|allonge-toi|assis|assieds-toi|assois-toi|donne la patte|salue|dis bonjour|étire-toi|révérence|incline-toi|joyeux|joyeuse|content|heureux|craintif|craintive|peureux|apeuré|menaçant|agressif|méchant|fatigué|épuisé|curieux|curieuse|neutre|calme)\b`,
+};
+function scinder(t, robot, reperes) {
+  if (W(String.raw`arr[eê]t d'urgence|\burgence\b|\barr[eê]t total\b`).test(t)) return [t];
+  const re = new RegExp(`${W(DECLENCHEURS.commun).source}|${W(DECLENCHEURS[robot]).source}`, "gu");
+  for (const m of t.matchAll(re)) {
+    if (m.index === 0) continue;
+    const g = t.slice(0, m.index).replace(/\s+(et|,)?\s*$/u, "").trim(), d = t.slice(m.index).trim();
+    if (!g || !d) continue;
+    const ag = phrase(g, robot, reperes), ad = phrase(d, robot, reperes);
+    if (ag && ag.type !== "absent" && ad) return [g, ...scinder(d, robot, reperes)];
+  }
+  return [t];
 }
 
 function phrase(t, robot, reperes) {
@@ -114,6 +164,7 @@ function phrase(t, robot, reperes) {
   if (W(String.raw`^(stop|halte|arr[eê]te|arr[eê]tez|arr[eê]te-toi|on arr[eê]te|ne bouge plus|ne bougez plus|reste là|stationnaire|sur place|pause)\b`).test(t)) return { type: "arreter" };
   if (W(String.raw`^(go|top|suivant|repère suivant|envoie|envoyez)\b`).test(t)) return { type: "go" };
   if (robot === "drone") {
+    if (W(String.raw`\baire de d[ée]collage\b`).test(t)) return { type: "retour" };
     if (W(String.raw`\b(décolle|décollez|décoller|decolle|envole-toi|envol|décollage)\b`).test(t)) return { type: "decoller", hauteur: nombre(t) ?? null };
     if (W(String.raw`\b(atterris|atterrissez|atterrir|atterrissage|pose-toi|posez-vous|pose toi)\b`).test(t)) return { type: "atterrir" };
     if (W(String.raw`\b(retour|reviens|rentre|à la base|a la base|aire de décollage)\b`).test(t) && !repereDans(t, reperes)) return { type: "retour" };
@@ -130,13 +181,15 @@ function phrase(t, robot, reperes) {
     for (const [nom, re] of Object.entries(allures)) if (re.test(t) && !/\b(va|avance|recule|tourne)\b/.test(t)) return { type: "allure", nom };
     if (W(String.raw`\b(retour|reviens|à ta place|a ta place|à ta marque|niche|rentre)\b`).test(t) && !repereDans(t, reperes)) return { type: "retour" };
   }
+  const absent = repereAbsent(t, reperes);
+  if (absent && W(String.raw`\b(va|allez|aller|rends-toi|rends toi|déplace-toi|vole|marche|cours|file|direction|vers|regarde|vise|filme)\b|^(à|au|aux|a)\b`).test(t)) return { type: "absent", nom: absent };
   if (W(String.raw`\b(regarde|vise|filme|tourne la tête vers|tourne la caméra vers)\b`).test(t)) {
     if (W(String.raw`\b(la salle|le public|les spectateurs)\b`).test(t)) return { type: "regarder", cible: "salle" };
     if (W(String.raw`\b(devant|droit devant|tout droit)\b`).test(t)) return { type: "regarder", cible: null };
     const r = repereDans(t, reperes); if (r) return { type: "regarder", cible: r };
   }
   if (W(String.raw`\b(demi-tour|demi tour|retourne-toi|fais volte-face)\b`).test(t)) return { type: "tourner", angle: 180 };
-  if (W(String.raw`\b(tourne|pivote|tournez|pivotez|virage|rotation)\b`).test(t)) {
+  if (W(String.raw`\b(tourne|pivote|tournez|pivotez|virage|rotation|tours?)\b`).test(t)) {
     const a = angle(t), droite = W(String.raw`\bdroite\b`).test(t);
     return { type: "tourner", angle: droite ? -a : a };
   }
@@ -224,6 +277,6 @@ export class EcouteVocale {
 }
 
 export const AIDE_VOIX = {
-  drone: ["décolle", "atterris", "stop / reste là", "avance de 2 mètres", "recule de 50 centimètres", "à gauche d'un mètre", "monte d'un mètre", "descends", "tourne à droite de 45 degrés", "demi-tour", "va au centre", "va côté cour", "va à l'avant-scène", "reviens à la base", "regarde la salle", "décolle puis va au centre", "GO", "arrêt d'urgence"],
+  drone: ["décolle", "atterris", "stop / reste là", "avance de 2 mètres", "recule de 50 centimètres", "à gauche d'un mètre", "monte d'un mètre", "descends", "tourne à droite de 45 degrés", "demi-tour", "fais un tour complet", "va au centre", "va côté cour", "va à l'avant-scène", "reviens à la base", "regarde la salle", "décolle puis va au centre", "GO", "arrêt d'urgence"],
   chien: ["lève-toi", "couché", "assis", "donne la patte", "salue", "étire-toi", "stop", "avance de 3 pas", "recule d'un mètre", "à droite", "tourne à gauche", "demi-tour", "va au centre", "va à l'avant-scène", "reviens à ta place", "joyeux", "craintif", "regarde la salle", "lève-toi puis va au centre", "GO", "arrêt d'urgence"],
 };

@@ -230,7 +230,7 @@ tout vol réel, remplacer ce gabarit par le relevé de la salle. Le pont n'ouvre
 cochée et signée, refuse le mode « représentation » tant que `[drone] vol_en_representation = false`, vérifie chaque
 destination et chaque segment, découpe les trajets en consignes à 10 Hz, filtre les consignes de vitesse par le point
 d'arrêt prévu, met le drone en stationnaire puis le pose si la page se tait (1 s, puis 4 s), et le pose sur tout ARRÊT
-de la plateforme. Pour MAVLink : `pip install pymavlink`. Guide : `docs/Guide_drone_de_scene_ROBO-SCENE_v1.1.docx`.
+de la plateforme. Pour MAVLink : `pip install pymavlink`. Guide : `docs/Guide_drone_de_scene_ROBO-SCENE_v1.2.docx`.
 
 ## Chien de scène (O-14)
 
@@ -254,7 +254,7 @@ n'ouvre un adaptateur réel que si `[chien] reel_autorise = true`, exige l'obser
 représentation tant que `[chien] marche_en_representation = false`, suit les trajets par poursuite de la référence à
 10 Hz à partir de l'odométrie, filtre les consignes manuelles par le point d'arrêt prévu, arrête le robot si la page
 se tait (0,5 s) puis le couche (3 s), et le couche sur tout ARRÊT. Pour ROS : un petit nœud côté robot traduit le sujet
-de posture (`std_msgs/String`) en commandes du fabricant. Guide : `docs/Guide_chien_de_scene_ROBO-SCENE_v1.1.docx`.
+de posture (`std_msgs/String`) en commandes du fabricant. Guide : `docs/Guide_chien_de_scene_ROBO-SCENE_v1.2.docx`.
 
 ### Souris, flèches et voix (drone et chien)
 
@@ -277,8 +277,8 @@ plateforme. Essais : `tests/test_commandes.py`.
 Version publiée : **2.3.3** (16 octobre 2026), en ligne sur <https://robo-scene.netlify.app> ; les deux documents de référence se téléchargent aussi depuis la page **Aide** (<https://robo-scene.netlify.app/aide>, dossier `web/aide/`).
 
 - `docs/Guide_plateforme_integree_ROBO-SCENE_v2.0.1.docx` — guide de la plateforme intégrée (58 fonctions, révision 2.0.1 du 16 octobre 2026)
-- `docs/Guide_drone_de_scene_ROBO-SCENE_v1.1.docx` — drone de scène (O-13) : drone virtuel, souris, flèches et voix, conduite, caméra 4K, zones, passage au drone réel
-- `docs/Guide_chien_de_scene_ROBO-SCENE_v1.1.docx` — chien de scène (O-14) : quadrupède virtuel, postures et allures, souris, flèches et voix, conduite, sol praticable, passage au chien réel
+- `docs/Guide_drone_de_scene_ROBO-SCENE_v1.2.docx` — drone de scène (O-13) : drone virtuel, souris, flèches et voix, conduite, caméra 4K, zones, passage au drone réel
+- `docs/Guide_chien_de_scene_ROBO-SCENE_v1.2.docx` — chien de scène (O-14) : quadrupède virtuel, postures et allures, souris, flèches et voix, conduite, sol praticable, passage au chien réel
 - `docs/Repertoire_commandes_gestes_robot_ROBO-SCENE_v1.0_2026-10-16.docx` — répertoire exhaustif des commandes vocales, des 70 gestes, des 11 poses et des mouvements induits du robot, et des bibliothèques fermées des robots physiques
 - `docs/Rapport_mise_en_oeuvre_audit_ROBO-SCENE_2026-10-16.docx` — mise en œuvre de l'audit indépendant : correctifs, vérifications, décisions résiduelles
 - `docs/Guide_partenaire_ROBO-SCENE.docx` — partenaire de théâtre

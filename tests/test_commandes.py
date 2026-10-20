@@ -116,6 +116,44 @@ console.log(JSON.stringify({
     assert math.isfinite(sum(d["avant_face_cour"]))
 
 
+def test_corrections_du_19_octobre():
+    # 1. « aire de décollage » ramène le drone au lieu de le faire décoller
+    assert une("aire de décollage") == [{"type": "retour"}]
+    assert une("retourne à l'aire de décollage") == [{"type": "retour"}]
+    assert une("va à l'aire") == [{"type": "aller", "repere": "aire"}]
+    # 2. tours complets, multiples et trois quarts ; découpage en étapes de 120° au plus, dans le sens demandé
+    assert une("fais un tour") == [{"type": "tourner", "angle": 360}]
+    assert une("tour complet") == [{"type": "tourner", "angle": 360}]
+    assert une("tourne sur toi-même") == [{"type": "tourner", "angle": 360}]
+    assert une("fais deux tours à droite") == [{"type": "tourner", "angle": -720}]
+    assert une("tourne de trois quarts de tour") == [{"type": "tourner", "angle": 270}]
+    js = """
+import { decouperRotations } from "./web/drone/commande.js";
+console.log(JSON.stringify(decouperRotations([{type: "tourner", angle: 360}, {type: "tourner", angle: -180}, {type: "tourner", angle: 90}, {type: "go"}])));
+"""
+    r = subprocess.run([NODE, "--input-type=module", "-e", js], capture_output=True, text=True, timeout=60, cwd=RACINE)
+    assert json.loads(r.stdout) == [{"type": "tourner", "angle": 120}] * 3 + [{"type": "tourner", "angle": -90}] * 2 + [{"type": "tourner", "angle": 90}, {"type": "go"}]
+    # 3. repère inexistant pour ce robot : refusé, jamais remplacé par un repère voisin
+    for phrase, robot in [("va en haut de l'escalier cour", "drone"), ("va au fond de l'allée", "drone"), ("va devant le premier rang", "drone"),
+                          ("va à l'aire de décollage", "chien"), ("va au centre de la salle", "chien"), ("va au centre haut", "chien")]:
+        r = interpreter([phrase], robot)[0]
+        assert r["actions"] == [] and r["absents"], (phrase, robot, r)
+    assert une("va en haut") == [{"type": "deplacer", "droite": 0, "avant": 0, "haut": 0.5}]
+    assert une("va en haut de l'escalier cour", "chien") == [{"type": "aller", "repere": "haut_escalier_cour"}]
+    # 4. plusieurs ordres sans « puis » : chacun est exécuté
+    # l'allure qualifie la marche du même segment : elle est prise avant de partir
+    assert une("va au centre joyeux", "chien") == [{"type": "allure", "nom": "joyeux"}, {"type": "aller", "repere": "centre"}]
+    assert une("va au centre puis joyeux", "chien") == [{"type": "aller", "repere": "centre"}, {"type": "allure", "nom": "joyeux"}]
+    assert une("lève-toi et va au centre", "chien") == [{"type": "lever"}, {"type": "aller", "repere": "centre"}]
+    assert une("assieds-toi et donne la patte", "chien") == [{"type": "posture", "nom": "assis"}, {"type": "posture", "nom": "patte"}]
+    assert une("décolle et va au centre et regarde la salle") == [{"type": "decoller", "hauteur": None}, {"type": "aller", "repere": "centre"}, {"type": "regarder", "cible": "salle"}]
+    # sans découpage abusif
+    assert une("avance vers cour") == [{"type": "aller", "repere": "cour"}]
+    assert une("tourne la caméra vers la salle") == [{"type": "regarder", "cible": "salle"}]
+    assert une("dis bonjour", "chien") == [{"type": "posture", "nom": "salut"}]
+    assert une("va au centre arrêt d'urgence") == [{"type": "urgence"}]     # l'ARRÊT l'emporte sur tout le segment
+
+
 def test_aide_vocale_entierement_comprise():
     js = """
 import { AIDE_VOIX, interpreter } from "./web/drone/commande.js";

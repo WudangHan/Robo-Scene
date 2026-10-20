@@ -2,7 +2,7 @@
    exécutées l'une après l'autre. Chaque action passe par les fonctions ordinaires de la page (lancer), donc par les
    mêmes vérifications (zones du drone, sol praticable du chien, pont et sécurités du robot réel). La voix ne commande
    jamais la coupure des moteurs ; « arrêt d'urgence » déclenche l'ARRÊT ordinaire, qui exige un réarmement distinct. */
-import { AIDE_VOIX, EcouteVocale, interpreter } from "./commande.js";
+import { AIDE_VOIX, EcouteVocale, decouperRotations, interpreter } from "./commande.js";
 
 const deg = (x) => `${Math.round(Math.abs(x))}°`;
 const m = (x) => `${Math.abs(x).toLocaleString("fr-CA", { maximumFractionDigits: 2 })} m`;
@@ -35,12 +35,15 @@ export function installerCommandes({ robot, reperes, lancer, preparer = (a) => a
     if (actions[0].type === "arreter") { vider(); arreterTout(); journal("info", `${libelle} → arrêter`); return; }
     vider();                                   // une nouvelle commande remplace celle en cours
     const a2 = preparer(actions.slice());
-    file.push(...a2);
     journal("info", `${libelle} → ${a2.map(decrire).join(", puis ")}`);
+    file.push(...decouperRotations(a2));      // plus de 120° : par étapes, dans le sens demandé
   }
   function executer(texte, source = "texte") {
     const t = String(texte || "").trim(); if (!t) return { actions: [], inconnu: [] };
     const r = interpreter(t, robot, reperes), icone = source === "voix" ? "🎙" : "⌨";
+    const qui = robot === "drone" ? "le drone" : "le chien";
+    // une destination inexistante pour ce robot fait refuser toute la phrase : rien n'est exécuté à moitié
+    if (r.absents?.length) { journal("refus", `${icone} « ${t} » refusée : repère inexistant pour ${qui} (« ${r.absents.join(" », « ")} »)`); return r; }
     if (!r.actions.length) { journal("refus", `${icone} « ${t} » : commande non comprise (voir les exemples)`); return r; }
     if (r.inconnu.length) journal("avert", `${icone} partie non comprise, ignorée : « ${r.inconnu.join(" / ")} »`);
     executerActions(r.actions, `${icone} « ${t} »`);
