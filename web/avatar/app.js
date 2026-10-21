@@ -2,7 +2,7 @@
    vocales, des émotions, de la parole, de l'apparence, de l'imitation et des liaisons
    (page Partenaire, pont local, robot physique). */
 import * as THREE from "three";
-import { Humanoide, APPARENCE_DEFAUT, PEAUX, YEUX } from "./humanoide.js";
+import { Humanoide, APPARENCE_DEFAUT, CHAMPS_HABILLAGE, PEAUX, YEUX } from "./humanoide.js";
 import { Animateur } from "./animation.js";
 import { Scene, LIBELLES_ZONES, DOFS_ZONE } from "./scene.js";
 import { Parole, estEcho } from "./parole.js";
@@ -87,7 +87,7 @@ const resume = (a) => {
     case "dire": return `dire « ${a.texte.slice(0, 60)}${a.texte.length > 60 ? "…" : ""} »${a.maniere ? ` (${a.maniere})` : ""}`;
     case "deplacer": return "x" in a || "z" in a ? `aller à (${a.x ?? "·"}, ${a.z ?? "·"})` : a.lateral ? `pas de côté ${a.lateral} m` : `${a.avant >= 0 ? "avancer" : "reculer"} ${Math.abs(a.avant)} m`;
     case "orienter": return `orientation ${a.relatif ? "+" : ""}${a.angle}°`;
-    case "apparence": return `apparence ${a.cle} ${a.relatif ? "+" : ""}${a.valeur}`;
+    case "apparence": return a.cle === "habillage" ? `habillage « ${SCHEMA.apparence.habillages?.[a.valeur]?.libelle || a.valeur} »` : `apparence ${a.cle} ${a.relatif ? "+" : ""}${a.valeur}`;
     default: return Object.entries(a).filter(([k]) => k !== "clause").map(([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : v}`).join(" ");
   }
 };
@@ -113,6 +113,12 @@ function toutArreter(motif) {
 }
 function appliquerApparence(cle, valeur, relatif) {
   const A = humain.apparence;
+  if (cle === "habillage") {
+    const h = (SCHEMA.apparence.habillages || {})[valeur]; if (!h) return;
+    humain.appliquerApparence({ ...h.valeurs, habillage: valeur });
+    ecrireLS("robo-scene-avatar-apparence", humain.apparence); majApparence(); return;
+  }
+  if (CHAMPS_HABILLAGE.includes(cle)) humain.apparence.habillage = "";        // tenue retouchée : personnalisée
   const v = relatif ? Number(A[cle]) + Number(valeur) : valeur;
   const r = SCHEMA.apparence[cle];
   humain.appliquerApparence({ [cle]: r && typeof r === "object" && "min" in r ? Math.max(r.min, Math.min(r.max, v)) : v });
@@ -507,8 +513,25 @@ function majApparence() {
   for (const k of ["cheveux", "barbe", "manches", "peau", "yeux"]) $(`#ap-${k}`).value = A[k];
   $("#ap-moustache").checked = !!A.moustache;
   const hex = (n) => (/^#/.test(n) ? n : SCHEMA.apparence.couleurs[n] || "#888888");
-  for (const k of ["haut", "bas", "chaussures", "couleur_cheveux"]) $(`#ap-${k}`).value = hex(A[k]);
+  for (const k of ["haut", "bas", "chaussures", "couleur_cheveux", "couleur_chapeau", "accessoire"]) $(`#ap-${k}`).value = hex(A[k]);
+  for (const k of ["matiere", "chapeau", "cou", "cape", "jupe"]) $(`#ap-${k}`).value = A[k];
+  $("#ap-gants").checked = !!A.gants;
+  const h = A.habillage || "";
+  for (const id of ["#habillage", "#ap-habillage"]) $(id).value = h;
+  $("#ap-habillage-desc").textContent = h ? SCHEMA.apparence.habillages[h]?.description || "" : "Tenue personnalisée : choisissez un habillage pour la remplacer.";
 }
+const HABILLAGES = SCHEMA.apparence.habillages || {};
+for (const id of ["#habillage", "#ap-habillage"]) {
+  $(id).innerHTML = `<option value="" disabled>${id === "#habillage" ? "Habillage…" : "personnalisé"}</option>`
+    + Object.entries(HABILLAGES).map(([k, h]) => `<option value="${k}" title="${echapper(h.description)}">${echapper(h.libelle)}</option>`).join("");
+  $(id).onchange = (e) => { if (e.target.value) { appliquerApparence("habillage", e.target.value); journal({ html: `Habillage : <b>${echapper(HABILLAGES[e.target.value].libelle)}</b>` }); } e.target.blur(); };
+}
+for (const k of ["matiere", "chapeau", "cou", "cape", "jupe"]) {
+  $(`#ap-${k}`).innerHTML = SCHEMA.apparence[k].map((x) => `<option>${x}</option>`).join("");
+  $(`#ap-${k}`).onchange = (e) => appliquerApparence(k, e.target.value);
+}
+for (const k of ["couleur_chapeau", "accessoire"]) $(`#ap-${k}`).oninput = (e) => appliquerApparence(k, e.target.value);
+$("#ap-gants").onchange = (e) => appliquerApparence("gants", e.target.checked);
 $("#ap-cheveux").innerHTML = SCHEMA.apparence.cheveux.map((x) => `<option>${x}</option>`).join("");
 $("#ap-barbe").innerHTML = SCHEMA.apparence.barbe.map((x) => `<option>${x}</option>`).join("");
 $("#ap-manches").innerHTML = SCHEMA.apparence.manches.map((x) => `<option>${x}</option>`).join("");
@@ -518,7 +541,7 @@ for (const k of ["taille", "carrure", "corpulence", "age"]) { const r = SCHEMA.a
 for (const k of ["cheveux", "barbe", "manches", "peau", "yeux"]) $(`#ap-${k}`).onchange = (e) => appliquerApparence(k, e.target.value);
 for (const k of ["haut", "bas", "chaussures", "couleur_cheveux"]) $(`#ap-${k}`).oninput = (e) => appliquerApparence(k, e.target.value);
 $("#ap-moustache").onchange = (e) => appliquerApparence("moustache", e.target.checked);
-$("#ap-defaut").onclick = () => { humain.appliquerApparence({ ...APPARENCE_DEFAUT }); ecrireLS("robo-scene-avatar-apparence", humain.apparence); majApparence(); };
+$("#ap-defaut").onclick = () => { humain.appliquerApparence({ ...APPARENCE_DEFAUT, habillage: "repetition" }); ecrireLS("robo-scene-avatar-apparence", humain.apparence); majApparence(); };
 majApparence();
 
 /* ══════════ Imitation (caméra, traitement local) ══════════ */

@@ -455,3 +455,71 @@ def test_vue_du_robot_page_et_scene():
     # le flux réel n'est jamais enregistré : seule la caméra virtuelle a un enregistreur
     bloc = app[app.index("vueRobot = (() => {"):app.index("window.ROBOT_VIRTUEL.vue")]
     assert "MediaRecorder" not in bloc and "cam.demarrerEnregistrement" in bloc and "flux.demarrer" not in bloc
+
+
+@pytest.mark.skipif(not NODE, reason="Node.js absent")
+def test_habillages(tmp_path):
+    """Habillages (21 oct. 2026) : chaque habillage n'emploie que des valeurs du schéma ; les directives
+    d'habillage et d'accessoires sont comprises ; un habillage ne touche jamais le corps ; JS et Python valident pareil."""
+    S = avatar.schema()
+    A = S["apparence"]
+    assert len(A["habillages"]) >= 12
+    for k, h in A["habillages"].items():
+        v = h["valeurs"]
+        for cle in ("matiere", "chapeau", "cou", "cape", "jupe", "manches"):
+            assert v[cle] in A[cle], (k, cle)
+        for cle in ("haut", "bas", "chaussures", "couleur_chapeau", "accessoire"):
+            assert v[cle] in A["couleurs"], (k, cle)
+        assert not {"taille", "age", "peau", "cheveux", "barbe", "yeux"} & set(v)
+    ok, rejets = avatar.valider([{"type": "apparence", "cle": "habillage", "valeur": "monarque"},
+                                     {"type": "apparence", "cle": "chapeau", "valeur": "melon"},
+                                     {"type": "apparence", "cle": "habillage", "valeur": "astronaute"},
+                                     {"type": "apparence", "cle": "chapeau", "valeur": "sombrero"}])
+    assert len(ok) == 2 and len(rejets) == 2
+    out = node("""
+      import { interpreter } from "./web/avatar/directives.js";
+      import fs from "node:fs";
+      const S = JSON.parse(fs.readFileSync("./web/avatar/schema.json", "utf8"));
+      const t = ["habille-toi en monarque", "mets ton habit de soirée", "déguise-toi en clown", "mets un chapeau melon noir",
+                 "mets un haut-de-forme", "enlève ton chapeau", "mets une cape rouge", "enlève ta cape", "mets une cravate bordeaux",
+                 "mets des gants blancs", "mets une robe longue rouge", "lève le bras en haut", "habille-toi en survêtement"];
+      console.log(JSON.stringify(Object.fromEntries(t.map((x) => [x, interpreter(x, S).actions.filter((a) => a.type === "apparence").map((a) => [a.cle, a.valeur])]))));
+    """)
+    assert out["habille-toi en monarque"] == [["habillage", "monarque"]]
+    assert out["mets ton habit de soirée"] == [["habillage", "soiree"]]
+    assert out["déguise-toi en clown"] == [["habillage", "clown"]]
+    assert out["mets un chapeau melon noir"] == [["chapeau", "melon"], ["couleur_chapeau", "noir"]]
+    assert out["mets un haut-de-forme"] == [["chapeau", "haut-de-forme"]]      # pas lu comme le « haut » du costume
+    assert out["enlève ton chapeau"] == [["chapeau", "aucun"]] and out["enlève ta cape"] == [["cape", "aucune"]]
+    assert out["mets une cape rouge"] == [["cape", "longue"], ["accessoire", "rouge"]]
+    assert out["mets une cravate bordeaux"] == [["cou", "cravate"], ["accessoire", "bordeaux"]]
+    assert out["mets des gants blancs"] == [["gants", True], ["accessoire", "blanc"]]
+    assert out["mets une robe longue rouge"] == [["jupe", "longue"], ["bas", "rouge"]]
+    assert out["lève le bras en haut"] == [] and out["habille-toi en survêtement"] == [["habillage", "sport"]]
+    # rendu : chaque habillage s'applique sans erreur et ne montre que ses accessoires
+    crochet = tmp_path / "three.mjs"
+    vendor = (WEB / "vendor" / "three.module.min.js").as_uri()
+    crochet.write_text('import { register } from "node:module";\n'
+                       'register("data:text/javascript," + encodeURIComponent('
+                       f'`export async function resolve(s, c, n) {{ if (s === "three") return {{ url: "{vendor}", '
+                       'shortCircuit: true }; return n(s, c); }`));\n', encoding="utf-8")
+    script = """
+      import fs from "node:fs";
+      import { Humanoide } from "./web/avatar/humanoide.js";
+      const S = JSON.parse(fs.readFileSync("./web/avatar/schema.json", "utf8"));
+      const H = new Humanoide(S); const avant = { ...H.apparence };
+      const out = {};
+      for (const [k, h] of Object.entries(S.apparence.habillages)) {
+        H.appliquerApparence({ ...h.valeurs, habillage: k });
+        out[k] = Object.entries(H.os.acc).filter(([, g]) => g.visible).map(([n]) => n).sort();
+      }
+      out.corps = ["taille", "age", "peau", "cheveux", "barbe"].every((c) => H.apparence[c] === avant[c]);
+      console.log(JSON.stringify(out));
+    """
+    r = subprocess.run([NODE, "--import", crochet.as_uri(), "--input-type=module", "-e", script],
+                       capture_output=True, text=True, timeout=60, cwd=RACINE)
+    assert r.returncode == 0, r.stderr
+    o = json.loads(r.stdout)
+    assert o["repetition"] == [] and o["monarque"] == ["cape_longue", "couronne"]
+    assert o["soiree"] == ["haut-de-forme", "nœud papillon"] and o["robe_soiree"] == ["foulard", "jupe_longue"]
+    assert o["corps"]

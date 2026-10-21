@@ -18,7 +18,8 @@ _SCHEMA: dict[str, Any] | None = None
 TYPES = {"articulation", "emotion", "visage", "geste", "pose", "deplacer", "orienter", "regard", "dire",
          "apparence", "camera", "lumiere", "vitesse", "memoriser", "rappeler", "arret", "repeter", "annuler", "aide"}
 APPARENCE_CLES = {"taille", "carrure", "corpulence", "age", "cheveux", "barbe", "manches", "peau", "haut", "bas",
-                  "chaussures", "couleur_cheveux", "moustache", "yeux"}
+                  "chaussures", "couleur_cheveux", "moustache", "yeux", "matiere", "chapeau", "couleur_chapeau", "cou", "cape",
+                  "jupe", "gants", "accessoire", "habillage"}
 
 
 def schema() -> dict[str, Any]:
@@ -93,9 +94,14 @@ def valider(actions: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
                     r = A[cle]
                     e = r["max"] - r["min"]
                     x["valeur"] = _borne(x["valeur"], -e, e) if x.get("relatif") else _borne(x["valeur"], r["min"], r["max"])
-                elif cle in ("cheveux", "barbe", "manches", "peau") and x.get("valeur") not in A[cle]:
+                elif cle in ("cheveux", "barbe", "manches", "peau", "matiere", "chapeau", "cou", "cape", "jupe") \
+                        and x.get("valeur") not in A[cle]:
                     raise ValueError(f"valeur inconnue pour {cle}")
-                elif cle in ("haut", "bas", "chaussures", "couleur_cheveux"):
+                elif cle == "habillage" and x.get("valeur") not in A.get("habillages", {}):
+                    raise ValueError("habillage inconnu")
+                elif cle == "gants":
+                    x["valeur"] = bool(x.get("valeur"))
+                elif cle in ("haut", "bas", "chaussures", "couleur_cheveux", "couleur_chapeau", "accessoire"):
                     v = str(x.get("valeur", ""))
                     if v not in A["couleurs"] and not re.fullmatch(r"#[0-9a-fA-F]{6}", v):
                         raise ValueError("couleur inconnue")
@@ -138,7 +144,9 @@ def vocabulaire() -> dict[str, Any]:
         },
         "articulations": {k: [v["min"], v["max"], v["libelle"]] for k, v in S["dofs"].items()},
         "lieux": S["lieux"],
-        "apparence": {k: v for k, v in S["apparence"].items() if k != "couleurs"} | {"couleurs": sorted(S["apparence"]["couleurs"])},
+        "apparence": {k: v for k, v in S["apparence"].items() if k not in ("couleurs", "habillages")}
+        | {"couleurs": sorted(S["apparence"]["couleurs"]),
+           "habillages": {k: h["libelle"] for k, h in S["apparence"].get("habillages", {}).items()}},
     }
 
 

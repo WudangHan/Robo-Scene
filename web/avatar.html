@@ -35,6 +35,7 @@
         <button data-vue="gros_plan">Gros plan</button><button data-vue="plan_americain">Américain</button><button data-vue="plein_pied">Pied</button>
         <button data-vue="plan_large">Large</button><button data-vue="plongee">Plongée</button>
       </div>
+      <select id="habillage" aria-label="Habillage du robot" title="Habillage du robot (costume complet)"></select>
       <select id="lumiere" aria-label="Éclairage">
         <option value="plein_feux">Plein feux</option><option value="douche">Douche</option><option value="contre_jour">Contre-jour</option>
         <option value="chaude">Lumière chaude</option><option value="froide">Lumière froide</option>
@@ -157,6 +158,8 @@
 
     <!-- ── Apparence ── -->
     <div class="panneau-onglet" id="ong-apparence" role="tabpanel" hidden>
+      <div class="ligne"><label>Habillage <select id="ap-habillage"></select></label></div>
+      <p class="petit" id="ap-habillage-desc"></p>
       <div class="grille-ap">
         <label>Taille <input type="range" id="ap-taille"><output id="ap-taille-val"></output></label>
         <label>Carrure <input type="range" id="ap-carrure"><output id="ap-carrure-val"></output></label>
@@ -172,9 +175,17 @@
         <label>Manches <select id="ap-manches"></select></label>
         <label>Pantalon <input type="color" id="ap-bas"></label>
         <label>Chaussures <input type="color" id="ap-chaussures"></label>
+        <label>Matière <select id="ap-matiere"></select></label>
+        <label>Chapeau <select id="ap-chapeau"></select></label>
+        <label>Couleur du chapeau <input type="color" id="ap-couleur_chapeau"></label>
+        <label>Au cou <select id="ap-cou"></select></label>
+        <label>Cape <select id="ap-cape"></select></label>
+        <label>Jupe ou robe <select id="ap-jupe"></select></label>
+        <label>Accessoires (cou, cape, gants) <input type="color" id="ap-accessoire"></label>
+        <label class="case"><input type="checkbox" id="ap-gants"> Gants</label>
       </div>
       <div class="ligne"><button id="ap-defaut">Apparence par défaut</button></div>
-      <p class="petit">L'apparence se modifie aussi par directive (« plus grand », « barbe pleine », « chemise rouge », « tu as 60 ans »). Elle est conservée dans ce navigateur.</p>
+      <p class="petit">Un habillage remplace les vêtements et les accessoires, jamais le corps (taille, âge, peau, cheveux, barbe). L'apparence se modifie aussi par directive (« habille-toi en monarque », « mets un chapeau melon noir », « enlève ta cape », « plus grand », « barbe pleine », « chemise rouge », « tu as 60 ans »). Elle est conservée dans ce navigateur.</p>
     </div>
 
     <!-- ── Imitation ── -->

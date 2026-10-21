@@ -29,7 +29,19 @@ export const YEUX = { bleu: "#3d6ea8", vert: "#4f7d4a", brun: "#4a3220", noir: "
 export const APPARENCE_DEFAUT = {
   taille: 178, carrure: 1, corpulence: 1, age: 40, cheveux: "court", couleur_cheveux: "châtain", barbe: "courte",
   moustache: false, manches: "longues", peau: "mate", yeux: "brun", haut: "bleu marine", bas: "gris", chaussures: "noir",
+  // habillage (21 oct. 2026) : matière des vêtements, chapeau, cou, cape, jupe ou robe, gants
+  matiere: "tissu", chapeau: "aucun", couleur_chapeau: "noir", cou: "aucun", cape: "aucune", jupe: "aucune", gants: false,
+  accessoire: "bordeaux", habillage: "repetition",
 };
+/* Rendu des matières (MeshStandardMaterial : rugosité, métallicité ; la scène n'a pas de carte d'environnement,
+   d'où une métallicité modérée pour que le métal reste lisible sous les projecteurs). */
+export const MATIERES = {
+  tissu: { haut: [0.86, 0], bas: [0.9, 0] }, satin: { haut: [0.36, 0.06], bas: [0.4, 0.06] },
+  cuir: { haut: [0.5, 0.02], bas: [0.55, 0.02] }, "métal": { haut: [0.3, 0.6], bas: [0.32, 0.6] },
+};
+/* Champs qu'un habillage remplace ; le corps (taille, âge, peau, cheveux, barbe, yeux) n'est jamais touché. */
+export const CHAMPS_HABILLAGE = ["haut", "bas", "chaussures", "manches", "matiere", "chapeau", "couleur_chapeau", "cou", "cape",
+  "jupe", "gants", "accessoire"];
 
 function std(color, roughness = 0.75, extra = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness: 0, ...extra });
@@ -204,6 +216,8 @@ export class Humanoide {
       levres: std("#a2655a", 0.5), blanc: std("#f2efe8", 0.25), iris: std("#4a3220", 0.35), pupille: std("#070707", 0.2),
       reflet: new THREE.MeshBasicMaterial({ color: "#ffffff" }), paupiere: std("#c09072", 0.65), cils: std("#1a1410", 0.9),
       bouche: std("#3b1515", 0.9), dents: std("#efeadf", 0.3), ceinture: std("#3b2618", 0.5), bois: std("#6b4a2e", 0.7),
+      mains: std("#c99a78", 0.62), chapeau: std("#1b1b1d", 0.6), accessoire: std("#6d1f2a", 0.7, { side: THREE.DoubleSide }),
+      jupe: std("#7d8086", 0.9, { side: THREE.DoubleSide }), or: std("#c9a227", 0.3, { metalness: 0.7 }),
     };
     this.os = {};
     this.zones = [];
@@ -258,25 +272,66 @@ export class Humanoide {
     const assise = maille(new THREE.CylinderGeometry(0.2, 0.2, 0.04, 28), M.bois); assise.position.y = 0.40; tab.add(assise);
     for (let i = 0; i < 3; i++) { const p = maille(new THREE.CylinderGeometry(0.016, 0.02, 0.4, 8), M.bois); const a = i * Math.PI * 2 / 3; p.position.set(Math.cos(a) * 0.14, 0.2, Math.sin(a) * 0.14); p.rotation.set(Math.sin(a) * 0.12, 0, -Math.cos(a) * 0.12); tab.add(p); }
     tab.position.set(0, 0, -0.06); tab.visible = false; this.racine.add(tab);
+    this.construireAccessoires();
     this.racine.traverse((o) => { if (o.isMesh && o.userData.zone) this.zones.push(o); });
   }
   construireMain(poignet, s, x) {
     const M = this.mat;
     const main = groupe(`main_${s}`, poignet);
-    const paume = maille(new THREE.BoxGeometry(0.026, 0.085, 0.074), M.peau, `main_${s}`); paume.position.y = -0.045; main.add(paume);
-    const arrondi = ellipsoide(0.037, M.peau, `main_${s}`, [0.38, 1.18, 1.02]); arrondi.position.y = -0.045; main.add(arrondi);
+    const paume = maille(new THREE.BoxGeometry(0.026, 0.085, 0.074), M.mains, `main_${s}`); paume.position.y = -0.045; main.add(paume);
+    const arrondi = ellipsoide(0.037, M.mains, `main_${s}`, [0.38, 1.18, 1.02]); arrondi.position.y = -0.045; main.add(arrondi);
     this.os[`doigts_${s}`] = [0.026, 0.0085, -0.0085, -0.026].map((z, i) => {
       const long = [0.044, 0.05, 0.047, 0.037][i];
       const d1 = groupe("phalange", main, 0, -0.088, z);
-      const p1 = capsule(0.0085, long * 0.5, M.peau, `main_${s}`); p1.position.y = -long * 0.3; d1.add(p1);
+      const p1 = capsule(0.0085, long * 0.5, M.mains, `main_${s}`); p1.position.y = -long * 0.3; d1.add(p1);
       const d2 = groupe("phalange", d1, 0, -long * 0.6, 0);
-      const p2 = capsule(0.0078, long * 0.4, M.peau, `main_${s}`); p2.position.y = -long * 0.25; d2.add(p2);
+      const p2 = capsule(0.0078, long * 0.4, M.mains, `main_${s}`); p2.position.y = -long * 0.25; d2.add(p2);
       return [d1, d2];
     });
     const pouce = groupe("pouce", main, -0.004 * x, -0.03, 0.036);
     pouce.rotation.set(0.5, 0, 0.45 * x);
-    const pp = capsule(0.0105, 0.03, M.peau, `main_${s}`); pp.position.y = -0.024; pouce.add(pp);
+    const pp = capsule(0.0105, 0.03, M.mains, `main_${s}`); pp.position.y = -0.024; pouce.add(pp);
     this.os[`pouce_${s}`] = pouce;
+  }
+
+  /* Accessoires de l'habillage : chapeaux (sur la tête, qui les entraîne), ornements du cou, cape (dos du tronc),
+     jupe ou robe (bassin). Ils n'appartiennent à aucune zone cliquable et sont masqués par défaut. */
+  construireAccessoires() {
+    const M = this.mat, O = this.os, f = this.visage.g, A = (O.acc = {});
+    const ajoute = (parent, nom, ...meshes) => { const g = groupe(nom, parent); meshes.forEach((m) => g.add(m)); g.visible = false; return g; };
+    const cyl = (rt, rb, h, mat, seg = 36, ouvert = false) => maille(new THREE.CylinderGeometry(rt, rb, h, seg, 1, ouvert), mat);
+    const pos = (m, x, y, z) => { m.position.set(x, y, z); return m; };
+    const bord = (r, y) => pos(cyl(r, r, 0.008, M.chapeau, 48), 0, y, 0);
+    // chapeaux (origine : centre de la tête ; sommet du crâne vers y = 0,112)
+    const calotte = (r, sy, y) => { const m = maille(new THREE.SphereGeometry(r, 36, 18, 0, Math.PI * 2, 0, Math.PI / 2), M.chapeau); m.scale.set(0.95, sy, 1.05); return pos(m, 0, y, -0.004); };
+    A.melon = ajoute(f, "chapeau_melon", calotte(0.104, 0.95, 0.05), bord(0.135, 0.058));
+    A["haut-de-forme"] = ajoute(f, "chapeau_haut_de_forme", pos(cyl(0.092, 0.086, 0.17, M.chapeau), 0, 0.15, -0.004), pos(cyl(0.093, 0.093, 0.012, M.accessoire), 0, 0.075, -0.004), bord(0.14, 0.064));
+    const beret = maille(new THREE.SphereGeometry(0.118, 36, 14), M.chapeau); beret.scale.set(1, 0.32, 1); pos(beret, 0.012, 0.098, -0.01); beret.rotation.z = -0.22;
+    A["béret"] = ajoute(f, "chapeau_beret", beret);
+    const visiere = maille(new THREE.CylinderGeometry(0.075, 0.075, 0.006, 32, 1, false, -Math.PI / 2, Math.PI), M.chapeau); pos(visiere, 0, 0.05, 0.075); visiere.rotation.x = 0.12;
+    A.casquette = ajoute(f, "chapeau_casquette", calotte(0.103, 0.85, 0.03), visiere);
+    const pointes = Array.from({ length: 8 }, (_, i) => { const a = (i / 8) * Math.PI * 2, c = maille(new THREE.ConeGeometry(0.014, 0.045, 10), M.or); return pos(c, Math.sin(a) * 0.083, 0.15, Math.cos(a) * 0.083 - 0.004); });
+    A.couronne = ajoute(f, "chapeau_couronne", pos(cyl(0.086, 0.086, 0.05, M.or, 40, true), 0, 0.105, -0.004), ...pointes);
+    A.calot = ajoute(f, "chapeau_calot", calotte(0.1, 0.92, 0.012));
+    // cou (origine : poitrine ; le col est à y = 0,285)
+    const P = O.poitrine;
+    const cravate = maille(new THREE.BoxGeometry(0.036, 0.21, 0.006), M.accessoire); pos(cravate, 0, 0.16, 0.108); cravate.rotation.x = -0.1;
+    const noeud = maille(new THREE.BoxGeometry(0.024, 0.022, 0.016), M.accessoire); pos(noeud, 0, 0.262, 0.07);
+    A.cravate = ajoute(P, "cou_cravate", cravate, noeud);
+    const aile = (x) => { const c = maille(new THREE.ConeGeometry(0.018, 0.04, 12), M.accessoire); c.rotation.z = x * Math.PI / 2; return pos(c, x * 0.022, 0.265, 0.064); };
+    A["nœud papillon"] = ajoute(P, "cou_noeud", aile(1), aile(-1), pos(maille(new THREE.SphereGeometry(0.009, 12, 8), M.accessoire), 0, 0.265, 0.068));
+    const collerette = maille(new THREE.TorusGeometry(0.085, 0.03, 10, 28), M.accessoire); collerette.rotation.x = Math.PI / 2; collerette.scale.set(1, 1, 0.45); pos(collerette, 0, 0.29, 0.004);
+    A.collerette = ajoute(P, "cou_collerette", collerette);
+    const tour = maille(new THREE.TorusGeometry(0.058, 0.017, 10, 24), M.accessoire); tour.rotation.x = Math.PI / 2; pos(tour, 0, 0.278, 0.004);
+    const pan = maille(new THREE.ConeGeometry(0.03, 0.09, 3), M.accessoire); pan.rotation.x = Math.PI; pos(pan, 0.012, 0.225, 0.075);
+    A.foulard = ajoute(P, "cou_foulard", tour, pan);
+    // cape (dos du tronc) et jupe ou robe (bassin)
+    const cape = (h, rb) => { const m = maille(new THREE.CylinderGeometry(0.17, rb, h, 36, 1, true, Math.PI / 2 + 0.25, Math.PI - 0.5), M.accessoire); return pos(m, 0, 0.27 - h / 2, -0.01); };
+    A.cape_courte = ajoute(P, "cape_courte", cape(0.55, 0.25));
+    A.cape_longue = ajoute(P, "cape_longue", cape(1.12, 0.36));
+    const jupe = (h, rb) => pos(maille(new THREE.CylinderGeometry(0.165, rb, h, 40, 1, true), M.jupe), 0, 0.075 - h / 2, 0);
+    A.jupe_courte = ajoute(O.bassin, "jupe_courte", jupe(0.42, 0.25));
+    A.jupe_longue = ajoute(O.bassin, "jupe_longue", jupe(0.93, 0.34));
   }
 
   /* Pose : {dof: degrés}, plus déplacement de la racine. Les angles sont ceux de schema.json. */
@@ -478,6 +533,17 @@ export class Humanoide {
     M.cheveux.color.copy(ch); M.barbe.color.copy(ch).multiplyScalar(0.9); M.sourcils.color.copy(ch).multiplyScalar(0.62);
     M.iris.color.set(YEUX[A.yeux] || YEUX.brun);
     M.haut.color.set(couleur(A.haut, "#1f2b4a")); M.bas.color.set(couleur(A.bas, "#7d8086")); M.chaussures.color.set(couleur(A.chaussures, "#1b1b1d"));
+    const [rh, mh] = (MATIERES[A.matiere] || MATIERES.tissu).haut, [rb, mb] = (MATIERES[A.matiere] || MATIERES.tissu).bas;
+    Object.assign(M.haut, { roughness: rh, metalness: mh }); Object.assign(M.bas, { roughness: rb, metalness: mb });
+    M.jupe.color.copy(M.bas.color); Object.assign(M.jupe, { roughness: rb, metalness: mb });
+    M.chapeau.color.set(couleur(A.couleur_chapeau, "#1b1b1d")); M.accessoire.color.set(couleur(A.accessoire, "#6d1f2a"));
+    M.mains.color.copy(A.gants ? new THREE.Color(couleur(A.accessoire, "#ececec")) : M.peau.color);
+    M.mains.roughness = A.gants ? 0.5 : 0.62;
+    const acc = O.acc;
+    for (const k of ["melon", "haut-de-forme", "béret", "casquette", "couronne", "calot"]) acc[k].visible = A.chapeau === k;
+    for (const k of ["cravate", "nœud papillon", "collerette", "foulard"]) acc[k].visible = A.cou === k;
+    acc.cape_courte.visible = A.cape === "courte"; acc.cape_longue.visible = A.cape === "longue";
+    acc.jupe_courte.visible = A.jupe === "courte"; acc.jupe_longue.visible = A.jupe === "longue";
     const courtes = A.manches === "courtes";
     for (const s of ["g", "d"]) { O[`avantbras_${s}`].material = courtes ? M.peau : M.haut; O[`articCoude_${s}`].material = courtes ? M.peau : M.haut; O[`manchette_${s}`].visible = !courtes; }
     this.visage.coiffure(A.cheveux, A.barbe, A.moustache);

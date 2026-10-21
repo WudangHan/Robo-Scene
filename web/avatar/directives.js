@@ -152,9 +152,75 @@ function couleurDans(c, schema) {
   const hex = c.match(/#[0-9a-f]{6}\b/);
   return hex ? hex[0] : null;
 }
+/* Habillages (21 oct. 2026) : mots qui désignent chacun des habillages de schema.json, après un verbe d'habillage. */
+const MOTS_HABILLAGE = {
+  repetition: /\b(tenue de repetition|repetition|tenue neutre|tenue de travail)\b/, soiree: /\b(habit de soiree|habit|smoking|frac|queue-de-pie|tenue de soiree)\b/,
+  pierrot: /\bpierrot\b/, monarque: /\b(monarque|roi|reine|souverain|souveraine)\b/, clown: /\bclown\b/,
+  automate: /\b(automate|robot de metal|homme de fer|metallique)\b/, magicien: /\b(magicien|magicienne|illusionniste)\b/,
+  professeur: /\b(professeur|professeure|prof)\b/, artiste: /\b(artiste|peintre)\b/, ouvrier: /\b(ouvrier|ouvriere|travailleur)\b/,
+  voyageur: /\b(voyageur|voyageuse|aventurier|aventuriere)\b/, danseur: /\b(danseur|danseuse)\b/,
+  robe_soiree: /\brobe de soiree\b/, tunique: /\b(tunique|antique|toge)\b/, sport: /\b(survetement|sport|sportif|sportive|jogging)\b/,
+};
+const VERBE_HABILLAGE = /\b(habille-toi|habille toi|habilles?|habillez|habillage|tenue|costume|deguise-toi|deguise|deguisement|change de tenue|mets ton|mets ta|en tenue)\b/;
+export function habillageDans(c, schema) {
+  const H = schema.apparence.habillages || {};
+  if (!VERBE_HABILLAGE.test(c)) return null;
+  for (const [id, re] of Object.entries(MOTS_HABILLAGE)) if (H[id] && re.test(c)) return id;
+  for (const id of Object.keys(H)) if (new RegExp(`\\b${normaliser(H[id].libelle)}\\b`).test(c)) return id;
+  return null;
+}
+const RETRAIT = /\b(sans|enleve|enlever|retire|retirer|ote|oter|plus de|supprime|quitte)\b/;
+
 function apparence(c, schema) {
   const out = [];
   const A = (cle, valeur, relatif = false) => out.push({ type: "apparence", cle, valeur, ...(relatif ? { relatif: true } : {}) });
+  const hab = habillageDans(c, schema);
+  if (hab) { A("habillage", hab); return out; }
+  // chapeaux, ornements du cou, cape, jupe ou robe, gants, matière
+  const chap = c.match(/\b(chapeau melon|melon|haut-de-forme|haut de forme|beret|casquette|couronne|calot|chapeau)\b/);
+  if (chap) {
+    if (RETRAIT.test(c)) A("chapeau", "aucun");
+    else {
+      A("chapeau", { "chapeau melon": "melon", melon: "melon", "haut-de-forme": "haut-de-forme", "haut de forme": "haut-de-forme", beret: "béret",
+        casquette: "casquette", couronne: "couronne", calot: "calot", chapeau: "melon" }[chap[1]]);
+      const col = couleurDans(c.slice(chap.index), schema);
+      if (col) A("couleur_chapeau", col);
+    }
+  }
+  const cou = c.match(/\b(noeud papillon|papillon|cravate|collerette|foulard|echarpe)\b/);
+  if (cou) {
+    if (RETRAIT.test(c)) A("cou", "aucun");
+    else {
+      A("cou", { "noeud papillon": "nœud papillon", papillon: "nœud papillon", cravate: "cravate", collerette: "collerette", foulard: "foulard", echarpe: "foulard" }[cou[1]]);
+      const col = couleurDans(c.slice(cou.index), schema);
+      if (col) A("accessoire", col);
+    }
+  }
+  const cape = c.match(/\b(cape|manteau de scene)\b/);
+  if (cape) {
+    if (RETRAIT.test(c)) A("cape", "aucune");
+    else {
+      A("cape", /\bcourte\b/.test(c) ? "courte" : "longue");
+      const col = couleurDans(c.slice(cape.index), schema);
+      if (col && !cou) A("accessoire", col);
+    }
+  }
+  const jupe = c.match(/\b(jupe|robe|kilt)\b/);
+  if (jupe) {
+    if (RETRAIT.test(c)) A("jupe", "aucune");
+    else {
+      A("jupe", /\bcourte\b/.test(c) || jupe[1] === "kilt" ? "courte" : /\blongue\b/.test(c) || jupe[1] === "robe" ? "longue" : "courte");
+      const col = couleurDans(c.slice(jupe.index), schema);
+      if (col) A("bas", col);
+    }
+  }
+  if (/\bgants?\b/.test(c)) {
+    A("gants", !RETRAIT.test(c));
+    const col = !RETRAIT.test(c) && couleurDans(c.slice(c.search(/\bgants?\b/)), schema);
+    if (col && !cou && !cape) A("accessoire", col);
+  }
+  const mat = c.match(/\b(?:en|de) (satin|cuir|metal|tissu|soie|velours)\b|\b(metallique|satine|satinee)\b/);
+  if (mat) A("matiere", { satin: "satin", soie: "satin", velours: "satin", satine: "satin", satinee: "satin", cuir: "cuir", metal: "métal", metallique: "métal", tissu: "tissu" }[mat[1] || mat[2]]);
   const t = c.match(/\b(?:mesure|taille( de)?|fais) (\d)[ m,.]?(\d{2})\b/) || c.match(/\b(\d{3}) ?cm\b/);
   if (t) A("taille", t[3] ? Number(t[2]) * 100 + Number(t[3]) : Number(t[1]));
   else if (/\b(plus grand|grandis|agrandis)/.test(c)) A("taille", 8, true);
@@ -183,7 +249,7 @@ function apparence(c, schema) {
   const vet = [["haut", /\b(chemise|haut|t-shirt|tee-shirt|tshirt|chandail|veste|pull|gilet|tunique|costume|polo)\b/],
                ["bas", /\b(pantalon|jean|jeans|culotte|bas)\b/], ["chaussures", /\b(chaussures?|souliers?|bottes?|bottines?)\b/]];
   for (const [cle, re] of vet) {
-    const m = c.match(re);
+    const m = (cle === "haut" ? c.replace(/haut[- ]de[- ]forme/g, "chapeau-forme") : c).match(re);
     if (m) {
       const suite = c.slice(m.index);
       const col = couleurDans(suite, schema) || couleurDans(c, schema);
@@ -505,6 +571,8 @@ export const EXEMPLES = [
   "gros plan", "vue de face", "vue de profil", "plan large", "lumière douche", "contre-jour", "lumière chaude",
   "plus vite", "plus lentement", "mémorise cette pose sous le nom attente", "reprends la pose attente", "annule", "répète", "stop", "aide",
   "mets une chemise rouge", "barbe pleine", "cheveux gris", "plus grand", "plus costaud", "tu as 60 ans", "rase-toi",
+  "habille-toi en monarque", "mets ton habit de soirée", "déguise-toi en clown", "mets un chapeau melon noir", "mets une cape rouge",
+  "enlève ton chapeau", "mets une cravate bordeaux", "mets des gants blancs",
 ];
 
 const VIDES = new Set(["le", "la", "les", "un", "une", "des", "de", "du", "d", "l", "a", "au", "aux", "et", "ou", "ton", "ta", "tes", "te", "toi", "moi",
@@ -759,7 +827,12 @@ export function valider(actions, schema) {
         else if (x.cle === "manches" && !A.manches.includes(x.valeur)) { rejets.push({ action: a, motif: "manches inconnues" }); continue; }
         else if (x.cle === "peau" && !A.peau.includes(x.valeur)) { rejets.push({ action: a, motif: "teinte inconnue" }); continue; }
         else if (["haut", "bas", "chaussures", "couleur_cheveux"].includes(x.cle) && !(x.valeur in A.couleurs) && !/^#[0-9a-f]{6}$/i.test(String(x.valeur))) { rejets.push({ action: a, motif: "couleur inconnue" }); continue; }
-        else if (!["taille", "carrure", "corpulence", "age", "cheveux", "barbe", "manches", "peau", "haut", "bas", "chaussures", "couleur_cheveux", "moustache", "yeux"].includes(x.cle)) { rejets.push({ action: a, motif: "attribut d'apparence inconnu" }); continue; }
+        else if (["matiere", "chapeau", "cou", "cape", "jupe"].includes(x.cle) && !(A[x.cle] || []).includes(x.valeur)) { rejets.push({ action: a, motif: `valeur inconnue pour ${x.cle}` }); continue; }
+        else if (x.cle === "habillage" && !(A.habillages || {})[x.valeur]) { rejets.push({ action: a, motif: "habillage inconnu" }); continue; }
+        else if (["couleur_chapeau", "accessoire"].includes(x.cle) && !(x.valeur in A.couleurs) && !/^#[0-9a-f]{6}$/i.test(String(x.valeur))) { rejets.push({ action: a, motif: "couleur inconnue" }); continue; }
+        else if (x.cle === "gants") x.valeur = !!x.valeur;
+        else if (!["taille", "carrure", "corpulence", "age", "cheveux", "barbe", "manches", "peau", "haut", "bas", "chaussures", "couleur_cheveux", "moustache", "yeux",
+          "matiere", "chapeau", "couleur_chapeau", "cou", "cape", "jupe", "gants", "accessoire", "habillage"].includes(x.cle)) { rejets.push({ action: a, motif: "attribut d'apparence inconnu" }); continue; }
         break;
       }
       case "memoriser": case "rappeler": x.nom = String(x.nom || "pose").slice(0, 40); break;
