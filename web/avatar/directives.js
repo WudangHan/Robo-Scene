@@ -146,9 +146,14 @@ function sens(c) {
 const art = (dof, valeur, extra = {}) => ({ type: "articulation", dof, valeur, ...extra });
 
 /* ── Apparence ─────────────────────────────────────────── */
+/* Accord en genre et en nombre (« chemise verte », « cape blanche », « gants blancs », « robe dorée ») : 24 oct. 2026. */
+const FEMININS = { blanc: "blanche", violet: "violette", roux: "rousse", or: "doree", argent: "argentee" };
 function couleurDans(c, schema) {
   const noms = Object.keys(schema.apparence.couleurs).sort((a, b) => b.length - a.length);
-  for (const n of noms) if (new RegExp(`\\b${normaliser(n)}s?\\b`).test(c)) return n;
+  for (const n of noms) {
+    const b = normaliser(n), f = FEMININS[b];
+    if (new RegExp(`\\b(${b}(e|es|s)?${f ? `|${f}s?` : ""})\\b`).test(c)) return n;
+  }
   const hex = c.match(/#[0-9a-f]{6}\b/);
   return hex ? hex[0] : null;
 }
@@ -638,6 +643,9 @@ function analyserClause(c, original, schema) {
 
   if (/^(stop|arrete|arrete[- ]toi|arret|fige[- ]toi|ne bouge plus|immobile|on arrete|halte)\b/.test(c)) return [{ type: "arret" }];
   if (/^(repete|encore une fois|recommence|refais|une autre fois|bis)\b/.test(c)) return [{ type: "repeter" }];
+  // un habillage nommé l'emporte sur un geste homonyme (« habille-toi en danseur » n'est pas « danse »)
+  const hab = habillageDans(c, schema);
+  if (hab) return [{ type: "apparence", cle: "habillage", valeur: hab }];
   if (/^(annule|defais|reviens en arriere|retour arriere)\b/.test(c)) return [{ type: "annuler" }];
   if (/^(aide|help|que sais[- ]tu faire|qu'est[- ]ce que tu sais faire|que peux[- ]tu faire|quelles commandes|liste des commandes|commandes)\b/.test(c)) return [{ type: "aide" }];
   if (/^(lis|lit|lire) (un livre|une lettre|le journal|ce livre)/.test(c)) return [{ type: "geste", nom: "lire", intensite: 1 }];
@@ -749,7 +757,8 @@ export function interpreter(texte, schema) {
     const c = chiffres(normaliser(brut));
     let a = [], note = null;
     // fautes de frappe corrigées d'abord (« marche vers le jardain »), sauf dans une parole
-    const cc = VERBES_DIRE.test(c) || /[«"“]/.test(brut) ? c : corriger(c);
+    // un habillage nommé se lit avant la correction des fautes (« danseur » n'est pas une faute pour « danser »)
+    const cc = VERBES_DIRE.test(c) || /[«"“]/.test(brut) || habillageDans(c, schema) ? c : corriger(c);
     if (cc !== c) { a = analyserClause(cc, cc, schema); if (a.length) note = { corrige: cc }; }
     if (!a.length) a = analyserClause(c, brut, schema);
     // « fais semblant de dormir », « mime la peur », « imite un boxeur »

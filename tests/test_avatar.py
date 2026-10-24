@@ -482,7 +482,8 @@ def test_habillages(tmp_path):
       const S = JSON.parse(fs.readFileSync("./web/avatar/schema.json", "utf8"));
       const t = ["habille-toi en monarque", "mets ton habit de soirée", "déguise-toi en clown", "mets un chapeau melon noir",
                  "mets un haut-de-forme", "enlève ton chapeau", "mets une cape rouge", "enlève ta cape", "mets une cravate bordeaux",
-                 "mets des gants blancs", "mets une robe longue rouge", "lève le bras en haut", "habille-toi en survêtement"];
+                 "mets des gants blancs", "mets une robe longue rouge", "lève le bras en haut", "habille-toi en survêtement",
+                 "habille-toi en danseur", "habille-toi en danseuse", "mets une cape violette", "chemise verte", "mets une cape blanche"];
       console.log(JSON.stringify(Object.fromEntries(t.map((x) => [x, interpreter(x, S).actions.filter((a) => a.type === "apparence").map((a) => [a.cle, a.valeur])]))));
     """)
     assert out["habille-toi en monarque"] == [["habillage", "monarque"]]
@@ -496,6 +497,10 @@ def test_habillages(tmp_path):
     assert out["mets des gants blancs"] == [["gants", True], ["accessoire", "blanc"]]
     assert out["mets une robe longue rouge"] == [["jupe", "longue"], ["bas", "rouge"]]
     assert out["lève le bras en haut"] == [] and out["habille-toi en survêtement"] == [["habillage", "sport"]]
+    # 24 oct. 2026 : l'habillage l'emporte sur le geste « danser » ; couleurs accordées au féminin
+    assert out["habille-toi en danseur"] == [["habillage", "danseur"]] == out["habille-toi en danseuse"]
+    assert out["mets une cape violette"] == [["cape", "longue"], ["accessoire", "violet"]]
+    assert out["chemise verte"] == [["haut", "vert"]] and out["mets une cape blanche"][-1] == ["accessoire", "blanc"]
     # rendu : chaque habillage s'applique sans erreur et ne montre que ses accessoires
     crochet = tmp_path / "three.mjs"
     vendor = (WEB / "vendor" / "three.module.min.js").as_uri()
