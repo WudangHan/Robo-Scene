@@ -320,6 +320,7 @@ Version publiée : **2.3.3** (16 octobre 2026), en ligne sur <https://robo-scene
 - `docs/Guide_plateforme_integree_ROBO-SCENE_v2.0.1.docx` — guide de la plateforme intégrée (58 fonctions, révision 2.0.1 du 16 octobre 2026)
 - `docs/Guide_drone_de_scene_ROBO-SCENE_v1.2.docx` — drone de scène (O-13) : drone virtuel, souris, flèches et voix, conduite, caméra 4K, zones, passage au drone réel
 - `docs/Guide_chien_de_scene_ROBO-SCENE_v1.2.docx` — chien de scène (O-14) : quadrupède virtuel, postures et allures, souris, flèches et voix, conduite, sol praticable, passage au chien réel
+- `docs/Guide_mains_cinq_doigts_ROBO-SCENE_v1.0_2026-10-25.docx` — guide des mains à cinq doigts du robot virtuel : anatomie, boucle perception-force-mouvement, prises, accessoires, toucher, commandes, limites et sources
 - `docs/Repertoire_commandes_gestes_robot_ROBO-SCENE_v1.2_2026-10-24.docx` — répertoire exhaustif des commandes vocales, du dialogue parlé, des 15 habillages, des 70 gestes, des 11 poses et des mouvements induits du robot, et des bibliothèques fermées des robots physiques (dont les 31 gestes natifs du TonyPi Pro)
 - `docs/Rapport_mise_en_oeuvre_audit_ROBO-SCENE_2026-10-16.docx` — mise en œuvre de l'audit indépendant : correctifs, vérifications, décisions résiduelles
 - `docs/Repertoire_commandes_mouvements_drone_ROBO-SCENE_v1.0_2026-10-20.docx` — répertoire exhaustif des commandes vocales, des manœuvres et des mouvements du drone de scène
