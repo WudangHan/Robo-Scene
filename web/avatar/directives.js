@@ -581,7 +581,7 @@ export const EXEMPLES = [
   "prends le verre délicatement", "prends l'épée fermement", "prends la rose du bout des doigts", "tiens la lettre", "prends le livre",
   "prends le crâne", "porte la lanterne", "pose le verre", "lâche la rose", "froisse la lettre", "serre plus fort", "desserre",
   "serre la main du partenaire", "effleure sa main", "pose la main sur le cœur", "montre trois doigts", "fais le signe ok",
-  "signe de la victoire", "serre le poing", "écarte les doigts", "pianote", "relâche la main",
+  "signe de la victoire", "serre le poing", "écarte les doigts", "pianote", "relâche la main", "prends la coupe", "main en coupe",
 ];
 
 const VIDES = new Set(["le", "la", "les", "un", "une", "des", "de", "du", "d", "l", "a", "au", "aux", "et", "ou", "ton", "ta", "tes", "te", "toi", "moi",
@@ -593,7 +593,9 @@ function lexique() {
   _lex = new Set();
   const extra = "lever baisser tourner pencher plier tendre ouvrir fermer marcher courir avancer reculer sauter danser saluer regarder bras main mains jambe jambes tete pied pieds genou genoux epaule epaules coude poignet doigt doigts dos ventre buste tronc bassin hanche hanches visage yeux bouche sourcils gauche droite droit devant derriere haut bas cote lentement doucement vite rapidement beaucoup completement legerement cour jardin lointain public scene plateau centre pirouette virevolte tourbillonne arpente chasse chasses decale glisse entree sors sortie quitte disparais monte descends dormir dors sieste semblant genou";
   // mots des exemples et de toutes les expressions reconnues (gestes, poses, émotions, verbes, parties du corps)
-  const sources = [...GESTES_PLUS, ...GESTES, ...POSES, ...EMO, ...PARTIES].map(([, re]) => re.source).concat(Object.values(V).map((re) => re.source));
+  // (mains, 25 oct. 2026) accessoires, verbes et postures des doigts : « coupe » ne doit pas devenir « coude »
+  const sources = [...GESTES_PLUS, ...GESTES, ...POSES, ...EMO, ...PARTIES, ...OBJETS_MAIN, ...POSTURES_MAIN].map(([, re]) => re.source)
+    .concat(Object.values(V).map((re) => re.source), [V_PRENDRE, V_POSER, V_LACHER, V_ECRASER].map((re) => re.source));
   const mots = sources.join(" ").replace(/\\[bdsw]/g, " ").replace(/[^a-z' -]+/g, " ");
   for (const e of [...EXEMPLES, extra, mots]) for (const w of chiffres(normaliser(e)).split(/\s+/)) if (w.length >= 3 && !/['-]$|^['-]/.test(w)) _lex.add(w);
   return _lex;
@@ -679,6 +681,8 @@ function mainsDans(c) {
   const man = maniereMain(c);
   if (/\b((la |ta )?main sur (le |ton |son )?coeur|touche (ton |le )coeur)\b/.test(c))
     return [{ type: "main", cote: "d", action: "toucher", valeur: "coeur", maniere: man === "effleurer" ? "effleurer" : man || "delicat" }];
+  // une posture nommée l'emporte sur l'accessoire homonyme (« main en coupe » n'est pas la coupe)
+  for (const [nom, re] of POSTURES_MAIN) if (re.test(c)) return mk("posture", { valeur: nom });
   const objet = OBJETS_MAIN.find(([, re]) => re.test(c))?.[0];
   if (objet) {
     if (V_ECRASER.test(c)) return mk("ecraser", { valeur: objet });
@@ -699,7 +703,6 @@ function mainsDans(c) {
   const n = c.match(/\b(?:montre|leve|tends|fais voir)(?: moi)? (\d) doigts?\b/) || c.match(/\bcompte jusqu'? ?a (\d)\b/);
   if (n && Number(n[1]) >= 1 && Number(n[1]) <= 5) return mk("posture", { valeur: `compter_${n[1]}` });
   if (/\b(montre|leve|tends) (un|1) doigt\b/.test(c)) return mk("posture", { valeur: "compter_1" });
-  for (const [nom, re] of POSTURES_MAIN) if (re.test(c)) return mk("posture", { valeur: nom });
   if (/\b(pianote|pianoter|tapote des doigts|tambourine|joue du piano)\b/.test(c)) return mk("pianoter");
   if (/\b(relache (la|ta|les|tes) mains?|detends (la|ta|tes|les) (mains?|doigts)|mains? (au )?repos|relache (tes|les) doigts)\b/.test(c)) return mk("relacher");
   return null;

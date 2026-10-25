@@ -192,6 +192,8 @@ def test_directives_de_main_comprises_et_validees_pareil_en_js_et_en_python():
         "desserre": ("force", None, "delicat"),
         "pianote": ("pianoter", None, None),
         "relâche la main": ("relacher", None, None),
+        "prends la coupe": ("prendre", "coupe", "normal"),          # « coupe » n'est pas corrigé en « coude »
+        "main en coupe": ("posture", "coupe", None),                 # la posture l'emporte sur l'accessoire homonyme
     }
     out = node("""
       import { interpreter, EXEMPLES } from "./web/avatar/directives.js"; import fs from "node:fs";
