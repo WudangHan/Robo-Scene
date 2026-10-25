@@ -6,7 +6,8 @@
    et des extrémités. Couches superposées : pose voulue + posture émotionnelle + vie
    (respiration, transfert de poids, micro-mouvements, clignements, saccades) + parole + marche. */
 import { CONTACTS, CONTACTS_POSES, EMOTIONS, GESTES, POSES } from "./emotions.js";
-import { REPERES_VISAGE } from "./humanoide.js";
+import { REPERES_VISAGE, REPERES_CORPS } from "./humanoide.js";
+import { MainVirtuelle, CAPTEURS_POINT, FORCES_TOUCHER } from "./mains.js";
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -38,6 +39,11 @@ export class Animateur {
     this.poidsToucher = { g: 0, d: 0 };
     this.camera = null;                                    // fourni par la scène (cible du regard « public »)
     this.ecouteurs = new Set();
+    // mains à cinq doigts (25 oct. 2026) : perception, force et mouvement des doigts (mains.js)
+    this.mains = { g: new MainVirtuelle("g"), d: new MainVirtuelle("d") };
+    this.accMain = { g: 0, d: 0 }; this.histMain = { g: [], d: [] };
+    this.maniereToucher = { g: null, d: null };            // « touche ton cœur fermement » : manière du contact
+    this.surMain = null;                                   // rappel (événement) fourni par la page : journal
   }
   /* ── cibles ─────────────────────────────────────────── */
   effort() {
@@ -97,9 +103,9 @@ export class Animateur {
       const s = k === "X" ? cote : k;
       const miroir = k === "X" && cote === "g";
       const nom = miroir ? rep.replace(/_d$/, "_g") : rep;
-      const r = REPERES_VISAGE[nom];
+      const r = REPERES_VISAGE[nom] || REPERES_CORPS[nom];
       if (!r) continue;
-      this.toucher[s] = { point, local: [r[0] + (miroir ? -dec[0] : dec[0]), r[1] + dec[1], r[2] + dec[2]] };
+      this.toucher[s] = { point, groupe: REPERES_CORPS[nom] ? "poitrine" : "visage", local: [r[0] + (miroir ? -dec[0] : dec[0]), r[1] + dec[1], r[2] + dec[2]] };
     }
   }
   majContacts(dt) {
@@ -110,11 +116,11 @@ export class Animateur {
       this.poidsToucher[s] = clamp(this.poidsToucher[s] + (t ? dt / 0.35 : -dt / 0.3), 0, 1);
       if (t) {
         const c = this.toucherCourant[s];
-        if (!c || c.point !== t.point || this.poidsToucher[s] < 0.02) this.toucherCourant[s] = { point: t.point, local: t.local.slice() };
+        if (!c || c.point !== t.point || c.groupe !== t.groupe || this.poidsToucher[s] < 0.02) this.toucherCourant[s] = { point: t.point, groupe: t.groupe, local: t.local.slice() };
         else c.local = c.local.map((v, i) => v + (t.local[i] - v) * k);
       }
       const c = this.toucherCourant[s];
-      if (c && this.poidsToucher[s] > 0.01) out.push({ s, point: c.point, local: c.local, poids: this.poidsToucher[s] });
+      if (c && this.poidsToucher[s] > 0.01) out.push({ s, point: c.point, groupe: c.groupe, local: c.local, poids: this.poidsToucher[s] });
       else if (!t) this.toucherCourant[s] = null;
     }
     return this.imitation?.pose ? [] : out;
@@ -286,9 +292,37 @@ export class Animateur {
     this.majRegard(dt, t, P, espace);
     // contact main-visage : la main suit la tête où qu'elle aille (passe géométrique dans humanoide.js)
     extra.contacts = this.majContacts(dt);
+    // mains : la fermeture des gestes guide les doigts libres ; une main commandée (posture, prise, toucher)
+    // impose sa fermeture au degré de liberté « main_x.fermeture » (jumeau à pince du TonyPi Pro)
+    extra.mains = {};
+    for (const s of ["g", "d"]) {
+      const m = this.mains[s];
+      m.suivreFermeture(clamp((P[`main_${s}.fermeture`] || 0) / 100, 0, 1), !!this.pointe[s]);
+      // toucher du corps propre (visage, cœur…) : les capteurs du point de contact sentent la pression
+      const tc = this.toucherCourant[s];
+      if (tc && this.poidsToucher[s] > 0.01 && !m.prise && (!m.toucher || m.toucher.auto))
+        m.toucher = { auto: true, capteurs: CAPTEURS_POINT[tc.point] || [], force: FORCES_TOUCHER[this.maniereToucher[s]] ?? FORCES_TOUCHER.delicat, poids: this.poidsToucher[s] };
+      else if (m.toucher?.auto && !(tc && this.poidsToucher[s] > 0.01)) m.toucher = null;
+      const ev = m.pas(dt, { acceleration: this.accMain[s] });
+      if (m.prise?.chute) m.lacher("échappé");
+      // (le jumeau physique lit les valeurs des ressorts : on y reporte la fermeture des doigts commandés)
+      if (!m.libre) { const f = m.fermeture(); P[`main_${s}.fermeture`] = f; this.val[`main_${s}.fermeture`] = f; this.vit[`main_${s}.fermeture`] = 0; }
+      for (const e of ev) this.surMain?.(e);
+      extra.mains[s] = m;
+    }
     this.h.appliquer(P, extra);
     this.h.racine.position.set(this.racine.x, 0, this.racine.z);
     this.h.racine.rotation.y = this.racine.yaw;
+    // accélération verticale de chaque main (différence seconde lissée) : la charge à tenir en dépend
+    this.h.racine.updateMatrixWorld(true);
+    for (const s of ["g", "d"]) {
+      const H = this.histMain[s]; H.push(this.h.pointMain(s, "paume").y); if (H.length > 3) H.shift();
+      if (H.length === 3 && dt > 0) {
+        const a = clamp((H[2] - 2 * H[1] + H[0]) / (dt * dt), -60, 60);
+        this.accMain[s] += (a - this.accMain[s]) * (1 - Math.exp(-dt / 0.05));
+      }
+    }
+    this.h.majChutes(dt);
     // visage
     this.majClignement(dt, t);
     const cAU = this.cibleAU();

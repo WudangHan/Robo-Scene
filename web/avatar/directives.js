@@ -578,6 +578,10 @@ export const EXEMPLES = [
   "mets une chemise rouge", "barbe pleine", "cheveux gris", "plus grand", "plus costaud", "tu as 60 ans", "rase-toi",
   "habille-toi en monarque", "mets ton habit de soirée", "déguise-toi en clown", "mets un chapeau melon noir", "mets une cape rouge",
   "enlève ton chapeau", "mets une cravate bordeaux", "mets des gants blancs",
+  "prends le verre délicatement", "prends l'épée fermement", "prends la rose du bout des doigts", "tiens la lettre", "prends le livre",
+  "prends le crâne", "porte la lanterne", "pose le verre", "lâche la rose", "froisse la lettre", "serre plus fort", "desserre",
+  "serre la main du partenaire", "effleure sa main", "pose la main sur le cœur", "montre trois doigts", "fais le signe ok",
+  "signe de la victoire", "serre le poing", "écarte les doigts", "pianote", "relâche la main",
 ];
 
 const VIDES = new Set(["le", "la", "les", "un", "une", "des", "de", "du", "d", "l", "a", "au", "aux", "et", "ou", "ton", "ta", "tes", "te", "toi", "moi",
@@ -635,6 +639,72 @@ export function rapprocher(c, n = 1) {
 }
 
 /* ── Analyse d'une proposition (clause) ────────────────── */
+
+/* ── Mains à cinq doigts (25 oct. 2026) ─────────────────────────────────────────────
+   Accessoires, manières de serrer, postures des doigts et toucher : actions {type: "main", cote, action,
+   valeur, maniere} exécutées par web/avatar/mains.js (vocabulaire fermé : schema.json, « mains »). */
+const OBJETS_MAIN = [
+  ["main_partenaire", /\b(main (du |de (mon |ton |son |sa |ma |la |l'|l )?)(partenaire|acteur|actrice|comedien|comedienne|autre)|sa main|leur main|(serrer|prendre|tenir|effleurer|caresser|lacher) la main (du|de)|(serre|prends|tiens|effleure|caresse|lache|relache)[- ]lui la main)\b/],
+  ["verre", /\bverres?\b/], ["coupe", /\b(coupe|calice|gobelet|hanap)\b/],
+  ["epee", /\b(epee|sabre|fleuret|glaive|rapiere|dague|poignard)\b/], ["eventail", /\beventail\b/],
+  ["lettre", /\b(lettre|feuille|papier|missive|billet)\b/], ["rose", /\b(rose|fleur)\b/], ["plume", /\b(plume|stylo|crayon)\b/],
+  ["pomme", /\b(pomme|fruit|orange|balle)\b/], ["crane", /\b(crane|tete de mort)\b/], ["livre", /\b(livre|cahier|carnet|registre)\b/],
+  ["lanterne", /\b(lanterne|lampe|fanal|lumignon)\b/],
+];
+const V_PRENDRE = /\b(prends?|prendre|saisis|saisir|attrape|empoigne|tiens|tenir|ramasse|agrippe|serre|serrer|porte|brandis|leve|souleve|recupere|effleure|effleurer|caresse|frole|touche)\b/;
+const V_POSER = /\b(pose|poser|depose|repose|range|remets)\b/;
+const V_LACHER = /\b(lache|lacher|laisse tomber|laisse echapper|jette|abandonne|relache|relacher)\b/;
+const V_ECRASER = /\b(froisse|froisser|ecrase|ecraser|broie|brise|casse|chiffonne|ecrabouille)\b/;
+const POSTURES_MAIN = [
+  ["ok", /\b(signe ok|fais ok|ok avec (la|ta) main|fais le signe ok|signe d'accord avec les doigts)\b/],
+  ["victoire", /\b(signe de (la )?victoire|v de (la )?victoire|fais un v|signe de paix)\b/],
+  ["pouce_bas", /\b(pouce (vers le bas|baisse|en bas)|baisse le pouce)\b/],
+  ["griffe", /\b(griffes?|main en griffe)\b/],
+  ["ecartee", /\b(ecarte (les|tes) doigts|doigts ecartes|main ecartee)\b/],
+  ["pince", /\b(fais une pince|pince (avec )?(les|tes) doigts|doigts en pince)\b/],
+  ["coupe", /\b(mains? en coupe|creuse (la|ta) main)\b/],
+  ["pointer", /\b(tends l'index|pointe l'index|index tendu)\b/],
+  ["poing", /\b(serre (le|ton|les|tes) poings?)\b/],
+];
+export function maniereMain(c) {
+  if (/\b(de toutes (tes|ses) forces|le plus fort possible|a fond|tres fort)\b/.test(c)) return "fort";
+  if (/\b(effleure|effleurer|frole|caresse|a peine)\b/.test(c)) return "effleurer";
+  if (/\b(delicatement|doucement|avec delicatesse|tendrement|avec precaution|precautionneusement|avec soin|legerement|en douceur|sans serrer|du bout des doigts)\b/.test(c)) return "delicat";
+  if (/\b(fermement|solidement|fort|avec force|avec fermete|bien serre|energiquement)\b/.test(c)) return "ferme";
+  return null;
+}
+function mainsDans(c) {
+  const cs = /\b(les (deux|2) mains|des deux mains|deux mains)\b/.test(c) ? ["g", "d"] : /\b(main |)gauche\b/.test(c) ? ["g"] : ["d"];
+  const mk = (action, extra = {}) => cs.map((s) => ({ type: "main", cote: s, action, ...extra }));
+  const man = maniereMain(c);
+  if (/\b((la |ta )?main sur (le |ton |son )?coeur|touche (ton |le )coeur)\b/.test(c))
+    return [{ type: "main", cote: "d", action: "toucher", valeur: "coeur", maniere: man === "effleurer" ? "effleurer" : man || "delicat" }];
+  const objet = OBJETS_MAIN.find(([, re]) => re.test(c))?.[0];
+  if (objet) {
+    if (V_ECRASER.test(c)) return mk("ecraser", { valeur: objet });
+    if (V_POSER.test(c) && !/\bpose (la|ta) main\b/.test(c)) return mk("poser", { valeur: objet });
+    if (V_LACHER.test(c)) return mk("lacher", { valeur: objet });
+    if (V_PRENDRE.test(c)) {
+      let m = man;
+      if (objet === "main_partenaire" && !m && /\b(effleure|frole|caresse|touche)\b/.test(c)) m = "effleurer";
+      if (objet !== "main_partenaire" && m === "effleurer") m = "delicat";
+      return mk("prendre", { valeur: objet, maniere: m || "normal" });
+    }
+    return null;                                   // « bois un verre », « lis un livre » : gestes mimés
+  }
+  if (/^(lache|laisse tomber|jette)( tout| ce que tu tiens| ca| le| la)?$/.test(c)) return mk("lacher");
+  if (/^(pose|depose|repose)( tout| ce que tu tiens| ca)$/.test(c)) return mk("poser");
+  if (/\b(serre|tiens|tenir)\b.*\b(plus fort|davantage|plus fermement)\b/.test(c)) return mk("force", { maniere: "ferme" });
+  if (/\b(desserre|serre moins|tiens plus doucement|moins fort|relache (un peu|la pression))\b/.test(c)) return mk("force", { maniere: "delicat" });
+  const n = c.match(/\b(?:montre|leve|tends|fais voir)(?: moi)? (\d) doigts?\b/) || c.match(/\bcompte jusqu'? ?a (\d)\b/);
+  if (n && Number(n[1]) >= 1 && Number(n[1]) <= 5) return mk("posture", { valeur: `compter_${n[1]}` });
+  if (/\b(montre|leve|tends) (un|1) doigt\b/.test(c)) return mk("posture", { valeur: "compter_1" });
+  for (const [nom, re] of POSTURES_MAIN) if (re.test(c)) return mk("posture", { valeur: nom });
+  if (/\b(pianote|pianoter|tapote des doigts|tambourine|joue du piano)\b/.test(c)) return mk("pianoter");
+  if (/\b(relache (la|ta|les|tes) mains?|detends (la|ta|tes|les) (mains?|doigts)|mains? (au )?repos|relache (tes|les) doigts)\b/.test(c)) return mk("relacher");
+  return null;
+}
+
 function analyserClause(c, original, schema) {
   const f = facteur(c);
   const vit = vitesseDe(c);
@@ -664,6 +734,7 @@ function analyserClause(c, original, schema) {
     const interne = POSES.find(([n, re]) => n === nom.replace(/[ -]/g, "_") || normaliser(n.replace(/_/g, " ")) === nom || re.test(nom));
     return [interne ? avec({ type: "pose", nom: interne[0] }) : { type: "rappeler", nom }];
   }
+  const mn = mainsDans(c); if (mn) return mn;
   const cam = camera(c); if (cam) return [cam];
   const lum = lumiere(c); if (lum) return [lum];
 
@@ -673,6 +744,7 @@ function analyserClause(c, original, schema) {
       if (["saluer", "pointer", "poing_leve", "main_coeur", "gratter_tete", "taper_pied", "salut_militaire", "signe_venir", "chasser", "pouce_leve"].includes(nom) && /\b(gauche|droite?)\b/.test(c) && !/\b(vers|a) (la |ta |ma )?(gauche|droite)\b/.test(c)) g.cote = cotes(c)[0];
       if (nom === "pointer") { const s = sens(c); g.direction = /\b(haut|ciel)\b/.test(c) ? "haut" : /\b(bas|sol)\b/.test(c) ? "bas" : s > 0 ? "gauche" : s < 0 ? "droite" : "devant"; }
       const rep = c.match(/\b(\d+) fois\b/); if (rep) g.repetitions = Math.min(8, Number(rep[1]));
+      if (nom === "pouce_leve") out.push({ type: "main", cote: g.cote || "d", action: "posture", valeur: "pouce_leve" });
       out.push(avec(g));
       const e = EMO.find(([, re2]) => re2.test(c));
       if (e && nom !== "rire" && nom !== "pleurer") out.push({ type: "emotion", nom: e[0], intensite: intensiteDe(c) });
@@ -842,6 +914,18 @@ export function valider(actions, schema) {
         else if (x.cle === "gants") x.valeur = !!x.valeur;
         else if (!["taille", "carrure", "corpulence", "age", "cheveux", "barbe", "manches", "peau", "haut", "bas", "chaussures", "couleur_cheveux", "moustache", "yeux",
           "matiere", "chapeau", "couleur_chapeau", "cou", "cape", "jupe", "gants", "accessoire", "habillage"].includes(x.cle)) { rejets.push({ action: a, motif: "attribut d'apparence inconnu" }); continue; }
+        break;
+      }
+      case "main": {
+        const Mn = schema.mains || {}, objets = Mn.objets || {};
+        if (!["g", "d"].includes(x.cote)) x.cote = "d";
+        if (!(Mn.actions || []).includes(x.action)) { rejets.push({ action: a, motif: "action de main inconnue" }); continue; }
+        if (x.action === "posture" && !(x.valeur in (Mn.postures || {}))) { rejets.push({ action: a, motif: "posture de main inconnue" }); continue; }
+        if (["prendre", "ecraser"].includes(x.action) && !(x.valeur in objets)) { rejets.push({ action: a, motif: "objet inconnu" }); continue; }
+        if (["poser", "lacher"].includes(x.action) && x.valeur != null && !(x.valeur in objets)) { rejets.push({ action: a, motif: "objet inconnu" }); continue; }
+        if (x.action === "toucher" && !(x.valeur in (Mn.toucher || {}))) { rejets.push({ action: a, motif: "cible de toucher inconnue" }); continue; }
+        if (x.maniere != null && !(x.maniere in (Mn.manieres || {}))) { rejets.push({ action: a, motif: "manière inconnue" }); continue; }
+        if (x.action === "force" && !x.maniere) { rejets.push({ action: a, motif: "manière attendue" }); continue; }
         break;
       }
       case "memoriser": case "rappeler": x.nom = String(x.nom || "pose").slice(0, 40); break;

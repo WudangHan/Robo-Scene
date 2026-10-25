@@ -63,6 +63,7 @@
       <button role="tab" data-onglet="directives">Directives</button>
       <button role="tab" data-onglet="emotions">Émotions et parole</button>
       <button role="tab" data-onglet="corps">Corps</button>
+      <button role="tab" data-onglet="mains">Mains</button>
       <button role="tab" data-onglet="apparence">Apparence</button>
       <button role="tab" data-onglet="imitation">Imitation</button>
       <button role="tab" data-onglet="camera">Caméra</button>
@@ -154,6 +155,54 @@
       <div class="ligne"><button id="btn-exporter">Exporter (JSON)</button><label class="bouton-fichier">Importer<input type="file" id="fichier-import" accept="application/json,.json" hidden></label></div>
       <h3>Toutes les articulations</h3>
       <div id="tous-curseurs"></div>
+    </div>
+
+    <!-- ── Mains ── -->
+    <div class="panneau-onglet" id="ong-mains" role="tabpanel" hidden>
+      <p class="petit">Deux mains à cinq doigts (20 articulations chacune) qui relient perception, force et mouvement : chaque doigt se ferme segment par segment jusqu'au contact ; la force de serrage suit la charge (poids, accélération du bras, frottement) avec une marge selon la manière, sans dépasser le seuil de dommage de l'objet ; un glissement senti relève le serrage après 74 ms. Dites aussi : « prends le verre délicatement », « froisse la lettre », « serre la main du partenaire », « montre trois doigts ».</p>
+      <label class="ligne petit"><input type="checkbox" id="mn-carte" checked> carte tactile (coussinets colorés selon la pression : vert, jaune, rouge)</label>
+      <div class="mains-grille">
+        <fieldset class="main-cote">
+          <legend>Main droite <small id="mn-fermeture-d">—</small></legend>
+          <p class="petit" id="mn-etat-d">—</p>
+          <select id="mn-posture-d" aria-label="Posture des doigts, main droite"></select>
+          <div class="ligne petit">
+            <select id="mn-objet-d" aria-label="Accessoire, main droite"></select>
+            <select id="mn-maniere-d" aria-label="Manière de serrer, main droite"></select>
+          </div>
+          <div class="ligne petit">
+            <button type="button" id="mn-prendre-d" class="primaire">Prendre</button><button type="button" id="mn-poser-d">Poser</button>
+            <button type="button" id="mn-lacher-d">Lâcher</button><button type="button" id="mn-ecraser-d">Écraser</button>
+            <button type="button" id="mn-relacher-d">Rendre aux gestes</button>
+          </div>
+          <table class="capteurs petit"><thead><tr><th>Capteur</th><th>Force</th><th>Pression</th></tr></thead><tbody id="mn-capteurs-d"></tbody></table>
+        </fieldset>
+        <fieldset class="main-cote">
+          <legend>Main gauche <small id="mn-fermeture-g">—</small></legend>
+          <p class="petit" id="mn-etat-g">—</p>
+          <select id="mn-posture-g" aria-label="Posture des doigts, main gauche"></select>
+          <div class="ligne petit">
+            <select id="mn-objet-g" aria-label="Accessoire, main gauche"></select>
+            <select id="mn-maniere-g" aria-label="Manière de serrer, main gauche"></select>
+          </div>
+          <div class="ligne petit">
+            <button type="button" id="mn-prendre-g" class="primaire">Prendre</button><button type="button" id="mn-poser-g">Poser</button>
+            <button type="button" id="mn-lacher-g">Lâcher</button><button type="button" id="mn-ecraser-g">Écraser</button>
+            <button type="button" id="mn-relacher-g">Rendre aux gestes</button>
+          </div>
+          <table class="capteurs petit"><thead><tr><th>Capteur</th><th>Force</th><th>Pression</th></tr></thead><tbody id="mn-capteurs-g"></tbody></table>
+        </fieldset>
+      </div>
+      <style>
+        .mains-grille { display: grid; gap: .6rem; grid-template-columns: minmax(0, 1fr); }
+        .main-cote { border: 1px solid #ffffff22; border-radius: 6px; padding: .4rem .6rem; }
+        .main-cote select { max-width: 100%; }
+        .main-cote .ligne { flex-wrap: wrap; }
+        table.capteurs { width: 100%; border-collapse: collapse; margin-top: .3rem; }
+        table.capteurs td, table.capteurs th { padding: 1px 4px; text-align: left; }
+        table.capteurs td:nth-child(n+2) { text-align: right; font-variant-numeric: tabular-nums; }
+        table.capteurs tr.actif { background: #f0b4291f; }
+      </style>
     </div>
 
     <!-- ── Apparence ── -->

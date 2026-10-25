@@ -359,6 +359,7 @@ export const CONTACTS = {
   tousser: { 0: { d: ["poing", "bouche", [0, -0.005, 0.03]] } },
   regarder_loin: { 0: { d: ["paume", "front", [0, 0.012, 0.03]] } },
   ecouter: { 0: { d: ["paume", "oreille_d", [-0.012, 0, 0.022]] } },
+  main_coeur: { 0: { d: ["paume", "coeur", [0, 0, 0.018]] } },
   dormir: { 0: { g: ["dos", "joue_g", [0.022, -0.012, -0.01]], d: ["paume", "joue_g", [0.012, -0.03, 0.01]] } },
 };
 export const CONTACTS_POSES = {

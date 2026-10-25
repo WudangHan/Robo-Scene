@@ -16,7 +16,7 @@ SCHEMA_CHEMIN = Path(__file__).resolve().parents[2] / "web" / "avatar" / "schema
 _SCHEMA: dict[str, Any] | None = None
 
 TYPES = {"articulation", "emotion", "visage", "geste", "pose", "deplacer", "orienter", "regard", "dire",
-         "apparence", "camera", "lumiere", "vitesse", "memoriser", "rappeler", "arret", "repeter", "annuler", "aide"}
+         "apparence", "camera", "lumiere", "vitesse", "memoriser", "rappeler", "arret", "repeter", "annuler", "aide", "main"}
 APPARENCE_CLES = {"taille", "carrure", "corpulence", "age", "cheveux", "barbe", "manches", "peau", "haut", "bas",
                   "chaussures", "couleur_cheveux", "moustache", "yeux", "matiere", "chapeau", "couleur_chapeau", "cou", "cape",
                   "jupe", "gants", "accessoire", "habillage"}
@@ -105,6 +105,27 @@ def valider(actions: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
                     v = str(x.get("valeur", ""))
                     if v not in A["couleurs"] and not re.fullmatch(r"#[0-9a-fA-F]{6}", v):
                         raise ValueError("couleur inconnue")
+            elif t == "main":
+                # mains à cinq doigts (25 oct. 2026) : même règle que web/avatar/directives.js
+                Mn = S.get("mains", {})
+                objets = Mn.get("objets", {})
+                if x.get("cote") not in ("g", "d"):
+                    x["cote"] = "d"
+                act = x.get("action")
+                if act not in Mn.get("actions", []):
+                    raise ValueError("action de main inconnue")
+                if act == "posture" and x.get("valeur") not in Mn.get("postures", {}):
+                    raise ValueError("posture de main inconnue")
+                if act in ("prendre", "ecraser") and x.get("valeur") not in objets:
+                    raise ValueError("objet inconnu")
+                if act in ("poser", "lacher") and x.get("valeur") is not None and x.get("valeur") not in objets:
+                    raise ValueError("objet inconnu")
+                if act == "toucher" and x.get("valeur") not in Mn.get("toucher", {}):
+                    raise ValueError("cible de toucher inconnue")
+                if x.get("maniere") is not None and x.get("maniere") not in Mn.get("manieres", {}):
+                    raise ValueError("manière inconnue")
+                if act == "force" and not x.get("maniere"):
+                    raise ValueError("manière attendue")
             elif t in ("memoriser", "rappeler"):
                 x["nom"] = str(x.get("nom") or "pose")[:40]
             if "vitesse" in x and t != "vitesse":
@@ -141,7 +162,11 @@ def vocabulaire() -> dict[str, Any]:
             "dire": {"texte": "texte fourni par l'utilisateur", "maniere": "chuchote|crie"},
             "apparence": {"cle": sorted(APPARENCE_CLES), "valeur": "voir bornes", "relatif": "booléen"},
             "camera": {"vue": S["vues"]}, "lumiere": {"mode": S["lumieres"]}, "vitesse": {"facteur": "0,2 à 3"},
+            "main": {"cote": "g|d", "action": S.get("mains", {}).get("actions", []),
+                     "valeur": "posture (posture), objet (prendre, ecraser, poser, lacher) ou cible (toucher)",
+                     "maniere": sorted(S.get("mains", {}).get("manieres", {}))},
         },
+        "mains": {k: v for k, v in S.get("mains", {}).items() if k != "note"},
         "articulations": {k: [v["min"], v["max"], v["libelle"]] for k, v in S["dofs"].items()},
         "lieux": S["lieux"],
         "apparence": {k: v for k, v in S["apparence"].items() if k not in ("couleurs", "habillages")}

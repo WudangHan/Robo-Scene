@@ -50,6 +50,14 @@
   "lumieres": ["plein_feux", "douche", "contre_jour", "chaude", "froide"],
   "lieux": {"centre": [0, 0], "cour": [1.5, 0], "jardin": [-1.5, 0], "lointain": [0, -1.2], "avant_scene": [0, 1.0]},
   "plateau": {"x": [-2.0, 2.0], "z": [-1.5, 1.4]},
+  "mains": {
+    "note": "Mains à cinq doigts (25 oct. 2026) : vocabulaire fermé des actions de main (web/avatar/mains.js).",
+    "actions": ["posture", "prendre", "poser", "lacher", "force", "ecraser", "toucher", "pianoter", "relacher"],
+    "postures": {"repos": "main au repos", "ouverte": "main ouverte", "ecartee": "doigts écartés", "poing": "poing fermé", "pointer": "index pointé", "pouce_leve": "pouce levé", "pouce_bas": "pouce baissé", "ok": "signe « OK » (pouce et index en anneau)", "victoire": "V de la victoire", "pince": "pince pouce-index", "cle": "prise en clé (index à demi replié)", "coupe": "main en coupe", "griffe": "main en griffe", "compter_1": "un doigt", "compter_2": "deux doigts", "compter_3": "trois doigts", "compter_4": "quatre doigts", "compter_5": "cinq doigts"},
+    "objets": {"verre": "verre", "coupe": "coupe", "epee": "épée", "eventail": "éventail", "lettre": "lettre", "rose": "rose", "plume": "plume", "pomme": "pomme", "crane": "crâne", "livre": "livre", "lanterne": "lanterne", "main_partenaire": "main du partenaire"},
+    "manieres": {"effleurer": "effleurement", "delicat": "délicatement", "normal": "normalement", "ferme": "fermement", "fort": "de toutes ses forces"},
+    "toucher": {"coeur": "cœur (main sur le cœur)", "sternum": "poitrine"}
+  },
   "apparence": {
     "taille":     {"min": 150, "max": 205, "defaut": 178, "unite": "cm"},
     "carrure":    {"min": 0.8, "max": 1.3, "defaut": 1.0},

@@ -4,6 +4,7 @@
    ellipsoïdes) et visage animé par unités d'action. Le parti pris stylisé, plutôt que
    photoréaliste, est volontaire (voir le guide : vallée de l'étrange). */
 import * as THREE from "three";
+import { DOIGTS, CAPTEURS, PAUME, OBJETS, cinematique, anglesPosture, poseObjet } from "./mains.js";
 
 const R = THREE.MathUtils.degToRad;
 const lerp = THREE.MathUtils.lerp;
@@ -22,6 +23,11 @@ export const REPERES_VISAGE = {
   oeil_g: [0.032, 0.012, 0.1], oeil_d: [-0.032, 0.012, 0.1], tempe_g: [0.078, 0.035, 0.045], tempe_d: [-0.078, 0.035, 0.045],
   oreille_g: [0.1, 0, -0.006], oreille_d: [-0.1, 0, -0.006], joue_g: [0.06, -0.03, 0.075], joue_d: [-0.06, -0.03, 0.075],
   crane_g: [0.05, 0.1, 0], crane_d: [-0.05, 0.1, 0],
+};
+/* Repères du corps propre (25 oct. 2026), dans le repère du groupe « poitrine » (mêmes axes), relevés sur
+   l'ellipsoïde du thorax et la carrure : la main s'y pose comme au visage (cœur, sternum, épaules). */
+export const REPERES_CORPS = {
+  coeur: [0.065, 0.125, 0.106], sternum: [0, 0.12, 0.113], epaule_g: [0.15, 0.24, 0.048], epaule_d: [-0.15, 0.24, 0.048],
 };
 
 export const PEAUX = { "très claire": "#f0d2bd", claire: "#e2b794", mate: "#c99a78", olive: "#ad875c", brune: "#8a5a3c", "foncée": "#5c3925" };
@@ -275,24 +281,127 @@ export class Humanoide {
     this.construireAccessoires();
     this.racine.traverse((o) => { if (o.isMesh && o.userData.zone) this.zones.push(o); });
   }
+  /* Mains à cinq doigts (25 oct. 2026) : 15 phalanges (pouce : métacarpien, phalanges proximale et distale)
+     dont la position vient, à chaque image, de la cinématique directe de mains.js — la même que celle des
+     contacts et des forces. Repère canonique (u palmaire, d distal, w radial) → repère de la main :
+     (−x·u, −d, w), x = 1 à gauche et −1 à droite (main droite : image miroir). */
   construireMain(poignet, s, x) {
     const M = this.mat;
     const main = groupe(`main_${s}`, poignet);
     const paume = maille(new THREE.BoxGeometry(0.026, 0.085, 0.074), M.mains, `main_${s}`); paume.position.y = -0.045; main.add(paume);
     const arrondi = ellipsoide(0.037, M.mains, `main_${s}`, [0.38, 1.18, 1.02]); arrondi.position.y = -0.045; main.add(arrondi);
-    this.os[`doigts_${s}`] = [0.026, 0.0085, -0.0085, -0.026].map((z, i) => {
-      const long = [0.044, 0.05, 0.047, 0.037][i];
-      const d1 = groupe("phalange", main, 0, -0.088, z);
-      const p1 = capsule(0.0085, long * 0.5, M.mains, `main_${s}`); p1.position.y = -long * 0.3; d1.add(p1);
-      const d2 = groupe("phalange", d1, 0, -long * 0.6, 0);
-      const p2 = capsule(0.0078, long * 0.4, M.mains, `main_${s}`); p2.position.y = -long * 0.25; d2.add(p2);
-      return [d1, d2];
-    });
-    const pouce = groupe("pouce", main, -0.004 * x, -0.03, 0.036);
-    pouce.rotation.set(0.5, 0, 0.45 * x);
-    const pp = capsule(0.0105, 0.03, M.mains, `main_${s}`); pp.position.y = -0.024; pouce.add(pp);
-    this.os[`pouce_${s}`] = pouce;
+    GEO_MAIN.cyl = GEO_MAIN.cyl || new THREE.CylinderGeometry(1, 1, 1, 12, 1, true);
+    GEO_MAIN.sph = GEO_MAIN.sph || new THREE.SphereGeometry(1, 12, 10);
+    const R = { main, x, doigts: {}, coussins: {}, objet: null, cleObjet: null, carte: true };
+    for (const d of DOIGTS) {
+      const segs = [0, 1, 2].map(() => { const m = maille(GEO_MAIN.cyl, M.mains, `main_${s}`); main.add(m); return m; });
+      const arts = [0, 1, 2, 3].map(() => { const m = maille(GEO_MAIN.sph, M.mains, `main_${s}`); main.add(m); return m; });
+      R.doigts[d] = { segs, arts };
+    }
+    // coussinets tactiles : visibles au contact, couleur selon la pression (carte de chaleur)
+    for (const c of CAPTEURS) {
+      const m = new THREE.Mesh(GEO_MAIN.sph, new THREE.MeshBasicMaterial({ color: "#3fbf6f", transparent: true, opacity: 0.9, depthWrite: false }));
+      m.visible = false; m.renderOrder = 2; m.name = `capteur_${c.id}_${s}`; main.add(m); R.coussins[c.id] = m;
+    }
+    (this.mainsRendu = this.mainsRendu || {})[s] = R;
+    this.poserMain(s, anglesPosture("repos"), null);
   }
+
+  /* Angles des doigts (degrés, noms de mains.js) → phalanges ; état de la main (prise, capteurs) → objet tenu
+     et carte tactile. */
+  poserMain(s, q, etat) {
+    const R = this.mainsRendu[s], x = R.x, Y = new THREE.Vector3(0, 1, 0);
+    const loc = (p) => new THREE.Vector3(-x * p[0], -p[1], p[2]);
+    const geo = {};
+    for (const d of DOIGTS) {
+      const { points, reperes } = cinematique(d, q);
+      const P = points.map(loc), r0 = d === "pouce" ? 0.0098 : d === "auriculaire" ? 0.0074 : 0.0082;
+      const F = R.doigts[d];
+      for (let i = 0; i < 3; i++) {
+        const a = P[i], b = P[i + 1], dir = b.clone().sub(a), L = dir.length() || 1e-6;
+        const r = d === "pouce" && i === 0 ? 0.0125 : r0 * (1 - 0.08 * i);
+        const seg = F.segs[i];
+        seg.position.copy(a).add(b).multiplyScalar(0.5);
+        seg.quaternion.setFromUnitVectors(Y, dir.multiplyScalar(1 / L));
+        seg.scale.set(r, L, r);
+        F.arts[i].position.copy(a); F.arts[i].scale.setScalar(r * 1.04);
+      }
+      F.arts[3].position.copy(P[3]); F.arts[3].scale.setScalar(r0 * 0.84);
+      geo[d] = { points, reperes };
+    }
+    // carte tactile
+    for (const c of CAPTEURS) {
+      const m = R.coussins[c.id], cap = etat?.capteurs?.[c.id];
+      const actif = R.carte && cap && cap.contact && cap.force > 0.005;
+      m.visible = !!actif;
+      if (!actif) continue;
+      let p, n, taille;
+      const colonne = (Rm, j) => [Rm[0][j], Rm[1][j], Rm[2][j]];
+      if (c.id === "paume") { p = [PAUME.epaisseur / 2 + 0.0008, 0.05, 0]; n = [1, 0, 0]; taille = [0.02, 0.0016, 0.024]; }
+      else {
+        const g = geo[c.doigt], seg = c.segment, u = colonne(g.reperes[seg], 0), dd = colonne(g.reperes[seg], 1);
+        const base = seg === 2 ? g.points[3].map((v, i) => v - dd[i] * 0.008) : g.points[1].map((v, i) => (v + g.points[2][i]) / 2);
+        const rr = c.doigt === "pouce" ? 0.0085 : 0.0072;
+        p = base.map((v, i) => v + u[i] * rr); n = u; taille = [0.0062, 0.0014, 0.0068];
+      }
+      m.position.copy(loc(p));
+      m.quaternion.setFromUnitVectors(Y, loc(n).normalize());
+      m.scale.set(...taille);
+      m.material.color.copy(couleurPression(cap.pression / 1000));
+    }
+    // objet tenu
+    const prise = etat?.prise;
+    const cle = prise && !prise.chute ? `${prise.objet}/${prise.nom}` : null;
+    if (cle !== R.cleObjet) {
+      if (R.objet) {
+        const tombe = R.objet.userData.tombe && !(etat?.dernierLacher?.poser && etat.dernierLacher.objet === R.objet.userData.nom);
+        if (tombe && this.racine.parent) { this.racine.parent.attach(R.objet); this.chutes = (this.chutes || []).filter((c) => c.nom !== R.objet.userData.nom); this.chutes.push({ g: R.objet, v: 0, nom: R.objet.userData.nom }); }
+        else R.objet.removeFromParent();
+        R.objet = null;
+      }
+      if (cle) {
+        // l'objet retombé au sol est ramassé
+        for (const c of this.chutes || []) if (c.nom === prise.objet) c.g.removeFromParent();
+        this.chutes = (this.chutes || []).filter((c) => c.nom !== prise.objet);
+        const obj = OBJETS[prise.objet], pose = poseObjet(prise.nom, obj);
+        const g = construireObjet(prise.objet, obj, this.mat);
+        const col = (j) => loc([pose.R[0][j], pose.R[1][j], pose.R[2][j]]);
+        const e1 = col(0), e2 = col(1), e3 = col(2);
+        if (new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeBasis(e1, e2, e3)).determinant() < 0) e1.negate();
+        g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(e1, e2, e3));
+        g.position.copy(loc(pose.centre));
+        g.userData = { nom: prise.objet, tombe: !obj.partenaire, base: g.position.clone(), axe: e2.clone() };
+        R.main.add(g); R.objet = g;
+      }
+      R.cleObjet = cle;
+    }
+    // dommage visible : la lettre froissée devient une boule, la tige de la rose plie, le reste s'assombrit
+    if (R.objet && prise?.endommage && !R.objet.userData.abime) {
+      R.objet.userData.abime = true;
+      if (prise.objet === "lettre") {
+        R.objet.clear();
+        const geo = new THREE.IcosahedronGeometry(0.03, 1), pos = geo.attributes.position;
+        for (let i = 0; i < pos.count; i++) { const k = 0.75 + 0.5 * Math.abs(Math.sin(i * 12.9898) * 43758.5453 % 1); pos.setXYZ(i, pos.getX(i) * k, pos.getY(i) * k, pos.getZ(i) * k); }
+        geo.computeVertexNormals();
+        const boule = new THREE.Mesh(geo, std(OBJETS.lettre.couleur, 0.95, { flatShading: true })); boule.castShadow = true;
+        boule.position.set(0, -0.8 * OBJETS.lettre.dims[1] + 0.022, 0);      // au point de pince (bord tenu de la feuille)
+        R.objet.add(boule);
+      } else if (prise.objet === "rose") R.objet.rotation.x += 0.5;
+      else R.objet.traverse((o) => { if (o.material?.color) { o.material = o.material.clone(); o.material.color.multiplyScalar(0.6); } });
+    }
+    // glissement visible : l'objet descend le long de sa longueur (au plus 4 cm)
+    if (R.objet && prise) R.objet.position.copy(R.objet.userData.base).addScaledVector(R.objet.userData.axe, -Math.min(0.04, prise.glisse || 0));
+  }
+  /* Objets échappés : chute libre jusqu'au plateau, où ils restent jusqu'à ce qu'on les reprenne. */
+  majChutes(dt) {
+    for (const c of this.chutes || []) {
+      if (c.pose) continue;
+      c.v += 9.81 * dt; c.g.position.y -= c.v * dt;
+      if (c.g.position.y <= 0.03) { c.g.position.y = 0.03; c.pose = true; c.g.rotation.set(Math.PI / 2, c.g.rotation.y, 0); }
+    }
+  }
+  /* Montre ou cache la carte tactile (coussinets colorés par la pression). */
+  carteTactile(visible) { for (const s of ["g", "d"]) this.mainsRendu[s].carte = !!visible; }
 
   /* Accessoires de l'habillage : chapeaux (sur la tête, qui les entraîne), ornements du cou, cape (dos du tronc),
      jupe ou robe (bassin). Ils n'appartiennent à aucune zone cliquable et sont masqués par défaut. */
@@ -352,12 +461,15 @@ export class Humanoide {
       ep.rotation.set(-R(v(`epaule_${s}.flexion`)), -x * R(v(`epaule_${s}.rotation`)), x * R(v(`epaule_${s}.abduction`) + REPOS_BRAS));
       O[`coude_${s}`].rotation.x = -R(v(`coude_${s}.flexion`) + REPOS_COUDE);
       O[`poignet_${s}`].rotation.z = -x * R(v(`poignet_${s}.flexion`));
-      const ferm = v(`main_${s}.fermeture`) / 100, pointe = !!(extra.pointe && extra.pointe[s]);
-      O[`doigts_${s}`].forEach(([a, b], i) => {
-        const k = pointe && i === 0 ? 0.05 : ferm;
-        a.rotation.z = -x * R(8 + 82 * k); b.rotation.z = -x * R(6 + 95 * k);
-      });
-      O[`pouce_${s}`].rotation.z = x * R(26 - 40 * ferm);
+      // mains : angles fournis par l'animateur (MainVirtuelle) ; à défaut, posture tirée de la fermeture
+      const mv = extra.mains?.[s];
+      if (mv) this.poserMain(s, mv.q, mv);
+      else {
+        const k = v(`main_${s}.fermeture`) / 100, a = anglesPosture("ouverte"), b = anglesPosture("poing"), q = {};
+        for (const n of Object.keys(a)) q[n] = a[n] + (b[n] - a[n]) * k;
+        if (extra.pointe?.[s]) Object.assign(q, Object.fromEntries(Object.entries(anglesPosture("pointer")).filter(([n]) => n.startsWith("index."))));
+        this.poserMain(s, q, null);
+      }
       const h = O[`hanche_${s}`];
       h.rotation.set(-R(v(`hanche_${s}.flexion`)), x * R(v(`hanche_${s}.rotation`)), x * R(v(`hanche_${s}.abduction`) + 1.5));
       O[`genou_${s}`].rotation.x = R(v(`genou_${s}.flexion`));
@@ -383,9 +495,9 @@ export class Humanoide {
     switch (type) {
       case "paume": return main.localToWorld(v.set(-x * 0.016, -0.06, 0));          // face palmaire
       case "dos": return main.localToWorld(v.set(x * 0.016, -0.06, 0));             // dos de la main
-      case "index": return O[`doigts_${s}`][0][1].localToWorld(v.set(0, -0.02, 0));  // bout de l'index
-      case "doigts": return O[`doigts_${s}`][1][1].localToWorld(v.set(0, -0.018, 0)); // bout du majeur
-      case "poing": return O[`doigts_${s}`][1][0].localToWorld(v.set(0, -0.012, 0));  // jointures
+      case "index": return this.mainsRendu[s].doigts.index.arts[3].getWorldPosition(v);   // bout de l'index
+      case "doigts": return this.mainsRendu[s].doigts.majeur.arts[3].getWorldPosition(v); // bout du majeur
+      case "poing": return this.mainsRendu[s].doigts.majeur.arts[1].getWorldPosition(v);  // jointures (IPP du majeur replié)
       case "avantbras": return O[`coude_${s}`].localToWorld(v.set(0, -0.06, 0.035)); // pli du coude
       default: return main.localToWorld(v.set(0, -0.06, 0));
     }
@@ -411,7 +523,7 @@ export class Humanoide {
       const noms = ["flexion", "abduction", "rotation"].map((k) => `epaule_${s}.${k}`).concat([`coude_${s}.flexion`]);
       const bornes = noms.map((n) => [D[n].min, D[n].max]);
       const q0 = noms.map((n) => P[n] || 0);
-      const cible = f.localToWorld(new THREE.Vector3(...c.local));
+      const cible = (c.groupe === "poitrine" ? this.os.poitrine : f).localToWorld(new THREE.Vector3(...c.local));
       const ecart = (q) => { this.regleBras(s, P, q); return cible.clone().sub(this.pointMain(s, c.point)); };
       const delta = this.ikDelta[s] || [0, 0, 0, 0];
       let q = q0.map((v, i) => clamp(v + delta[i], bornes[i][0], bornes[i][1]));
@@ -554,4 +666,55 @@ export class Humanoide {
     this.visage.g.updateWorldMatrix(true, false);
     return cible.set(0, 0.012, 0.08).applyMatrix4(this.visage.g.matrixWorld);
   }
+}
+
+/* ── Mains : géométries partagées, carte de pression, accessoires ───────────────── */
+const GEO_MAIN = {};
+/* Pression (kPa) → couleur : vert (effleurement) → jaune → rouge (≥ 300 kPa), échelle logarithmique. */
+function couleurPression(kpa) {
+  const t = clamp(Math.log10(1 + Math.max(0, kpa)) / Math.log10(301), 0, 1);
+  return new THREE.Color().setHSL(0.36 * (1 - t), 0.85, 0.5);
+}
+/* Accessoire dans son repère propre (x : épaisseur ou rayon, y : longueur, z : axe des cylindres), aux
+   dimensions du modèle de contact (mains.js) ; quelques détails de décor seulement. */
+function construireObjet(nom, o, M) {
+  const g = new THREE.Group(); g.name = `objet_${nom}`;
+  const [a, b, c] = o.dims;
+  const mat = std(o.couleur, 0.5, nom === "verre" ? { transparent: true, opacity: 0.45, roughness: 0.08 } : {});
+  const ajoute = (m, x = 0, y = 0, z = 0) => { m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+  const cylZ = (r1, r2, h, m) => { const geo = new THREE.CylinderGeometry(r1, r2, h, 20); geo.rotateX(Math.PI / 2); return new THREE.Mesh(geo, m); };
+  if (o.forme === "cylindre") ajoute(cylZ(a, a, 2 * b, mat));
+  else if (o.forme === "sphere") ajoute(new THREE.Mesh(new THREE.SphereGeometry(a, 24, 18), mat));
+  else ajoute(new THREE.Mesh(new THREE.BoxGeometry(2 * a, 2 * b, 2 * c), mat));
+  switch (nom) {
+    case "epee": {
+      const acier = std("#c9ccd2", 0.25, { metalness: 0.8 });
+      ajoute(new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.022, 0.012), M.or), 0, 0, b + 0.006).scale.set(1, 5, 1);
+      ajoute(new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.032, 0.72), acier), 0, 0, b + 0.37);
+      ajoute(new THREE.Mesh(new THREE.SphereGeometry(0.02, 14, 10), M.or), 0, 0, -b - 0.012);
+      break;
+    }
+    case "coupe": ajoute(cylZ(0.04, 0.015, 0.06, mat), 0, 0, b + 0.03); ajoute(cylZ(0.035, 0.035, 0.006, mat), 0, 0, -b); break;
+    case "rose": ajoute(new THREE.Mesh(new THREE.SphereGeometry(0.024, 16, 12), std("#b0182c", 0.6)), 0, 0, b + 0.016).scale.set(1, 1, 0.8); break;
+    case "plume": ajoute(new THREE.Mesh(new THREE.BoxGeometry(0.002, 0.03, 0.13), std("#f5f5f0", 0.8, { side: THREE.DoubleSide })), 0, 0.013, b + 0.02); break;
+    case "pomme": ajoute(cylZ(0.002, 0.002, 0.018, M.bois), 0, a, 0).rotation.x = Math.PI / 2; break;
+    case "crane": { const noir = std("#151210", 0.9); ajoute(new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), noir), 0.06, -0.012, 0.022); ajoute(new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), noir), 0.06, -0.012, -0.022); break; }
+    case "livre": ajoute(new THREE.Mesh(new THREE.BoxGeometry(2 * a * 0.85, 2 * b * 0.97, 2 * c + 0.002), std("#efe6cf", 0.9)), 0.001, 0.002, 0); break;
+    case "lanterne": {
+      ajoute(new THREE.Mesh(new THREE.BoxGeometry(0.002, 0.11, 0.002), M.chaussures), 0, 0.055, 0);
+      ajoute(new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.14, 0.09), std("#ffcf6a", 0.4, { emissive: "#ff9a2a", emissiveIntensity: 0.6 })), 0, 0.18, 0);
+      break;
+    }
+    case "main_partenaire": {
+      // main tendue du partenaire virtuel et sa manche, qui vient du côté du pouce du robot
+      // l'avant-bras du partenaire part de son poignet (côté pouce du robot) et s'éloigne vers l'avant
+      const dir = new THREE.Vector3(0, 0.35, 0.94).normalize();
+      const manche = ajoute(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.034, 0.26, 20), std("#5d6a7a", 0.85)));
+      manche.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      manche.position.set(0, b, 0).addScaledVector(dir, 0.13);
+      ajoute(new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), mat), 0.018, -b * 0.3, c * 0.9);
+      break;
+    }
+  }
+  return g;
 }

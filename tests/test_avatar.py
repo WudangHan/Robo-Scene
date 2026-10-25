@@ -394,7 +394,7 @@ def test_contact_main_visage(tmp_path):
                        'shortCircuit: true }; return n(s, c); }`));\n', encoding="utf-8")
     script = """
       import fs from "node:fs";
-      import { Humanoide, REPERES_VISAGE } from "./web/avatar/humanoide.js";
+      import { Humanoide, REPERES_VISAGE, REPERES_CORPS } from "./web/avatar/humanoide.js";
       import { Animateur } from "./web/avatar/animation.js";
       import { CONTACTS, GESTES } from "./web/avatar/emotions.js";
       const S = JSON.parse(fs.readFileSync("./web/avatar/schema.json", "utf8"));
@@ -410,8 +410,8 @@ def test_contact_main_visage(tmp_path):
           h.racine.updateMatrixWorld(true);
           const spec = Object.values(CONTACTS[nom]).at(-1);
           const ecarts = Object.entries(spec).map(([k, [point, rep, dec]]) => {
-            const s = k === "X" ? "d" : k, r = REPERES_VISAGE[rep];
-            const l = h.visage.g.worldToLocal(h.pointMain(s, point));
+            const s = k === "X" ? "d" : k, r = REPERES_VISAGE[rep] || REPERES_CORPS[rep];
+            const l = (REPERES_CORPS[rep] ? h.os.poitrine : h.visage.g).worldToLocal(h.pointMain(s, point));
             return Math.hypot(l.x - r[0] - dec[0], l.y - r[1] - dec[1], l.z - r[2] - dec[2]);
           });
           out[`${nom}/${regard}`] = Math.max(...ecarts);

@@ -9,6 +9,7 @@ import { Parole, estEcho } from "./parole.js";
 import { Imitation, lireEmotion } from "./imitation.js";
 import { EMOTIONS, prosodie } from "./emotions.js";
 import { interpreter, valider, EXEMPLES } from "./directives.js";
+import { OBJETS, POSTURES, MANIERES, CAPTEURS, NOMS_OBJETS, article } from "./mains.js";
 import { CameraVirtuelle, FluxReel, dessinerCadre } from "../drone/camera4k.js";
 import { installerDialogue } from "../dialogue.js";
 
@@ -47,6 +48,7 @@ scene.avantImage = (dt, t) => {
     if (o?.au && ++compteurLecture % 15 === 0) afficherLecture(o.au);
   } else anim.imitation = null;
   anim.maj(dt, t, bouche);
+  majMains();
   jumeau.maj();
   vueRobot?.rendre();
 };
@@ -148,17 +150,21 @@ async function parler(texte, { maniere = null, emotion = null, prosodieImposee =
 async function executer(actions, { source = "règles", clauseLog = null } = {}) {
   const jeton = ++enCours;
   memoriserEtat();
+  // une main commandée dans la même directive garde sa posture pendant les gestes qui suivent
+  const mainsCommandees = new Set(actions.filter((a) => a.type === "main").map((a) => a.cote || "d"));
+  const libererMains = (cotes = ["g", "d"]) => { for (const s of cotes) if (!mainsCommandees.has(s)) anim.mains[s].liberer(); };
   let groupe = false;
   const tenir = async () => { if (groupe) { groupe = false; await attendre(650 / anim.vitesse); } };
   for (const a of actions) {
     if (jeton !== enCours) return;
     if (a.type !== "articulation") await tenir();
     switch (a.type) {
-      case "articulation": anim.definir(a.dof, a.valeur, { relatif: !!a.relatif, vitesse: a.vitesse }); groupe = true; break;
+      case "articulation": if (/^main_[gd]\.fermeture$/.test(a.dof)) libererMains([a.dof[5]]); anim.definir(a.dof, a.valeur, { relatif: !!a.relatif, vitesse: a.vitesse }); groupe = true; break;
       case "emotion": anim.definirEmotion(a.nom, a.intensite, !!a.relatif); await attendre(250); break;
       case "visage": anim.definirVisage(a.au, a.tenir !== false); await attendre(250); break;
-      case "geste": await anim.jouerGeste(a.nom, { cote: a.cote || "d", repetitions: a.repetitions || 1, intensite: a.intensite || 1, direction: a.direction || "devant", vitesse: a.vitesse }); break;
-      case "pose": anim.prendrePose(a.nom, a.vitesse); await attendre(900 / anim.vitesse); break;
+      case "main": await executerMain(a); break;
+      case "geste": libererMains(); await anim.jouerGeste(a.nom, { cote: a.cote || "d", repetitions: a.repetitions || 1, intensite: a.intensite || 1, direction: a.direction || "devant", vitesse: a.vitesse }); break;
+      case "pose": libererMains(); anim.prendrePose(a.nom, a.vitesse); await attendre(900 / anim.vitesse); break;
       case "deplacer": await anim.deplacer({ ...a }); break;
       case "orienter": await anim.orienter((a.angle * Math.PI) / 180, !!a.relatif); break;
       case "regard": anim.regardMode = a.cible; anim.regardEmotion = null; break;
@@ -180,6 +186,77 @@ async function executer(actions, { source = "règles", clauseLog = null } = {}) 
   if (!actions.some((a) => ["repeter", "annuler"].includes(a.type))) derniere = actions;
   majCurseurs();
 }
+
+/* ══════════ Mains à cinq doigts (25 oct. 2026) ══════════
+   Postures des doigts, prises d'accessoires, force de serrage, toucher : web/avatar/mains.js. Le bras présente
+   l'objet saisi (coude fléchi) ou se tend vers la main du partenaire ; il revient quand la main lâche. */
+function presenter(s, objet) {
+  if (objet === "main_partenaire") { anim.definir(`epaule_${s}.flexion`, 48); anim.definir(`coude_${s}.flexion`, 38); anim.definir(`epaule_${s}.rotation`, 8); }
+  else if (OBJETS[objet]?.prise === "crochet") { anim.definir(`epaule_${s}.flexion`, 8); anim.definir(`coude_${s}.flexion`, 12); }
+  else { anim.definir(`epaule_${s}.flexion`, 22); anim.definir(`coude_${s}.flexion`, 82); anim.definir(`epaule_${s}.rotation`, 18); }
+}
+function ramenerBras(s) { for (const n of ["epaule", "coude"]) anim.definir(`${n}_${s}.flexion`, 0); anim.definir(`epaule_${s}.rotation`, 0); }
+async function executerMain(a) {
+  let s = a.cote === "g" ? "g" : "d";
+  // « lâche le verre », « serre plus fort » : la main qui tient l'objet, même si la phrase ne la nomme pas
+  const tient = (c) => !!anim.mains[c].prise && (!a.valeur || anim.mains[c].prise.objet === a.valeur);
+  if (["poser", "lacher", "force"].includes(a.action) && !tient(s) && tient(s === "g" ? "d" : "g")) s = s === "g" ? "d" : "g";
+  const m = anim.mains[s], cote = s === "g" ? "gauche" : "droite";
+  let r = { ok: true };
+  switch (a.action) {
+    case "posture": r = m.prendrePosture(a.valeur); break;
+    case "prendre": r = m.prendre(a.valeur, { maniere: a.maniere || "normal" }); if (r.ok) { presenter(s, a.valeur); await attendre(600 / anim.vitesse); } break;
+    case "poser": case "lacher":
+      if (a.valeur && m.prise && m.prise.objet !== a.valeur) { r = { ok: false, motif: `elle tient ${article(m.prise.obj)}, pas ${article(OBJETS[a.valeur])}` }; break; }
+      r = m.lacher("", { poser: a.action === "poser" }); if (r.ok) ramenerBras(s); break;
+    case "force": r = m.regler(a.maniere); if (r.ok) journal({ html: `Main ${cote} : serrage ${echapper(MANIERES[a.maniere].libelle)}` }); break;
+    case "ecraser":
+      if (!m.prise || m.prise.objet !== a.valeur) { r = m.prendre(a.valeur, { maniere: "normal" }); if (!r.ok) break; presenter(s, a.valeur); await attendre(900 / anim.vitesse); }
+      r = m.ecraser(); break;
+    case "toucher": anim.maniereToucher[s] = a.maniere || "delicat"; await anim.jouerGeste("main_coeur", { cote: s }); break;
+    case "pianoter": r = m.pianoterDoigts(true); break;
+    case "relacher": r = m.liberer(); break;
+  }
+  if (!r.ok) journal({ html: `Main ${cote} : ${echapper(r.motif)}`, classe: "avert" });
+  majMains(true);
+}
+anim.surMain = (e) => journal({ html: `<small>✋ ${e.cote === "g" ? "gauche" : "droite"}</small> ${echapper(e.msg)}`, classe: e.niveau === "alerte" ? "alerte" : e.niveau === "avert" ? "avert" : "" });
+/* Panneau « Mains » : commandes et relevé (prise, force, pressions des capteurs). */
+function remplirMains() {
+  const opt = (o) => Object.entries(o).map(([k, v]) => `<option value="${k}">${echapper(typeof v === "string" ? v : v.libelle)}</option>`).join("");
+  for (const s of ["g", "d"]) {
+    $(`#mn-objet-${s}`).innerHTML = opt(Object.fromEntries(NOMS_OBJETS.map((k) => [k, OBJETS[k].libelle])));
+    $(`#mn-maniere-${s}`).innerHTML = opt(Object.fromEntries(Object.entries(MANIERES).map(([k, v]) => [k, v.libelle])));
+    $(`#mn-maniere-${s}`).value = "normal";
+    $(`#mn-posture-${s}`).innerHTML = `<option value="">— posture des doigts —</option>${opt(POSTURES)}`;
+    $(`#mn-posture-${s}`).onchange = (e) => { if (e.target.value) executer([{ type: "main", cote: s, action: "posture", valeur: e.target.value }]); e.target.value = ""; };
+    $(`#mn-prendre-${s}`).onclick = () => executer([{ type: "main", cote: s, action: "prendre", valeur: $(`#mn-objet-${s}`).value, maniere: $(`#mn-maniere-${s}`).value }]);
+    $(`#mn-poser-${s}`).onclick = () => executer([{ type: "main", cote: s, action: "poser" }]);
+    $(`#mn-lacher-${s}`).onclick = () => executer([{ type: "main", cote: s, action: "lacher" }]);
+    $(`#mn-ecraser-${s}`).onclick = () => executer([{ type: "main", cote: s, action: "ecraser", valeur: anim.mains[s].prise?.objet || $(`#mn-objet-${s}`).value }]);
+    $(`#mn-maniere-${s}`).onchange = (e) => { if (anim.mains[s].prise) executer([{ type: "main", cote: s, action: "force", maniere: e.target.value }]); };
+    $(`#mn-relacher-${s}`).onclick = () => executer([{ type: "main", cote: s, action: "relacher" }]);
+  }
+  $("#mn-carte").onchange = (e) => humain.carteTactile(e.target.checked);
+}
+let dernierReleve = 0;
+function majMains(force = false) {
+  const t = performance.now();
+  if (!force && (t - dernierReleve < 200 || $("#ong-mains")?.hidden)) return;
+  dernierReleve = t;
+  for (const s of ["g", "d"]) {
+    const e = anim.mains[s].etat(), p = e.prise;
+    $(`#mn-etat-${s}`).innerHTML = p
+      ? `<b>${echapper(p.libelle)}</b> — ${echapper(article(OBJETS[p.objet]))} (${echapper(MANIERES[p.maniere].libelle)})<br>force <b>${p.force.toFixed(1)} N</b> · minimum ${p.minimale.toFixed(1)} N${p.glissement ? " · <span class=\"alerte\">glisse</span>" : ""}${p.endommage ? " · <span class=\"avert\">endommagé</span>" : ""}`
+      : `${echapper(anim.mains[s].libre ? "suit les gestes" : (POSTURES[e.posture]?.libelle || e.posture))}`;
+    $(`#mn-fermeture-${s}`).textContent = `${e.fermeture} %`;
+    $(`#mn-capteurs-${s}`).innerHTML = CAPTEURS.map((c) => {
+      const k = e.capteurs[c.id];
+      return `<tr${k.contact && k.force > 0.005 ? ' class="actif"' : ""}><td>${echapper(c.libelle)}</td><td>${k.force.toFixed(2)} N</td><td>${k.pression_kpa.toFixed(1)} kPa</td></tr>`;
+    }).join("");
+  }
+}
+remplirMains();
 
 /* ══════════ Directives écrites et vocales ══════════ */
 async function executerTexte(texte, origine = "écrit") {
