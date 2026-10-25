@@ -261,3 +261,64 @@ def test_animateur_relie_les_mains_au_rendu_et_au_jumeau(tmp_path):
     assert out["tenu"] == "objet_verre" and out["coussins"] >= 3
     assert out["chute"] == [["verre", True, 0.03]] and out["chutes"] == 1      # la pomme posée ne tombe pas
     assert any("Prise établie" in e for e in out["ev"]) and any("est lâché" in e for e in out["ev"])
+
+
+def test_poignet_humain_rotation_flexion_inclinaison(tmp_path):
+    """25 oct. 2026 : le poignet a trois mouvements humains — pronation-supination de l'avant-bras, flexion-
+    extension, inclinaisons radiale et cubitale — dans les amplitudes usuelles, commandés à la voix et rendus
+    dans le bon sens, bras tendu devant soi."""
+    S = json.loads((RACINE / "web" / "avatar" / "schema.json").read_text(encoding="utf-8"))
+    for c in "gd":
+        assert (S["dofs"][f"poignet_{c}.flexion"]["min"], S["dofs"][f"poignet_{c}.flexion"]["max"]) == (-75, 85)
+        assert (S["dofs"][f"poignet_{c}.deviation"]["min"], S["dofs"][f"poignet_{c}.deviation"]["max"]) == (-20, 40)
+        assert (S["dofs"][f"poignet_{c}.rotation"]["min"], S["dofs"][f"poignet_{c}.rotation"]["max"]) == (-90, 90)
+    assert "rouler_poignets" in S["gestes"]
+    crochet = tmp_path / "three.mjs"
+    vendor = (RACINE / "web" / "vendor" / "three.module.min.js").as_uri()
+    crochet.write_text('import { register } from "node:module";\n'
+                       'register("data:text/javascript," + encodeURIComponent('
+                       f'`export async function resolve(s, c, n) {{ if (s === "three") return {{ url: "{vendor}", '
+                       'shortCircuit: true }; return n(s, c); }`));\n', encoding="utf-8")
+    script = """
+      import fs from "node:fs";
+      import * as THREE from "three";
+      import { Humanoide } from "./web/avatar/humanoide.js";
+      import { interpreter } from "./web/avatar/directives.js";
+      const S = JSON.parse(fs.readFileSync("./web/avatar/schema.json", "utf8"));
+      const h = new Humanoide(S);
+      const mesure = (P) => {
+        h.appliquer(P, { ancrage: false }); h.racine.updateMatrixWorld(true); const r = {};
+        for (const s of ["g", "d"]) {
+          const n = h.pointMain(s, "paume").sub(h.pointMain(s, "dos")).normalize();
+          const f = h.pointMain(s, "doigts").sub(h.os[`poignet_${s}`].getWorldPosition(new THREE.Vector3())).normalize();
+          r[s] = { paume: n.toArray(), doigts: f.toArray() };
+        }
+        return r;
+      };
+      const bras = { "epaule_g.flexion": 80, "epaule_d.flexion": 80 };
+      const P = (k, v) => ({ ...bras, [`poignet_g.${k}`]: v, [`poignet_d.${k}`]: v });
+      const phrases = ["paume vers le haut", "paumes vers le bas", "étends le poignet", "incline le poignet vers le pouce",
+                       "incline le poignet vers le petit doigt", "tourne le poignet", "roule les poignets", "tends la main paume vers le haut"];
+      console.log(JSON.stringify({
+        supination: mesure(P("rotation", -85)), pronation: mesure(P("rotation", 85)),
+        flexion: mesure(P("flexion", 60)), cubitale: mesure(P("deviation", 35)),
+        phrases: Object.fromEntries(phrases.map((t) => [t, interpreter(t, S).actions.map((a) => a.dof ? [a.dof, Math.round(a.valeur)] : [a.type, a.nom])])),
+      }));
+    """
+    r = subprocess.run([NODE, "--import", crochet.as_uri(), "--input-type=module", "-e", script],
+                       capture_output=True, text=True, timeout=120, cwd=RACINE)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout.strip().splitlines()[-1])
+    for s, x in (("g", 1), ("d", -1)):
+        assert out["supination"][s]["paume"][1] > 0.9          # bras devant : paume vers le haut
+        assert out["pronation"][s]["paume"][1] < -0.9          # paume vers le bas
+        assert out["flexion"][s]["doigts"][0] * x < -0.8       # les doigts vont vers la paume (côté médial)
+        assert out["cubitale"][s]["doigts"][1] < -0.5          # pouce en haut : l'inclinaison cubitale abaisse les doigts
+    p = out["phrases"]
+    assert p["paume vers le haut"] == [["poignet_d.rotation", -85]] and p["paumes vers le bas"] == [["poignet_g.rotation", 85], ["poignet_d.rotation", 85]]
+    assert p["étends le poignet"] == [["poignet_d.flexion", -60]]
+    assert p["incline le poignet vers le pouce"] == [["poignet_d.deviation", -18]]
+    assert p["incline le poignet vers le petit doigt"] == [["poignet_d.deviation", 35]]
+    assert p["tourne le poignet"] == [["poignet_d.rotation", 70]]
+    assert p["roule les poignets"] == [["geste", "rouler_poignets"]]
+    assert ["poignet_d.rotation", -85] in p["tends la main paume vers le haut"] and ["epaule_d.flexion", 70] in p["tends la main paume vers le haut"]

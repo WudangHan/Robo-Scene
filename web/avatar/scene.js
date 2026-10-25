@@ -10,7 +10,7 @@ const ZONES = {
   tete: ["-tete.flexion", "tete.rotation"], tronc: ["-tronc.flexion", "tronc.rotation"], bassin: ["-bassin.abaissement", "tronc.inclinaison"],
   bras_g: ["epaule_g.flexion", "epaule_g.abduction"], bras_d: ["epaule_d.flexion", "epaule_d.abduction"],
   avantbras_g: ["coude_g.flexion", "-epaule_g.rotation"], avantbras_d: ["coude_d.flexion", "-epaule_d.rotation"],
-  main_g: ["-poignet_g.flexion", "main_g.fermeture"], main_d: ["-poignet_d.flexion", "main_d.fermeture"],
+  main_g: ["-poignet_g.flexion", "poignet_g.deviation"], main_d: ["-poignet_d.flexion", "poignet_d.deviation"],
   cuisse_g: ["hanche_g.flexion", "hanche_g.abduction"], cuisse_d: ["hanche_d.flexion", "hanche_d.abduction"],
   tibia_g: ["genou_g.flexion", "hanche_g.rotation"], tibia_d: ["genou_d.flexion", "hanche_d.rotation"],
   pied_g: ["-cheville_g.flexion", "hanche_g.rotation"], pied_d: ["-cheville_d.flexion", "hanche_d.rotation"],
@@ -236,7 +236,10 @@ export class Scene {
     if (!this.glisse) return;
     const dx = e.clientX - this.glisse.x, dy = e.clientY - this.glisse.y;
     this.glisse.x = e.clientX; this.glisse.y = e.clientY;
-    const [vert, horiz] = ZONES[this.glisse.zone] || [];
+    let [vert, horiz] = ZONES[this.glisse.zone] || [];
+    // main + Maj : fermeture des doigts (vertical) et rotation de l'avant-bras, pronation-supination (horizontal)
+    const m = /^main_([gd])$/.exec(this.glisse.zone);
+    if (m && e.shiftKey) { vert = `main_${m[1]}.fermeture`; horiz = `poignet_${m[1]}.rotation`; }
     // le sens latéral dépend du côté et de l'orientation du personnage par rapport à la caméra
     const versCam = new THREE.Vector3().subVectors(this.camera.position, this.h.racine.position);
     const face = Math.sign(versCam.x * Math.sin(this.h.racine.rotation.y) + versCam.z * Math.cos(this.h.racine.rotation.y)) || 1;

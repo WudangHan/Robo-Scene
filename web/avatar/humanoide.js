@@ -259,6 +259,8 @@ export class Humanoide {
       const avb = capsule(0.039, 0.19, M.haut, `avantbras_${s}`); avb.position.y = -0.12; coude.add(avb); O[`avantbras_${s}`] = avb;
       const manchette = maille(new THREE.CylinderGeometry(0.041, 0.041, 0.02, 16), M.haut, `avantbras_${s}`); manchette.position.y = -0.225; coude.add(manchette); O[`manchette_${s}`] = manchette;
       const poignet = (O[`poignet_${s}`] = groupe(`poignet_${s}`, coude, 0, -0.255, 0));
+      // rotation de l'avant-bras d'abord (axe du bras), puis flexion, puis inclinaison, dans le repère de la main
+      poignet.rotation.order = "YZX";
       this.construireMain(poignet, s, x);
       const hanche = (O[`hanche_${s}`] = groupe(`hanche_${s}`, bassin, 0.092 * x, -0.06, 0));
       hanche.rotation.order = "ZXY";
@@ -460,7 +462,9 @@ export class Humanoide {
       const ep = O[`epaule_${s}`];
       ep.rotation.set(-R(v(`epaule_${s}.flexion`)), -x * R(v(`epaule_${s}.rotation`)), x * R(v(`epaule_${s}.abduction`) + REPOS_BRAS));
       O[`coude_${s}`].rotation.x = -R(v(`coude_${s}.flexion`) + REPOS_COUDE);
-      O[`poignet_${s}`].rotation.z = -x * R(v(`poignet_${s}.flexion`));
+      // poignet humain (25 oct. 2026) : pronation-supination de l'avant-bras (y), flexion-extension (z, vers la
+      // paume), inclinaison radiale-cubitale (x) ; au repos, le pouce est devant et la paume tournée vers la cuisse
+      O[`poignet_${s}`].rotation.set(R(v(`poignet_${s}.deviation`)), -x * R(v(`poignet_${s}.rotation`)), -x * R(v(`poignet_${s}.flexion`)));
       // mains : angles fournis par l'animateur (MainVirtuelle) ; à défaut, posture tirée de la fermeture
       const mv = extra.mains?.[s];
       if (mv) this.poserMain(s, mv.q, mv);

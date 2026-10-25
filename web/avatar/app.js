@@ -456,6 +456,7 @@ function groupeDeZone(z) {
 let manipulationMemorisee = false;
 scene.surManipulation = (dof, delta) => {
   if (!manipulationMemorisee) { memoriserEtat(); manipulationMemorisee = true; }
+  const fm = /^main_([gd])\.fermeture$/.exec(dof); if (fm && !anim.mains[fm[1]].prise) anim.mains[fm[1]].liberer();
   anim.definir(dof, delta, { relatif: true, vitesse: 3 }); majCurseurs();
 };
 scene.surFinManipulation = () => { manipulationMemorisee = false; };
@@ -469,7 +470,7 @@ const NOMS_GESTES = { saluer: "saluer (main)", reverence: "révérence", hocher:
   chut: "chut", mains_dos: "mains dans le dos", mains_poches: "mains dans les poches", pouce_leve: "pouce levé", se_designer: "se désigner",
   tete_mains: "tête dans les mains", frapper_porte: "frapper à la porte", boire: "boire", telephoner: "téléphoner", ecrire: "écrire", lire: "lire",
   montre: "regarder sa montre", essuyer_front: "s'essuyer le front", bailler: "bâiller", frotter_yeux: "se frotter les yeux", sauter: "sauter",
-  sautiller: "sautiller", serrer_main: "serrer la main", repousser: "repousser", trembler: "trembler", frotter_mains: "se frotter les mains",
+  sautiller: "sautiller", serrer_main: "serrer la main", repousser: "repousser", trembler: "trembler", frotter_mains: "se frotter les mains", rouler_poignets: "rouler les poignets",
   muscles: "montrer ses muscles", accolade: "accolade", lancer: "lancer", ramasser: "ramasser", pousser: "pousser", tirer: "tirer", boxer: "boxer",
   coup_de_pied: "coup de pied", pointes_pieds: "pointes des pieds", tituber: "tituber", regarder_loin: "scruter au loin", eternuer: "éternuer",
   tousser: "tousser", compter: "compter sur ses doigts", menacer: "menacer", hesiter: "hésiter", ecouter: "tendre l'oreille", bercer: "bercer",

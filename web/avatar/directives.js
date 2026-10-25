@@ -81,7 +81,7 @@ const POSES = [
 
 const PARTIES = [
   ["sourcils", /\bsourcils?\b/], ["yeux", /\b(yeux|paupieres?|oeil)\b/], ["bouche", /\b(bouche|levres?)\b/],
-  ["poignet", /\bpoignets?\b/], ["coude", /\b(coudes?|avant-bras)\b/], ["epaule", /\bepaules?\b/],
+  ["poignet", /\b(poignets?|paumes?|supination|pronation)\b/], ["coude", /\b(coudes?|avant-bras)\b/], ["epaule", /\bepaules?\b/],
   ["main", /\b(mains?|poings?|doigts?)\b/], ["bras", /\bbras\b/],
   ["genou", /\bgenoux?\b/], ["pied", /\b(pieds?|chevilles?|orteils?|pointes? de pied)\b/], ["jambe", /\b(jambes?|cuisses?)\b/],
   ["tete", /\b(tete|visage|menton|nez|cou|nuque|front)\b/], ["tronc", /\b(tronc|buste|torse|dos|haut du corps|corps|poitrine)\b/],
@@ -128,7 +128,8 @@ function degres(c) {
 }
 function cotes(c) {
   if (/\b(les (deux|2)|(deux|2) (bras|mains|jambes|pieds|epaules|coudes|genoux|poignets))\b/.test(c)) return ["g", "d"];
-  if (/\b(les|tes|des|ses) (bras|mains|jambes|genoux|pieds|epaules|coudes|poignets|poings|chevilles)\b/.test(c)) return ["g", "d"];
+  if (/\bpaumes\b/.test(c) && !/\b(gauche|droite?)\b/.test(c)) return ["g", "d"];
+  if (/\b(les|tes|des|ses) (bras|mains|jambes|genoux|pieds|epaules|coudes|poignets|poings|chevilles|paumes)\b/.test(c)) return ["g", "d"];
   if (/\bgauche\b/.test(c)) return ["g"];
   if (/\bdroite?\b/.test(c)) return ["d"];
   return ["d"];
@@ -287,6 +288,21 @@ function visage(c, f) {
   return null;
 }
 
+/* ── Poignet : rotation de l'avant-bras et inclinaison (25 oct. 2026) ──────────────
+   Rotation : + pronation (paume vers le bas, vers l'arrière bras le long du corps), − supination (paume vers le
+   haut, vers l'avant). Inclinaison : + cubitale (vers l'auriculaire), − radiale (vers le pouce). */
+function rotationPoignet(c) {
+  if (/\b(supination|paumes? (vers le haut|en l'air|en haut|vers le ciel|vers l'avant|vers le public|ouvertes?|tournees? vers le haut)|(tourne|retourne)\b.*\b(vers l'exterieur|en dehors))\b/.test(c)) return -85;
+  if (/\b(pronation|paumes? (vers le bas|en bas|vers le sol|vers l'arriere|contre terre|tournees? vers le bas)|(tourne|retourne)\b.*\b(vers l'interieur|en dedans))\b/.test(c)) return 85;
+  if (/\bpaumes? (vers l'interieur|face a face|l'une vers l'autre|de profil|en tranche)\b/.test(c)) return 0;
+  return null;
+}
+function deviationPoignet(c) {
+  if (/\b(vers (le|ton) pouce|cote (du|de ton) pouce|radiale?)\b/.test(c)) return -18;
+  if (/\b(vers (le|ton) petit doigt|vers l'auriculaire|cote (du|de ton) petit doigt|cubitale?|ulnaire)\b/.test(c)) return 35;
+  return null;
+}
+
 /* ── Articulations nommées ─────────────────────────────── */
 function articulations(c, partie, f) {
   const out = [];
@@ -350,7 +366,20 @@ function articulations(c, partie, f) {
       break;
     }
     case "poignet": {
-      for (const s of S) R(`poignet_${s}.flexion`, d ?? (baisser || V.plier.test(c) ? 50 * f : (lever ? -45 * f : 0)));
+      // poignet humain (25 oct. 2026) : rotation de l'avant-bras, inclinaison, flexion-extension
+      const rot = rotationPoignet(c), dev = deviationPoignet(c);
+      // « tends la main paume vers le haut » : le bras se tend aussi
+      if (rot !== null && /\bmains?\b/.test(c) && (V.tendre.test(c) || /\b(offre|presente)\b/.test(c)))
+        for (const s of S) { R(`epaule_${s}.flexion`, 70); R(`coude_${s}.flexion`, 15); R(`main_${s}.fermeture`, 5); }
+      for (const s of S) {
+        if (rot !== null) R(`poignet_${s}.rotation`, d != null ? Math.sign(rot || 1) * d : rot * Math.min(1, f));
+        else if (dev !== null) R(`poignet_${s}.deviation`, d != null ? Math.sign(dev) * d : dev * Math.min(1, f));
+        else if (/\b(retourne|tourne|pivote)\b/.test(c)) R(`poignet_${s}.rotation`, d ?? 70 * Math.min(1, f));
+        else if (V.pencher.test(c)) R(`poignet_${s}.deviation`, d ?? 25 * Math.min(1, f));
+        else if (/\b(etends|casse|cambre|renverse|extension)\b/.test(c)) R(`poignet_${s}.flexion`, -(d ?? 60 * f));
+        else if (/\b(detends|relache|neutre|aligne|redresse)\b/.test(c)) { R(`poignet_${s}.flexion`, 0); R(`poignet_${s}.deviation`, 0); R(`poignet_${s}.rotation`, 0); }
+        else R(`poignet_${s}.flexion`, d ?? (baisser || V.plier.test(c) || /\bflexion\b/.test(c) ? 50 * f : (lever ? -45 * f : 0)));
+      }
       break;
     }
     case "main": {
@@ -496,6 +525,7 @@ const GESTES_PLUS = [
   ["repousser", /\b(repousse|repousser|tiens[- ]le a distance|garde tes distances|recule de la main)/],
   ["trembler", /\b(tremble|trembler|frissonne|grelotte|frisson|tu as froid)/],
   ["frotter_mains", /\b(frotte[- ]toi les mains|frotte les mains|se frotter les mains)/],
+  ["rouler_poignets", /\b((roule|fais rouler|fais tourner|echauffe)( tes| les)? poignets|tourne (tes |les )?poignets en (rond|cercle)|(fais )?des cercles avec (tes |les )?poignets|cercles? (des|de) poignets?)\b/],
   ["muscles", /\b(montre tes muscles|fais le fort|biceps|fais le costaud|bombe le torse)/],
   ["accolade", /\b(prends[- ]le dans tes bras|accolade|enlace|etreins|serre[- ]le dans tes bras|embrasse)/],
   ["lancer", /\b(lance|jette|lancer|jeter)\b/],
@@ -582,6 +612,9 @@ export const EXEMPLES = [
   "prends le crâne", "porte la lanterne", "pose le verre", "lâche la rose", "froisse la lettre", "serre plus fort", "desserre",
   "serre la main du partenaire", "effleure sa main", "pose la main sur le cœur", "montre trois doigts", "fais le signe ok",
   "signe de la victoire", "serre le poing", "écarte les doigts", "pianote", "relâche la main", "prends la coupe", "main en coupe",
+  "plie le poignet", "étends le poignet", "incline le poignet vers le pouce", "incline le poignet vers le petit doigt",
+  "tourne le poignet", "paume vers le haut", "paumes vers le bas", "tourne les poignets vers l'extérieur", "redresse le poignet",
+  "roule les poignets",
 ];
 
 const VIDES = new Set(["le", "la", "les", "un", "une", "des", "de", "du", "d", "l", "a", "au", "aux", "et", "ou", "ton", "ta", "tes", "te", "toi", "moi",

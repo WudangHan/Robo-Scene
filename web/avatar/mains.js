@@ -39,14 +39,13 @@ export const SEGMENTS = {
 
 /* Amplitudes articulaires (degrés). Valeurs usuelles des tableaux cliniques consultés (Eaton ; Physiotutors) :
    MCP 0-90 (hyperextension jusqu'à 30-45), IPP 0-100/115, IPD 0-80, abduction 20-30 ; pouce : CMC abduction
-   45-60, MCP 0-55, IP 0-80 ; poignet : déviation radiale 15-20, cubitale 30-45 ; pronation et supination 90. */
+   45-60, MCP 0-55, IP 0-80. Le poignet (flexion-extension, inclinaisons radiale et cubitale) et la rotation de
+   l'avant-bras (pronation-supination) sont des degrés de liberté du corps : web/avatar/schema.json. */
 export const ARTICULATIONS = {
   "pouce.cmc_flexion": { min: -15, max: 50, repos: 8, libelle: "Pouce — opposition (trapézo-métacarpienne)" },
   "pouce.cmc_abduction": { min: 0, max: 60, repos: 22, libelle: "Pouce — abduction palmaire" },
   "pouce.mcp": { min: 0, max: 55, repos: 10, libelle: "Pouce — métacarpo-phalangienne" },
   "pouce.ip": { min: -10, max: 80, repos: 12, libelle: "Pouce — interphalangienne" },
-  "poignet.deviation": { min: -20, max: 35, repos: 0, libelle: "Poignet — déviation (+ : cubitale)" },
-  "avant_bras.pronation": { min: -90, max: 90, repos: 0, libelle: "Avant-bras — pronation (+) et supination (−)" },
 };
 const REPOS_DOIGTS = { index: [14, 0, 18], majeur: [18, 0, 22], annulaire: [22, 0, 26], auriculaire: [26, 0, 30] };
 for (const d of DOIGTS.slice(1)) {

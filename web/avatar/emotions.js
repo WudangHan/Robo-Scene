@@ -249,6 +249,18 @@ Object.assign(GESTES, {
   trembler: (r) => [...osc(20 * r, 0.07, 0, { "epaule_g.haussement": 12, "epaule_d.haussement": 12, "coude_g.flexion": 40, "coude_d.flexion": 40, "tete.inclinaison": 2, "genou_g.flexion": 8 },
                                             { "epaule_g.haussement": 6, "epaule_d.haussement": 6, "coude_g.flexion": 34, "coude_d.flexion": 34, "tete.inclinaison": -2, "genou_g.flexion": 4 })
                       .map((im, i) => (i === 0 ? { ...im, au: { au1: 0.6, au20: 0.5, au25: 0.3 } } : im)), finDe(20 * r * 0.07 + 0.1, {})],
+  // cercles des poignets (circumduction) : flexion, inclinaison cubitale, extension, inclinaison radiale, en boucle,
+  // avant-bras devant soi ; la rotation de l'avant-bras accompagne le cercle
+  rouler_poignets: (r) => {
+    const tour = [[55, 0, 20], [0, 32, 0], [-55, 0, -20], [0, -16, 0]];
+    const images = [{ t: 0, p: { "epaule_g.flexion": 30, "epaule_d.flexion": 30, "coude_g.flexion": 88, "coude_d.flexion": 88, "main_g.fermeture": 15, "main_d.fermeture": 15 } }];
+    for (let i = 0; i < 4 * 2 * r; i++) {
+      const [f, d, ro] = tour[i % 4];
+      images.push({ t: 0.5 + i * 0.22, p: { "poignet_g.flexion": f, "poignet_d.flexion": f, "poignet_g.deviation": d, "poignet_d.deviation": d, "poignet_g.rotation": ro, "poignet_d.rotation": ro } });
+    }
+    images.push(finDe(0.5 + 8 * r * 0.22 + 0.4));
+    return images;
+  },
   frotter_mains: (r) => [
     { t: 0, p: { "epaule_g.flexion": 40, "epaule_d.flexion": 40, "epaule_g.rotation": 60, "epaule_d.rotation": 60, "coude_g.flexion": 95, "coude_d.flexion": 95, "main_g.fermeture": 10, "main_d.fermeture": 10 }, au: { au12: 0.6, au6: 0.3 } },
     ...osc(8 * r, 0.15, 0.5, { "epaule_g.abduction": 4, "epaule_d.abduction": 12 }, { "epaule_g.abduction": 12, "epaule_d.abduction": 4 }), finDe(0.6 + 1.2 * r, {})],
