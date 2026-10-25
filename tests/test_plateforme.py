@@ -151,7 +151,7 @@ async def test_plateforme_bout_en_bout(cfg, monkeypatch):
         r = await c.get("/aide", allow_redirects=False)
         assert r.status == 302 and r.headers["Location"] == "/static/aide/index.html"
         html = await (await c.get("/static/aide/index.html")).text()
-        for doc in ("Guide_plateforme_integree_ROBO-SCENE_v2.0.1.docx", "Repertoire_commandes_gestes_robot_ROBO-SCENE_v1.2_2026-10-24.docx",
+        for doc in ("Guide_plateforme_integree_ROBO-SCENE_v2.0.1.docx", "Repertoire_commandes_gestes_robot_ROBO-SCENE_v1.3_2026-10-25.docx",
                     "Repertoire_commandes_mouvements_drone_ROBO-SCENE_v1.0_2026-10-20.docx",
                     "Repertoire_commandes_mouvements_chien_ROBO-SCENE_v1.0_2026-10-20.docx",
                     "Guide_mains_cinq_doigts_ROBO-SCENE_v1.0_2026-10-25.docx"):
