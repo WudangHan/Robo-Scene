@@ -165,7 +165,8 @@ const MOTS_HABILLAGE = {
   automate: /\b(automate|robot de metal|homme de fer|metallique)\b/, magicien: /\b(magicien|magicienne|illusionniste)\b/,
   professeur: /\b(professeur|professeure|prof)\b/, artiste: /\b(artiste|peintre)\b/, ouvrier: /\b(ouvrier|ouvriere|travailleur)\b/,
   voyageur: /\b(voyageur|voyageuse|aventurier|aventuriere)\b/, danseur: /\b(danseur|danseuse)\b/,
-  robe_soiree: /\brobe de soiree\b/, tunique: /\b(tunique|antique|toge)\b/, sport: /\b(survetement|sport|sportif|sportive|jogging)\b/,
+  robe_soiree: /\brobe de soiree\b/, tunique: /\b(tunique|antique|toge)\b/,
+  lutteur: /\b(lutteur|lutteuse|lutte|ncaa|maillot de lutte|singlet)\b/, sport: /\b(survetement|sport|sportif|sportive|jogging)\b/,
 };
 const VERBE_HABILLAGE = /\b(habille-toi|habille toi|habilles?|habillez|habillage|tenue|costume|deguise-toi|deguise|deguisement|change de tenue|mets ton|mets ta|en tenue)\b/;
 export function habillageDans(c, schema) {
@@ -183,12 +184,13 @@ function apparence(c, schema) {
   const hab = habillageDans(c, schema);
   if (hab) { A("habillage", hab); return out; }
   // chapeaux, ornements du cou, cape, jupe ou robe, gants, matière
-  const chap = c.match(/\b(chapeau melon|melon|haut-de-forme|haut de forme|beret|casquette|couronne|calot|chapeau)\b/);
+  const chap = c.match(/\b(chapeau melon|melon|haut-de-forme|haut de forme|beret|casquette|couronne|calot|protege-oreilles|protege oreilles|casque de lutte|chapeau)\b/);
   if (chap) {
     if (RETRAIT.test(c)) A("chapeau", "aucun");
     else {
       A("chapeau", { "chapeau melon": "melon", melon: "melon", "haut-de-forme": "haut-de-forme", "haut de forme": "haut-de-forme", beret: "béret",
-        casquette: "casquette", couronne: "couronne", calot: "calot", chapeau: "melon" }[chap[1]]);
+        casquette: "casquette", couronne: "couronne", calot: "calot", "protege-oreilles": "protège-oreilles", "protege oreilles": "protège-oreilles",
+        "casque de lutte": "protège-oreilles", chapeau: "melon" }[chap[1]]);
       const col = couleurDans(c.slice(chap.index), schema);
       if (col) A("couleur_chapeau", col);
     }
@@ -254,7 +256,7 @@ function apparence(c, schema) {
   if (/\bmoustache\b/.test(c)) A("moustache", !/\b(sans|enleve|retire|rase|plus de|supprime)\b/.test(c));
   const vet = [["haut", /\b(chemise|haut|t-shirt|tee-shirt|tshirt|chandail|veste|pull|gilet|tunique|costume|polo)\b/],
                ["bas", /\b(pantalon|jean|jeans|culotte|bas)\b/], ["chaussures", /\b(chaussures?|souliers?|bottes?|bottines?)\b/]];
-  for (const [cle, re] of vet) {
+  for (const [cle, re] of /\b(maillot de lutte|singlet)\b/.test(c) ? [] : vet) {
     const m = (cle === "haut" ? c.replace(/haut[- ]de[- ]forme/g, "chapeau-forme") : c).match(re);
     if (m) {
       const suite = c.slice(m.index);
@@ -262,8 +264,18 @@ function apparence(c, schema) {
       if (col) A(cle, col);
     }
   }
-  if (/\bmanches? courtes?\b/.test(c)) A("manches", "courtes");
+  const singlet = c.match(/\b(maillot de lutte|singlet)\b/);
+  if (singlet) {
+    // maillot de lutte d'une pièce : sans manches, cuissard ; la couleur dite habille le haut et le bas
+    A("manches", "sans"); A("coupe_bas", "cuissard");
+    const col = couleurDans(c.slice(singlet.index), schema);
+    if (col) { A("haut", col); A("bas", col); }
+  } else if (/\b(sans manches|debardeur)\b/.test(c)) A("manches", "sans");
+  else if (/\bmanches? courtes?\b/.test(c)) A("manches", "courtes");
   else if (/\bmanches? longues?\b/.test(c)) A("manches", "longues");
+  if (/\b(cuissard|short|bermuda|jambes nues)\b/.test(c)) A("coupe_bas", RETRAIT.test(c) ? "pantalon" : "cuissard");
+  else if (/\b(pantalon long|pantalon)\b/.test(c) && /\b(mets|enfile|porte)\b/.test(c)) A("coupe_bas", "pantalon");
+  if (/\b(chaussures (de lutte|montantes)|bottines de lutte)\b/.test(c)) A("chaussures_montantes", !RETRAIT.test(c));
   const p = c.match(/\bpeau (tres claire|claire|mate|olive|brune|foncee|noire|sombre)\b/);
   if (p) A("peau", { "tres claire": "très claire", claire: "claire", mate: "mate", olive: "olive", brune: "brune", foncee: "foncée", noire: "foncée", sombre: "foncée" }[p[1]]);
   const y = c.match(/\byeux (bleus|verts|bruns|marron|noirs|gris|noisette)\b/);
@@ -614,7 +626,7 @@ export const EXEMPLES = [
   "signe de la victoire", "serre le poing", "écarte les doigts", "pianote", "relâche la main", "prends la coupe", "main en coupe",
   "plie le poignet", "étends le poignet", "incline le poignet vers le pouce", "incline le poignet vers le petit doigt",
   "tourne le poignet", "paume vers le haut", "paumes vers le bas", "tourne les poignets vers l'extérieur", "redresse le poignet",
-  "roule les poignets",
+  "roule les poignets", "habille-toi en lutteur", "mets un protège-oreilles", "mets un maillot de lutte rouge", "mets des chaussures de lutte",
 ];
 
 const VIDES = new Set(["le", "la", "les", "un", "une", "des", "de", "du", "d", "l", "a", "au", "aux", "et", "ou", "ton", "ta", "tes", "te", "toi", "moi",
@@ -944,12 +956,12 @@ export function valider(actions, schema) {
         else if (x.cle === "manches" && !A.manches.includes(x.valeur)) { rejets.push({ action: a, motif: "manches inconnues" }); continue; }
         else if (x.cle === "peau" && !A.peau.includes(x.valeur)) { rejets.push({ action: a, motif: "teinte inconnue" }); continue; }
         else if (["haut", "bas", "chaussures", "couleur_cheveux"].includes(x.cle) && !(x.valeur in A.couleurs) && !/^#[0-9a-f]{6}$/i.test(String(x.valeur))) { rejets.push({ action: a, motif: "couleur inconnue" }); continue; }
-        else if (["matiere", "chapeau", "cou", "cape", "jupe"].includes(x.cle) && !(A[x.cle] || []).includes(x.valeur)) { rejets.push({ action: a, motif: `valeur inconnue pour ${x.cle}` }); continue; }
+        else if (["matiere", "chapeau", "cou", "cape", "jupe", "coupe_bas"].includes(x.cle) && !(A[x.cle] || []).includes(x.valeur)) { rejets.push({ action: a, motif: `valeur inconnue pour ${x.cle}` }); continue; }
         else if (x.cle === "habillage" && !(A.habillages || {})[x.valeur]) { rejets.push({ action: a, motif: "habillage inconnu" }); continue; }
         else if (["couleur_chapeau", "accessoire"].includes(x.cle) && !(x.valeur in A.couleurs) && !/^#[0-9a-f]{6}$/i.test(String(x.valeur))) { rejets.push({ action: a, motif: "couleur inconnue" }); continue; }
-        else if (x.cle === "gants") x.valeur = !!x.valeur;
+        else if (x.cle === "gants" || x.cle === "chaussures_montantes") x.valeur = !!x.valeur;
         else if (!["taille", "carrure", "corpulence", "age", "cheveux", "barbe", "manches", "peau", "haut", "bas", "chaussures", "couleur_cheveux", "moustache", "yeux",
-          "matiere", "chapeau", "couleur_chapeau", "cou", "cape", "jupe", "gants", "accessoire", "habillage"].includes(x.cle)) { rejets.push({ action: a, motif: "attribut d'apparence inconnu" }); continue; }
+          "matiere", "chapeau", "couleur_chapeau", "cou", "cape", "jupe", "gants", "accessoire", "habillage", "coupe_bas", "chaussures_montantes"].includes(x.cle)) { rejets.push({ action: a, motif: "attribut d'apparence inconnu" }); continue; }
         break;
       }
       case "main": {

@@ -38,6 +38,8 @@ export const APPARENCE_DEFAUT = {
   // habillage (21 oct. 2026) : matière des vêtements, chapeau, cou, cape, jupe ou robe, gants
   matiere: "tissu", chapeau: "aucun", couleur_chapeau: "noir", cou: "aucun", cape: "aucune", jupe: "aucune", gants: false,
   accessoire: "bordeaux", habillage: "repetition",
+  // lutteur (25 oct. 2026) : longueur du bas (pantalon ou cuissard) et chaussures montant au-dessus de la cheville
+  coupe_bas: "pantalon", chaussures_montantes: false,
 };
 /* Rendu des matières (MeshStandardMaterial : rugosité, métallicité ; la scène n'a pas de carte d'environnement,
    d'où une métallicité modérée pour que le métal reste lisible sous les projecteurs). */
@@ -47,7 +49,7 @@ export const MATIERES = {
 };
 /* Champs qu'un habillage remplace ; le corps (taille, âge, peau, cheveux, barbe, yeux) n'est jamais touché. */
 export const CHAMPS_HABILLAGE = ["haut", "bas", "chaussures", "manches", "matiere", "chapeau", "couleur_chapeau", "cou", "cape",
-  "jupe", "gants", "accessoire"];
+  "jupe", "gants", "accessoire", "coupe_bas", "chaussures_montantes"];
 
 function std(color, roughness = 0.75, extra = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness: 0, ...extra });
@@ -266,7 +268,7 @@ export class Humanoide {
       hanche.rotation.order = "ZXY";
       const cuisse = capsule(0.068, 0.3, M.bas, `cuisse_${s}`); cuisse.position.y = -0.2; hanche.add(cuisse); O[`cuisse_${s}`] = cuisse;
       const genou = (O[`genou_${s}`] = groupe(`genou_${s}`, hanche, 0, -0.43, 0));
-      const rotule = ellipsoide(0.052, M.bas, `tibia_${s}`); genou.add(rotule);
+      const rotule = ellipsoide(0.052, M.bas, `tibia_${s}`); genou.add(rotule); O[`rotule_${s}`] = rotule;
       const tibia = capsule(0.05, 0.31, M.bas, `tibia_${s}`); tibia.position.y = -0.2; genou.add(tibia); O[`tibia_${s}`] = tibia;
       const cheville = (O[`cheville_${s}`] = groupe(`cheville_${s}`, genou, 0, -0.41, 0));
       const pied = capsule(0.046, 0.16, M.chaussures, `pied_${s}`); pied.rotation.x = Math.PI / 2; pied.position.set(0, -0.036, 0.055); pied.scale.set(1.05, 1, 0.82); cheville.add(pied);
@@ -424,6 +426,21 @@ export class Humanoide {
     const pointes = Array.from({ length: 8 }, (_, i) => { const a = (i / 8) * Math.PI * 2, c = maille(new THREE.ConeGeometry(0.014, 0.045, 10), M.or); return pos(c, Math.sin(a) * 0.083, 0.15, Math.cos(a) * 0.083 - 0.004); });
     A.couronne = ajoute(f, "chapeau_couronne", pos(cyl(0.086, 0.086, 0.05, M.or, 40, true), 0, 0.105, -0.004), ...pointes);
     A.calot = ajoute(f, "chapeau_calot", calotte(0.1, 0.92, 0.012));
+    // protège-oreilles de lutte : coquilles rigides sur les oreilles, sangles du sommet et de la nuque, mentonnière
+    // à boucle (NCAA, règle 1.5.4 : protège-oreilles à dispositif de verrouillage réglable)
+    const coquille = (x) => {
+      const c = maille(new THREE.CylinderGeometry(0.043, 0.047, 0.026, 28), M.chapeau); c.rotation.z = Math.PI / 2; pos(c, x * 0.111, -0.004, -0.006);
+      const event = maille(new THREE.TorusGeometry(0.024, 0.006, 8, 20), M.accessoire); event.rotation.y = Math.PI / 2; pos(event, x * 0.125, -0.004, -0.006);
+      return [c, event];
+    };
+    const sangle = (r, rotX, y, z) => { const m = maille(new THREE.TorusGeometry(r, 0.009, 8, 40, Math.PI), M.chapeau); m.scale.set(1, 1.02, 1.6); m.rotation.x = rotX; return pos(m, 0, y, z); };
+    const menton = maille(new THREE.TorusGeometry(0.112, 0.007, 8, 40, Math.PI), M.chapeau); menton.rotation.set(0.55, 0, Math.PI); pos(menton, 0, -0.012, 0.012);
+    A["protège-oreilles"] = ajoute(f, "chapeau_protege_oreilles", ...coquille(1), ...coquille(-1), sangle(0.116, 0, -0.004, -0.012), sangle(0.114, -0.75, -0.002, -0.014), menton);
+    // chaussures de lutte : tige montant au-dessus de la cheville
+    for (const s of ["g", "d"]) {
+      const tige = maille(new THREE.CylinderGeometry(0.056, 0.05, 0.12, 24), M.chaussures, `pied_${s}`); pos(tige, 0, 0.02, 0.005);
+      A[`tige_${s}`] = ajoute(O[`cheville_${s}`], `chaussure_montante_${s}`, tige);
+    }
     // cou (origine : poitrine ; le col est à y = 0,285)
     const P = O.poitrine;
     const cravate = maille(new THREE.BoxGeometry(0.036, 0.21, 0.006), M.accessoire); pos(cravate, 0, 0.16, 0.108); cravate.rotation.x = -0.1;
@@ -656,12 +673,19 @@ export class Humanoide {
     M.mains.color.copy(A.gants ? new THREE.Color(couleur(A.accessoire, "#ececec")) : M.peau.color);
     M.mains.roughness = A.gants ? 0.5 : 0.62;
     const acc = O.acc;
-    for (const k of ["melon", "haut-de-forme", "béret", "casquette", "couronne", "calot"]) acc[k].visible = A.chapeau === k;
+    for (const k of ["melon", "haut-de-forme", "béret", "casquette", "couronne", "calot", "protège-oreilles"]) acc[k].visible = A.chapeau === k;
+    for (const s of ["g", "d"]) acc[`tige_${s}`].visible = !!A.chaussures_montantes;
+    O.ceinture.visible = !(A.manches === "sans" && A.coupe_bas === "cuissard");   // maillot d'une pièce : pas de ceinture
     for (const k of ["cravate", "nœud papillon", "collerette", "foulard"]) acc[k].visible = A.cou === k;
     acc.cape_courte.visible = A.cape === "courte"; acc.cape_longue.visible = A.cape === "longue";
     acc.jupe_courte.visible = A.jupe === "courte"; acc.jupe_longue.visible = A.jupe === "longue";
-    const courtes = A.manches === "courtes";
-    for (const s of ["g", "d"]) { O[`avantbras_${s}`].material = courtes ? M.peau : M.haut; O[`articCoude_${s}`].material = courtes ? M.peau : M.haut; O[`manchette_${s}`].visible = !courtes; }
+    const courtes = A.manches === "courtes" || A.manches === "sans", sans = A.manches === "sans", cuissard = A.coupe_bas === "cuissard";
+    for (const s of ["g", "d"]) {
+      O[`avantbras_${s}`].material = courtes ? M.peau : M.haut; O[`articCoude_${s}`].material = courtes ? M.peau : M.haut; O[`manchette_${s}`].visible = !courtes;
+      // sans manches (maillot de lutte) : bras et épaules nus ; cuissard : jambes nues sous le genou
+      O[`bras_${s}`].material = sans ? M.peau : M.haut; O[`deltoide_${s}`].material = sans ? M.peau : M.haut;
+      O[`tibia_${s}`].material = cuissard ? M.peau : M.bas; O[`rotule_${s}`].material = cuissard ? M.peau : M.bas;
+    }
     this.visage.coiffure(A.cheveux, A.barbe, A.moustache);
     return A;
   }

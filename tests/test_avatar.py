@@ -483,11 +483,23 @@ def test_habillages(tmp_path):
       const t = ["habille-toi en monarque", "mets ton habit de soirée", "déguise-toi en clown", "mets un chapeau melon noir",
                  "mets un haut-de-forme", "enlève ton chapeau", "mets une cape rouge", "enlève ta cape", "mets une cravate bordeaux",
                  "mets des gants blancs", "mets une robe longue rouge", "lève le bras en haut", "habille-toi en survêtement",
-                 "habille-toi en danseur", "habille-toi en danseuse", "mets une cape violette", "chemise verte", "mets une cape blanche"];
+                 "habille-toi en danseur", "habille-toi en danseuse", "mets une cape violette", "chemise verte", "mets une cape blanche",
+                 "habille-toi en lutteur", "mets un casque de lutte rouge", "mets un maillot de lutte rouge"];
       console.log(JSON.stringify(Object.fromEntries(t.map((x) => [x, interpreter(x, S).actions.filter((a) => a.type === "apparence").map((a) => [a.cle, a.valeur])]))));
     """)
     assert out["habille-toi en monarque"] == [["habillage", "monarque"]]
+    # lutteur universitaire (NCAA, 25 oct. 2026) : maillot d'une pièce sans manches, cuissard, protège-oreilles, chaussures montantes
+    L = A["habillages"]["lutteur"]["valeurs"]
+    assert (L["manches"], L["coupe_bas"], L["chapeau"], L["chaussures_montantes"]) == ("sans", "cuissard", "protège-oreilles", True)
+    assert all({"coupe_bas", "chaussures_montantes"} <= set(h["valeurs"]) for h in A["habillages"].values())
+    ok, rejets = avatar.valider([{"type": "apparence", "cle": "coupe_bas", "valeur": "cuissard"},
+                                 {"type": "apparence", "cle": "chaussures_montantes", "valeur": 1},
+                                 {"type": "apparence", "cle": "coupe_bas", "valeur": "bermuda"}])
+    assert len(ok) == 2 and ok[1]["valeur"] is True and len(rejets) == 1
     assert out["mets ton habit de soirée"] == [["habillage", "soiree"]]
+    assert out["habille-toi en lutteur"] == [["habillage", "lutteur"]]
+    assert out["mets un casque de lutte rouge"] == [["chapeau", "protège-oreilles"], ["couleur_chapeau", "rouge"]]
+    assert out["mets un maillot de lutte rouge"] == [["manches", "sans"], ["coupe_bas", "cuissard"], ["haut", "rouge"], ["bas", "rouge"]]
     assert out["déguise-toi en clown"] == [["habillage", "clown"]]
     assert out["mets un chapeau melon noir"] == [["chapeau", "melon"], ["couleur_chapeau", "noir"]]
     assert out["mets un haut-de-forme"] == [["chapeau", "haut-de-forme"]]      # pas lu comme le « haut » du costume
