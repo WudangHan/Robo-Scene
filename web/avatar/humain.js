@@ -59,9 +59,31 @@ export class CorpsHumain {
     // les os n'ont pas de parent : leur matrice monde est posée directement à chaque image
     for (const b of this.os) b.updateMatrixWorld = () => {};
     this.construireYeux(t);
+    this.construireGalbe();
     this.visible = false;
     this.mesh.visible = false;
     humanoide.racine.add(this.mesh);
+  }
+
+  /* Silhouette masculine sous le vêtement (25 oct. 2026) : volume ellipsoïdal à l'avant du bassin, toujours de la
+     couleur du bas, lié au bassin et aux deux hanches (il suit la marche et les flexions). */
+  construireGalbe() {
+    const G = this.meta.galbe;
+    if (!G?.centre) return;
+    const geo = new THREE.SphereGeometry(1, 28, 20);
+    // forme en goutte : plus large et plus pleine vers le bas, effilée vers le haut où elle se fond dans le bassin
+    const p0 = geo.attributes.position;
+    for (let k = 0; k < p0.count; k++) { const y = p0.getY(k); const f = y < 0 ? 1 + 0.18 * -y : 1 - 0.3 * y; p0.setX(k, p0.getX(k) * f); p0.setZ(k, p0.getZ(k) * (y > 0 ? 1 - 0.45 * y : 1)); }
+    geo.computeVertexNormals();
+    geo.scale(...G.rayons); geo.rotateX(G.inclinaison || 0); geo.translate(...G.centre);
+    const n = geo.attributes.position.count, iBassin = this.noeuds.indexOf("bassin"), ig = this.noeuds.indexOf("hanche_g"), id = this.noeuds.indexOf("hanche_d");
+    const si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+    for (let k = 0; k < n; k++) { si.set([iBassin, ig, id, 0], 4 * k); sw.set([0.7, 0.15, 0.15, 0], 4 * k); }
+    geo.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(si, 4)); geo.setAttribute("skinWeight", new THREE.BufferAttribute(sw, 4));
+    this.matGalbe = new THREE.MeshStandardMaterial({ roughness: 0.58 });
+    const m = new THREE.SkinnedMesh(geo, this.matGalbe); m.name = "corps-humain-galbe"; m.frustumCulled = false; m.castShadow = true;
+    m.bindMode = THREE.DetachedBindMode; m.bind(this.mesh.skeleton, new THREE.Matrix4()); m.visible = false;
+    this.h.racine.add(m); this.galbe = m;
   }
 
   construireYeux(t) {
@@ -93,7 +115,7 @@ export class CorpsHumain {
     const h = this.h, O = h.os;
     this.visible = oui;
     this.mesh.visible = oui;
-    for (const nom of ["cheveux", "sourcils", "barbe"]) if (this[nom]) this[nom].visible = oui;
+    for (const nom of ["cheveux", "sourcils", "barbe", "galbe"]) if (this[nom]) this[nom].visible = oui;
     h.proportions(oui ? this.meta : null);
     // repos du squelette (degrés de liberté nuls), mémorisé pour l'habillage
     h.appliquer({}, { ancrage: false, sansHumain: true }); h.racine.position.set(0, 0, 0); h.racine.rotation.set(0, 0, 0);
@@ -266,6 +288,7 @@ export class CorpsHumain {
       c[3 * i] = k.r; c[3 * i + 1] = k.g; c[3 * i + 2] = k.b;
     }
     this.mesh.geometry.attributes.color.needsUpdate = true;
+    if (this.matGalbe) this.matGalbe.color.copy(bas);
     // coques : cheveux (épaisseur selon la coiffure, plus fine sur les bords), sourcils, barbe
     this.matCheveux = this.matCheveux || new THREE.MeshStandardMaterial({ roughness: 0.92 });
     this.matCheveux.color.copy(cheveux);

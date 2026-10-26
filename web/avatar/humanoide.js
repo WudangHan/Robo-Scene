@@ -564,7 +564,7 @@ export class Humanoide {
     const accessoires = new Set();
     for (const g of Object.values(this.os.acc || {})) g.traverse((o) => accessoires.add(o));
     this.racine.traverse((o) => {
-      if (!o.isMesh || accessoires.has(o) || o.name === "corps-humain" || /^oeil_humain|^capteur_|^objet_/.test(o.name) || o.parent?.name?.startsWith("objet_")) return;
+      if (!o.isMesh || accessoires.has(o) || /^corps-humain|^oeil_humain|^capteur_|^objet_/.test(o.name) || o.parent?.name?.startsWith("objet_")) return;
       let dansObjet = false; for (let p = o.parent; p; p = p.parent) if (p.name?.startsWith("objet_") || p.name === "tabouret") dansObjet = true;
       if (dansObjet || o.parent === this.os.tabouret) return;
       if (o.visible) { o.visible = false; this.stylise.push(o); }

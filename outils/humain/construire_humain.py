@@ -161,6 +161,35 @@ def reposer(os_, poids, v, cote_cibles):
     return out, joints, M
 
 
+GALBE: dict = {}
+
+
+def galbe_masculin(v, corps, joints):
+    """Silhouette masculine du bassin sous le vêtement (demande du 25 oct. 2026) : le maillage de base de MakeHuman
+    est lisse à l'entrejambe ; on lui donne le relief qu'on voit sous un maillot de lutte d'une pièce, par un
+    renflement doux vers l'avant centré sous le pubis (gaussienne anisotrope). (Inférence) Amplitude et étendue
+    choisies d'après les photographies de compétition fournies ; la région reste toujours couverte par le bas."""
+    v = v.copy()
+    hl, hr = joints["upperleg01.L"]["tete"], joints["upperleg01.R"]["tete"]
+    idx = np.array(corps)
+    P = v[idx]
+    milieu = (np.abs(P[:, 0]) < 0.006) & (P[:, 1] > hl[1] - 0.2) & (P[:, 1] < hl[1])
+    fourche = P[milieu, 1].min()                           # point le plus bas du bassin, entre les jambes
+    pubis = milieu & (P[:, 1] < fourche + 0.07)
+    zf = P[pubis, 2].max()                                 # avant du pubis
+    yc = fourche + 0.03
+    sx, sy, A = 0.026, 0.032, 0.012
+    w = np.exp(-(P[:, 0] ** 2) / (2 * sx * sx) - ((P[:, 1] - yc) ** 2) / (2 * sy * sy))
+    devant = np.clip((P[:, 2] - (zf - 0.05)) / 0.03, 0, 1)  # face avant seulement, fondu vers l'arrière
+    d = A * w * devant
+    v[idx, 2] += d
+    v[idx, 1] -= 0.3 * d                                   # légère retombée vers le bas
+    # le maillage est peu dense à cet endroit : un volume dédié (ellipsoïde habillé, construit dans la page)
+    # donne le relief net du vêtement ; on en exporte le centre et les rayons
+    GALBE.update({"centre": [0.0, float(fourche + 0.028), float(zf - 0.012)], "rayons": [0.041, 0.06, 0.031], "inclinaison": 0.5})
+    return v
+
+
 def noeud_de(os_nom: str, os_) -> str | None:
     """Nœud du robot qui pilote un os de MakeHuman."""
     s = None
@@ -292,6 +321,7 @@ def main():
         voulu = voulu / np.linalg.norm(voulu) * np.linalg.norm(d)
         cibles[f"foot.{c}"] = (f"foot.{c}", f"toe3-1.{c}", voulu, None)
     v_rep, joints, M = reposer(os_, poids, v, cibles)
+    v_rep = galbe_masculin(v_rep, corps, joints)
 
     # nœuds pilotés, poids réduits à 4 influences
     noeuds = []
@@ -418,7 +448,7 @@ def main():
     (a.sortie / "corps.json").write_text(json.dumps({
         "source": "MakeHuman hm08 (CC0) : base.obj, cibles macrodetails, rigs/default, eyes/high-poly",
         "morphologie": {"genre": GENRE, "age": AGE, "muscle": MUSCLE, "poids": POIDS, "hauteur_m": HAUTEUR},
-        "noeuds": noeuds, "pieds": pieds, "tete": {"demi_largeur": round(float(np.abs(P[REG == 0][:, 0]).max()), 4)}, "pivots": {k_: [round(x, 5) for x in p] for k_, p in piv.items()}, "tableaux": meta,
+        "noeuds": noeuds, "pieds": pieds, "galbe": GALBE, "tete": {"demi_largeur": round(float(np.abs(P[REG == 0][:, 0]).max()), 4)}, "pivots": {k_: [round(x, 5) for x in p] for k_, p in piv.items()}, "tableaux": meta,
         "regions": {"tete": 0, "cou": 1, "tronc": 2, "taille": 3, "bassin": 4, "bras": 5, "avantbras": 6, "main": 7, "cuisse": 8, "jambe": 9, "pied": 10},
     }, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{n} sommets, {len(I)} triangles, {len(noeuds)} nœuds, yeux {len(YP)} sommets ; {off / 1024:.0f} Kio")
