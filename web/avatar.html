@@ -37,6 +37,8 @@
       </div>
       <select id="style" aria-label="Style du corps" title="Corps stylisé ou humain (MakeHuman)"></select>
       <select id="habillage" aria-label="Habillage du robot" title="Habillage du robot (costume complet)"></select>
+      <select id="maillot" aria-label="Maillot de lutte" title="Maillot de lutte (singlet) : choisir un modèle met aussi le haut sans manches et le cuissard"></select>
+      <select id="souliers" aria-label="Chaussures de lutte" title="Chaussures de lutte montantes"></select>
       <select id="lumiere" aria-label="Éclairage">
         <option value="plein_feux">Plein feux</option><option value="douche">Douche</option><option value="contre_jour">Contre-jour</option>
         <option value="chaude">Lumière chaude</option><option value="froide">Lumière froide</option>
@@ -209,6 +211,7 @@
     <!-- ── Apparence ── -->
     <div class="panneau-onglet" id="ong-apparence" role="tabpanel" hidden>
       <div class="ligne"><label>Corps <select id="ap-style"></select></label><label>Habillage <select id="ap-habillage"></select></label></div>
+      <div class="ligne"><label>Maillot de lutte <select id="ap-modele_maillot"></select></label><label>Chaussures de lutte <select id="ap-modele_chaussures"></select></label></div>
       <p class="petit">Corps humain : maillage MakeHuman (licence CC0) lié au squelette du robot ; tons de peau de l'échelle de Monk (Monk 01 à Monk 10 ; Ellis Monk, Google, CC BY 4.0).</p>
       <p class="petit" id="ap-habillage-desc"></p>
       <div class="grille-ap">
@@ -228,8 +231,6 @@
         <label>Longueur du bas <select id="ap-coupe_bas"></select></label>
         <label>Chaussures <input type="color" id="ap-chaussures"></label>
         <label class="case"><input type="checkbox" id="ap-chaussures_montantes"> Chaussures montantes (lutte)</label>
-        <label>Modèle de chaussures de lutte <select id="ap-modele_chaussures"></select></label>
-        <label>Modèle de maillot de lutte <select id="ap-modele_maillot"></select></label>
         <label>Matière <select id="ap-matiere"></select></label>
         <label>Chapeau <select id="ap-chapeau"></select></label>
         <label>Couleur du chapeau <input type="color" id="ap-couleur_chapeau"></label>

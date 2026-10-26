@@ -604,6 +604,10 @@ function majApparence() {
   for (const k of ["matiere", "chapeau", "cou", "cape", "jupe", "coupe_bas", "style"]) $(`#ap-${k}`).value = A[k];
   $("#ap-modele_chaussures").value = A.modele_chaussures || "uni";
   $("#ap-modele_maillot").value = A.modele_maillot || "uni";
+  // barre de la scène : modèle choisi, ou « Maillot… » / « Chaussures… » quand la tenue n'en porte pas
+  const singlet = A.manches === "sans" && A.coupe_bas === "cuissard";
+  $("#maillot").value = singlet ? A.modele_maillot || "uni" : "";
+  $("#souliers").value = A.modele_chaussures && A.modele_chaussures !== "uni" ? A.modele_chaussures : "";
   $("#style").value = A.style || "stylisé";
   $("#ap-gants").checked = !!A.gants; $("#ap-chaussures_montantes").checked = !!A.chaussures_montantes;
   const h = A.habillage || "";
@@ -626,9 +630,16 @@ for (const k of ["couleur_chapeau", "accessoire"]) $(`#ap-${k}`).oninput = (e) =
 $("#ap-gants").onchange = (e) => appliquerApparence("gants", e.target.checked);
 $("#ap-chaussures_montantes").onchange = (e) => appliquerApparence("chaussures_montantes", e.target.checked);
 $("#ap-modele_chaussures").innerHTML = Object.entries(SCHEMA.apparence.modeles_chaussures).map(([k, m]) => `<option value="${k}" title="${echapper(m.description)}">${echapper(m.libelle)}</option>`).join("");
-$("#ap-modele_chaussures").onchange = (e) => { appliquerApparence("modele_chaussures", e.target.value); if (e.target.value !== "uni") appliquerApparence("chaussures_montantes", true); };
+$("#ap-modele_chaussures").onchange = (e) => choisirSouliers(e.target.value);
 $("#ap-modele_maillot").innerHTML = Object.entries(SCHEMA.apparence.modeles_maillot).map(([k, m]) => `<option value="${k}" title="${echapper(m.description)}">${echapper(m.libelle)}</option>`).join("");
-$("#ap-modele_maillot").onchange = (e) => { appliquerApparence("modele_maillot", e.target.value); appliquerApparence("manches", "sans"); appliquerApparence("coupe_bas", "cuissard"); };
+const choisirMaillot = (m) => { appliquerApparence("modele_maillot", m); appliquerApparence("manches", "sans"); appliquerApparence("coupe_bas", "cuissard"); };
+const choisirSouliers = (m) => { appliquerApparence("modele_chaussures", m); if (m !== "uni") appliquerApparence("chaussures_montantes", true); };
+$("#ap-modele_maillot").onchange = (e) => choisirMaillot(e.target.value);
+const options = (M) => Object.entries(M).map(([k, m]) => `<option value="${k}" title="${echapper(m.description)}">${echapper(m.libelle)}</option>`).join("");
+$("#maillot").innerHTML = `<option value="" disabled>Maillot…</option>` + options(SCHEMA.apparence.modeles_maillot);
+$("#souliers").innerHTML = `<option value="" disabled>Chaussures…</option>` + options(SCHEMA.apparence.modeles_chaussures);
+$("#maillot").onchange = (e) => { if (e.target.value) { choisirMaillot(e.target.value); journal({ html: `Maillot : <b>${echapper(SCHEMA.apparence.modeles_maillot[e.target.value].libelle)}</b>` }); } e.target.blur(); };
+$("#souliers").onchange = (e) => { if (e.target.value) { choisirSouliers(e.target.value); journal({ html: `Chaussures : <b>${echapper(SCHEMA.apparence.modeles_chaussures[e.target.value].libelle)}</b>` }); } e.target.blur(); };
 $("#ap-cheveux").innerHTML = SCHEMA.apparence.cheveux.map((x) => `<option>${x}</option>`).join("");
 $("#ap-barbe").innerHTML = SCHEMA.apparence.barbe.map((x) => `<option>${x}</option>`).join("");
 $("#ap-manches").innerHTML = SCHEMA.apparence.manches.map((x) => `<option>${x}</option>`).join("");
