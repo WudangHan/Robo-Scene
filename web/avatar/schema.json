@@ -71,7 +71,8 @@
     "barbe":      ["aucune", "courte", "pleine"],
     "manches":    ["longues", "courtes", "sans"],
     "coupe_bas":  ["pantalon", "cuissard"],
-    "peau":       ["très claire", "claire", "mate", "olive", "brune", "foncée"],
+    "peau":       ["très claire", "claire", "mate", "olive", "brune", "foncée", "Monk 01", "Monk 02", "Monk 03", "Monk 04", "Monk 05", "Monk 06", "Monk 07", "Monk 08", "Monk 09", "Monk 10"],
+    "style":      ["stylisé", "humain"],
     "matiere":    ["tissu", "satin", "cuir", "métal"],
     "chapeau":    ["aucun", "melon", "haut-de-forme", "béret", "casquette", "couronne", "calot", "protège-oreilles"],
     "cou":        ["aucun", "cravate", "nœud papillon", "collerette", "foulard"],
@@ -108,10 +109,10 @@
         "valeurs": {"haut": "beige", "bas": "beige", "chaussures": "brun", "manches": "courtes", "matiere": "tissu", "chapeau": "aucun", "couleur_chapeau": "beige", "cou": "aucun", "cape": "courte", "jupe": "courte", "gants": false, "accessoire": "bordeaux", "coupe_bas": "pantalon", "chaussures_montantes": false}},
       "sport": {"libelle": "Survêtement", "description": "Survêtement bleu, chaussures blanches, casquette blanche.",
         "valeurs": {"haut": "bleu", "bas": "bleu", "chaussures": "blanc", "manches": "longues", "matiere": "tissu", "chapeau": "casquette", "couleur_chapeau": "blanc", "cou": "aucun", "cape": "aucune", "jupe": "aucune", "gants": false, "accessoire": "blanc", "coupe_bas": "pantalon", "chaussures_montantes": false}},
-      "lutteur": {"libelle": "Lutteur universitaire (NCAA)", "description": "Maillot de lutte d'une pièce (singlet) bleu marine sans manches, s'arrêtant au-dessus des genoux ; protège-oreilles noir à sangle de menton ; chaussures de lutte noires montant au-dessus de la cheville.",
-        "valeurs": {"haut": "bleu marine", "bas": "bleu marine", "chaussures": "noir", "manches": "sans", "matiere": "satin", "chapeau": "protège-oreilles", "couleur_chapeau": "noir", "cou": "aucun", "cape": "aucune", "jupe": "aucune", "gants": false, "accessoire": "or", "coupe_bas": "cuissard", "chaussures_montantes": true}}
+      "lutteur": {"libelle": "Lutteur universitaire (NCAA)", "description": "Maillot de lutte d'une pièce (singlet) blanc à liserés bleu ciel, sans manches, s'arrêtant au-dessus des genoux ; protège-oreilles bleu ciel à sangle de menton ; chaussures de lutte noires montant au-dessus de la cheville.",
+        "valeurs": {"haut": "blanc", "bas": "blanc", "chaussures": "noir", "manches": "sans", "matiere": "satin", "chapeau": "protège-oreilles", "couleur_chapeau": "bleu ciel", "cou": "aucun", "cape": "aucune", "jupe": "aucune", "gants": false, "accessoire": "bleu ciel", "coupe_bas": "cuissard", "chaussures_montantes": true}}
     },
-    "couleurs":   {"rouge": "#b0302c", "bleu": "#2f5aa8", "bleu marine": "#1f2b4a", "marine": "#1f2b4a", "vert": "#3f7a46",
+    "couleurs":   {"rouge": "#b0302c", "bleu": "#2f5aa8", "bleu marine": "#1f2b4a", "bleu ciel": "#7fb3e6", "marine": "#1f2b4a", "vert": "#3f7a46",
                    "kaki": "#6b6b3e", "jaune": "#d6b23a", "orange": "#d9772b", "rose": "#d58aa0", "violet": "#6a4c93",
                    "bordeaux": "#6d1f2a", "turquoise": "#2fa3a0", "noir": "#1b1b1d", "blanc": "#ececec", "gris": "#7d8086",
                    "beige": "#cdb894", "brun": "#5a3d2b", "marron": "#5a3d2b", "blond": "#c9a55a", "châtain": "#6b4a2f",

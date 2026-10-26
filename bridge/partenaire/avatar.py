@@ -19,7 +19,7 @@ TYPES = {"articulation", "emotion", "visage", "geste", "pose", "deplacer", "orie
          "apparence", "camera", "lumiere", "vitesse", "memoriser", "rappeler", "arret", "repeter", "annuler", "aide", "main"}
 APPARENCE_CLES = {"taille", "carrure", "corpulence", "age", "cheveux", "barbe", "manches", "peau", "haut", "bas",
                   "chaussures", "couleur_cheveux", "moustache", "yeux", "matiere", "chapeau", "couleur_chapeau", "cou", "cape",
-                  "jupe", "gants", "accessoire", "habillage", "coupe_bas", "chaussures_montantes"}
+                  "jupe", "gants", "accessoire", "habillage", "coupe_bas", "chaussures_montantes", "style"}
 
 
 def schema() -> dict[str, Any]:
@@ -94,7 +94,7 @@ def valider(actions: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
                     r = A[cle]
                     e = r["max"] - r["min"]
                     x["valeur"] = _borne(x["valeur"], -e, e) if x.get("relatif") else _borne(x["valeur"], r["min"], r["max"])
-                elif cle in ("cheveux", "barbe", "manches", "peau", "matiere", "chapeau", "cou", "cape", "jupe", "coupe_bas") \
+                elif cle in ("cheveux", "barbe", "manches", "peau", "matiere", "chapeau", "cou", "cape", "jupe", "coupe_bas", "style") \
                         and x.get("valeur") not in A[cle]:
                     raise ValueError(f"valeur inconnue pour {cle}")
                 elif cle == "habillage" and x.get("valeur") not in A.get("habillages", {}):

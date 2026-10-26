@@ -10,6 +10,7 @@ import { Imitation, lireEmotion } from "./imitation.js";
 import { EMOTIONS, prosodie } from "./emotions.js";
 import { interpreter, valider, EXEMPLES } from "./directives.js";
 import { OBJETS, POSTURES, MANIERES, CAPTEURS, NOMS_OBJETS, article } from "./mains.js";
+import { chargerCorpsHumain, CorpsHumain } from "./humain.js";
 import { CameraVirtuelle, FluxReel, dessinerCadre } from "../drone/camera4k.js";
 import { installerDialogue } from "../dialogue.js";
 
@@ -22,6 +23,14 @@ const ecrireLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); }
 
 const SCHEMA = await (await fetch(new URL("./schema.json", import.meta.url))).json();
 const humain = new Humanoide(SCHEMA);
+// style « humain » (25 oct. 2026) : corps MakeHuman chargé à la première demande (1,1 Mo)
+humain.chargerHumain = async () => {
+  try {
+    const d = await chargerCorpsHumain(new URL("./humain/", import.meta.url).href);
+    humain.humain = new CorpsHumain(humain, d);
+    journal?.({ html: "Corps humain chargé (MakeHuman, CC0)." });
+  } catch (e) { console.error(e); journal?.({ html: `Corps humain indisponible : ${echapper(e.message)}`, classe: "alerte" }); }
+};
 const anim = new Animateur(humain, SCHEMA);
 const scene = new Scene($("#vue3d"), humain, anim);
 const parole = new Parole();
@@ -592,7 +601,8 @@ function majApparence() {
   $("#ap-moustache").checked = !!A.moustache;
   const hex = (n) => (/^#/.test(n) ? n : SCHEMA.apparence.couleurs[n] || "#888888");
   for (const k of ["haut", "bas", "chaussures", "couleur_cheveux", "couleur_chapeau", "accessoire"]) $(`#ap-${k}`).value = hex(A[k]);
-  for (const k of ["matiere", "chapeau", "cou", "cape", "jupe", "coupe_bas"]) $(`#ap-${k}`).value = A[k];
+  for (const k of ["matiere", "chapeau", "cou", "cape", "jupe", "coupe_bas", "style"]) $(`#ap-${k}`).value = A[k];
+  $("#style").value = A.style || "stylisé";
   $("#ap-gants").checked = !!A.gants; $("#ap-chaussures_montantes").checked = !!A.chaussures_montantes;
   const h = A.habillage || "";
   for (const id of ["#habillage", "#ap-habillage"]) $(id).value = h;
@@ -604,7 +614,9 @@ for (const id of ["#habillage", "#ap-habillage"]) {
     + Object.entries(HABILLAGES).map(([k, h]) => `<option value="${k}" title="${echapper(h.description)}">${echapper(h.libelle)}</option>`).join("");
   $(id).onchange = (e) => { if (e.target.value) { appliquerApparence("habillage", e.target.value); journal({ html: `Habillage : <b>${echapper(HABILLAGES[e.target.value].libelle)}</b>` }); } e.target.blur(); };
 }
-for (const k of ["matiere", "chapeau", "cou", "cape", "jupe", "coupe_bas"]) {
+$("#style").innerHTML = SCHEMA.apparence.style.map((x) => `<option value="${x}">${x === "humain" ? "Humain" : "Stylisé"}</option>`).join("");
+$("#style").onchange = (e) => { appliquerApparence("style", e.target.value); e.target.blur(); };
+for (const k of ["matiere", "chapeau", "cou", "cape", "jupe", "coupe_bas", "style"]) {
   $(`#ap-${k}`).innerHTML = SCHEMA.apparence[k].map((x) => `<option>${x}</option>`).join("");
   $(`#ap-${k}`).onchange = (e) => appliquerApparence(k, e.target.value);
 }

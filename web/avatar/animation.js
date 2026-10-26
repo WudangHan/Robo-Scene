@@ -330,6 +330,7 @@ export class Animateur {
     const tous = new Set([...Object.keys(cAU), ...Object.keys(this.au)]);
     for (const a of tous) { this.au[a] = (this.au[a] || 0) + ((cAU[a] || 0) - (this.au[a] || 0)) * k; if (Math.abs(this.au[a]) < 0.002 && !cAU[a]) delete this.au[a]; }
     this.h.visage.maj({ ...this.au, clignement: this.clignement }, this.regardYeux, bouche);
+    this.h.humain?.majVisage({ ...this.au, clignement: this.clignement }, this.regardYeux, bouche);
     this.dernierePose = P;
   }
   majMarche(dt, P, extra) {

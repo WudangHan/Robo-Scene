@@ -13,6 +13,7 @@ const REPOS_BRAS = 7;          // abduction structurelle : les bras pendent sans
 const REPOS_COUDE = 6;
 // Segments de la jambe (repère de l'échelle, en m) : hanche → genou, genou → cheville, cheville → semelle
 const CUISSE = 0.43, JAMBE = 0.41, SEMELLE = 0.08;
+const CUISSE_STYLISE = CUISSE, JAMBE_STYLISE = JAMBE, SEMELLE_STYLISE = SEMELLE;
 const TOLERANCE_SOL = 0.002;
 /* Repères du visage (m), dans le repère du groupe « visage » (origine au centre de la tête ; x vers la gauche du
    personnage, y vers le haut, z vers l'avant), relevés sur la géométrie ci-dessous (crâne, yeux, nez, menton,
@@ -31,6 +32,17 @@ export const REPERES_CORPS = {
 };
 
 export const PEAUX = { "très claire": "#f0d2bd", claire: "#e2b794", mate: "#c99a78", olive: "#ad875c", brune: "#8a5a3c", "foncée": "#5c3925" };
+/* Échelle de tons de peau de Monk (Ellis Monk ; Google, 2022 ; CC BY 4.0), Monk 01 à Monk 10. */
+PEAUX["Monk 01"] = "#f6ede4";
+PEAUX["Monk 02"] = "#f3e7db";
+PEAUX["Monk 03"] = "#f7ead0";
+PEAUX["Monk 04"] = "#eadaba";
+PEAUX["Monk 05"] = "#d7bd96";
+PEAUX["Monk 06"] = "#a07e56";
+PEAUX["Monk 07"] = "#825c43";
+PEAUX["Monk 08"] = "#604134";
+PEAUX["Monk 09"] = "#3a312a";
+PEAUX["Monk 10"] = "#292420";
 export const YEUX = { bleu: "#3d6ea8", vert: "#4f7d4a", brun: "#4a3220", noir: "#1e1612", gris: "#7d8790", noisette: "#7a5a2e" };
 export const APPARENCE_DEFAUT = {
   taille: 178, carrure: 1, corpulence: 1, age: 40, cheveux: "court", couleur_cheveux: "châtain", barbe: "courte",
@@ -40,6 +52,7 @@ export const APPARENCE_DEFAUT = {
   accessoire: "bordeaux", habillage: "repetition",
   // lutteur (25 oct. 2026) : longueur du bas (pantalon ou cuissard) et chaussures montant au-dessus de la cheville
   coupe_bas: "pantalon", chaussures_montantes: false,
+  style: "stylisé",                                   // « humain » : corps humain issu de MakeHuman (humain.js)
 };
 /* Rendu des matières (MeshStandardMaterial : rugosité, métallicité ; la scène n'a pas de carte d'environnement,
    d'où une métallicité modérée pour que le métal reste lisible sous les projecteurs). */
@@ -314,6 +327,7 @@ export class Humanoide {
   /* Angles des doigts (degrés, noms de mains.js) → phalanges ; état de la main (prise, capteurs) → objet tenu
      et carte tactile. */
   poserMain(s, q, etat) {
+    (this.anglesMains = this.anglesMains || {})[s] = q;                 // repris par le corps humain (phalanges)
     const R = this.mainsRendu[s], x = R.x, Y = new THREE.Vector3(0, 1, 0);
     const loc = (p) => new THREE.Vector3(-x * p[0], -p[1], p[2]);
     const geo = {};
@@ -500,6 +514,61 @@ export class Humanoide {
     O.tabouret.visible = !!extra.tabouret;
     if (extra.ancrage !== false && !extra.tabouret) this.ancrer(P, extra);
     if (extra.contacts) this.toucherVisage(P, extra.contacts);
+    if (this.humain?.visible && !extra.sansHumain) this.humain.maj();
+  }
+
+  /* ── Style humain (25 oct. 2026) ─────────────────────────────────────────────────────
+     Proportions du squelette : pivots du corps humain (MakeHuman) ou du personnage stylisé (meta = null). Le visage
+     stylisé (repères des contacts main-visage, chapeaux) est recalé sur les yeux du corps humain. */
+  proportions(meta) {
+    const O = this.os, noms = ["cou", "tete"];
+    for (const s of ["g", "d"]) noms.push(`clav_${s}`, `epaule_${s}`, `coude_${s}`, `poignet_${s}`, `hanche_${s}`, `genou_${s}`, `cheville_${s}`, `contact_talon_${s}`, `contact_pointe_${s}`);
+    if (!this.propOrig) {
+      this.propOrig = Object.fromEntries(noms.map((n) => [n, O[n].position.clone()]));
+      this.propOrig.visage = { p: this.visage.g.position.clone(), s: this.visage.g.scale.clone() };
+    }
+    for (const n of noms) O[n].position.copy(this.propOrig[n]);
+    this.visage.g.position.copy(this.propOrig.visage.p); this.visage.g.scale.copy(this.propOrig.visage.s);
+    this.cuisse = this.jambe = this.semelle = undefined;
+    this.masquerStylise(!!meta);
+    if (!meta) return;
+    const pos = this.racine.position.clone(), rot = this.racine.rotation.clone();
+    this.racine.position.set(0, 0, 0); this.racine.rotation.set(0, 0, 0);
+    this.appliquer({}, { ancrage: false, sansHumain: true });
+    const P = meta.pivots, V = (k) => new THREE.Vector3(...P[k]);
+    const placer = (g, cible) => { g.parent.updateMatrixWorld(true); g.position.copy(g.parent.worldToLocal(cible)); g.updateMatrixWorld(true); };
+    placer(O.cou, V("cou")); placer(O.tete, V("tete"));
+    for (const s of ["g", "d"]) {
+      placer(O[`clav_${s}`], V(`clav_${s}`)); placer(O[`epaule_${s}`], V(`epaule_${s}`)); placer(O[`coude_${s}`], V(`coude_${s}`));
+      placer(O[`poignet_${s}`], V(`main_${s}`));
+      placer(O[`hanche_${s}`], V(`hanche_${s}`)); placer(O[`genou_${s}`], V(`genou_${s}`)); placer(O[`cheville_${s}`], V(`cheville_${s}`));
+      O[`contact_talon_${s}`].position.set(...meta.pieds[s].talon); O[`contact_pointe_${s}`].position.set(...meta.pieds[s].pointe);
+    }
+    this.cuisse = V("hanche_g").distanceTo(V("genou_g")); this.jambe = V("genou_g").distanceTo(V("cheville_g")); this.semelle = -meta.pieds.g.talon[1];
+    // visage stylisé (invisible) recalé : le milieu des yeux sur celui du corps humain, à l'échelle de l'écart des yeux
+    const og = V("oeil_g"), od = V("oeil_d"), k = og.distanceTo(od) / 0.064;
+    const cible = og.clone().add(od).multiplyScalar(0.5).add(new THREE.Vector3(0, 0, 0.012));
+    O.tete.updateMatrixWorld(true);
+    const local = O.tete.worldToLocal(cible);
+    // largeur : oreilles du visage stylisé (x = 0,1) sur la demi-largeur de la tête humaine (chapeaux, protège-oreilles)
+    const kx = meta.tete?.demi_largeur ? meta.tete.demi_largeur / 0.1 : k;
+    this.visage.g.scale.set(kx, k, k);
+    this.visage.g.position.set(local.x, local.y - 0.012 * k, local.z - 0.1 * k);
+    this.racine.position.copy(pos); this.racine.rotation.copy(rot);
+  }
+  /* Masque (ou montre) les volumes du personnage stylisé ; les accessoires d'habillage, les coussinets tactiles et
+     les objets tenus restent visibles. Les volumes masqués restent cliquables (sélection des parties du corps). */
+  masquerStylise(oui) {
+    this.stylise = this.stylise || [];
+    if (!oui) { for (const m of this.stylise) m.visible = true; this.stylise = []; return; }
+    const accessoires = new Set();
+    for (const g of Object.values(this.os.acc || {})) g.traverse((o) => accessoires.add(o));
+    this.racine.traverse((o) => {
+      if (!o.isMesh || accessoires.has(o) || o.name === "corps-humain" || /^oeil_humain|^capteur_|^objet_/.test(o.name) || o.parent?.name?.startsWith("objet_")) return;
+      let dansObjet = false; for (let p = o.parent; p; p = p.parent) if (p.name?.startsWith("objet_") || p.name === "tabouret") dansObjet = true;
+      if (dansObjet || o.parent === this.os.tabouret) return;
+      if (o.visible) { o.visible = false; this.stylise.push(o); }
+    });
   }
 
   /* ── Contact main-visage (2026-10-16) ───────────────────────────────────────────────
@@ -588,6 +657,8 @@ export class Humanoide {
   plierJambe(s, P, enfoncement) {
     const O = this.os, p = new THREE.Vector3();
     const hanche = O.echelle.worldToLocal(O[`hanche_${s}`].getWorldPosition(p)).y;
+    // longueurs du segment : celles du style courant (stylisé, ou proportions du corps humain)
+    const CUISSE = this.cuisse ?? CUISSE_STYLISE, JAMBE = this.jambe ?? JAMBE_STYLISE, SEMELLE = this.semelle ?? SEMELLE_STYLISE;
     const D = clamp(hanche - (this.hauteurSemelle(s) + enfoncement) - SEMELLE, Math.abs(CUISSE - JAMBE) + 0.01, CUISSE + JAMBE);
     const k = Math.acos(clamp((D * D - CUISSE * CUISSE - JAMBE * JAMBE) / (2 * CUISSE * JAMBE), -1, 1));
     const hf = Math.atan2(JAMBE * Math.sin(k), CUISSE + JAMBE * Math.cos(k));
@@ -687,6 +758,15 @@ export class Humanoide {
       O[`tibia_${s}`].material = cuissard ? M.peau : M.bas; O[`rotule_${s}`].material = cuissard ? M.peau : M.bas;
     }
     this.visage.coiffure(A.cheveux, A.barbe, A.moustache);
+    // style humain : corps chargé à la demande (chargerHumain, fourni par la page), puis activé ou peint
+    if (A.style === "humain" && !this.humain && this.chargerHumain && !this.chargement) {
+      this.chargement = this.chargerHumain().then(() => { this.chargement = null; this.appliquerApparence({}); });
+    }
+    if (this.humain) {
+      const veut = A.style === "humain";
+      if (veut !== this.humain.visible) { this.humain.activer(veut); if (!veut) return this.appliquerApparence({}); }
+      else if (veut) { this.masquerStylise(true); this.humain.peindre(); }
+    }
     return A;
   }
   /* position mondiale approximative du milieu des yeux (cadrage, regard) */
