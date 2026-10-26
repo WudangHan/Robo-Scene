@@ -359,7 +359,8 @@ export class CorpsHumain {
       else if (reg === 4) k = maillot ? maillot(x, y, z) : bas;
       else if (reg === 8) {
         const ourlet = genou + 0.12;
-        k = A.coupe_bas === "cuissard" && y < ourlet && !this.gpu ? peau : bas;
+        // (par pixel, seule la frange de l'ourlet garde le tissu : sinon il déteint sur la peau au pli du genou)
+        k = A.coupe_bas === "cuissard" && y < ourlet && (!this.gpu || y < ourlet - 0.03) ? peau : bas;
         if (maillot && k === bas) k = maillot(x, y, z);
         if (singlet && y >= ourlet && y < ourlet + 0.025 && !this.gpu) k = ourl;              // bandes au bas des cuisses
       } else if (reg === 9) {

@@ -4,7 +4,8 @@ Source : maillage de base et cibles de morphologie de MakeHuman (hm08), squelett
 yeux « high-poly » — ressources publiées sous licence CC0 par la communauté MakeHuman (fichier
 LICENSE.ASSETS.md du dépôt makehumancommunity/makehuman). Le script :
   1. lit le maillage de base et applique les cibles « macro » d'un homme jeune, athlétique et musclé
-     (genre 1, âge 25 ans, musculature 0,85, poids 0,55, mélange ethnique par défaut) ;
+     (genre 1, âge 25 ans, musculature 1, poids 0,45, mélange ethnique par défaut), puis les cibles locales de
+     définition musculaire (pectoraux, dorsaux, torse en V, deltoïdes, bras, avant-bras, cuisses, mollets) ;
   2. met le corps à l'échelle du robot (1,785 m) et le recale sur son squelette (pieds au sol, hanches en z = 0) ;
   3. le replace dans la pose de repos du robot : bras le long du corps (et non en A), avant-bras, mains,
      jambes et pieds orientés comme ceux du robot (habillage par mélange linéaire avec les poids MakeHuman) ;
@@ -29,7 +30,14 @@ RACINE = Path(__file__).resolve().parents[2]
 SQUELETTE = json.loads((Path(__file__).with_name("squelette_robot.json")).read_text(encoding="utf-8"))
 
 # ── Morphologie (Inférence : réglage choisi pour une carrure de lutteur universitaire) ──
-GENRE, AGE, MUSCLE, POIDS = 1.0, 0.5, 0.85, 0.55
+GENRE, AGE, MUSCLE, POIDS = 1.0, 0.5, 1.0, 0.45     # musculature maximale, peu de masse grasse (26 oct. 2026)
+# définition musculaire locale (cibles CC0 de MakeHuman, 0 à 1) : pectoraux, dorsaux, torse en V, deltoïdes,
+# biceps et triceps, avant-bras, cuisses, mollets — demandée pour une silhouette de lutteur plus dessinée
+DEFINITION = {
+    "torso/torso-muscle-pectoral-incr": 1.0, "torso/torso-muscle-dorsi-incr": 0.8, "torso/torso-vshape-incr": 0.6,
+    **{f"armslegs/{c}-{m}-incr": v for c in "lr" for m, v in (("upperarm-muscle", 1.0), ("upperarm-shoulder-muscle", 0.9),
+       ("lowerarm-muscle", 0.8), ("upperleg-muscle", 1.0), ("lowerleg-muscle", 1.0))},
+}
 HAUTEUR = 1.785                                   # m, sommet du crâne du robot stylisé
 DOIGTS = ["pouce", "index", "majeur", "annulaire", "auriculaire"]
 
@@ -72,6 +80,8 @@ def appliquer_cibles(data: Path, v: np.ndarray) -> np.ndarray:
                 out += mv * wv * lire_cible(macro / f"universal-male-young-{mk}muscle-{wk}weight.target", len(v))
     for race in ("african", "asian", "caucasian"):                      # mélange ethnique par défaut : 1/3 chacun
         out += (1 / 3) * lire_cible(macro / f"{race}-male-young.target", len(v))
+    for nom, poids in DEFINITION.items():                               # définition musculaire locale
+        out += poids * lire_cible(data / "targets" / f"{nom}.target", len(v))
     return out
 
 
@@ -452,7 +462,7 @@ def main():
     Image.open(data / "eyes" / "materials" / "brown_eye.png").convert("RGBA").resize((512, 512), Image.LANCZOS).save(a.sortie / "oeil.png", optimize=True)
     (a.sortie / "corps.json").write_text(json.dumps({
         "source": "MakeHuman hm08 (CC0) : base.obj, cibles macrodetails, rigs/default, eyes/high-poly",
-        "morphologie": {"genre": GENRE, "age": AGE, "muscle": MUSCLE, "poids": POIDS, "hauteur_m": HAUTEUR},
+        "morphologie": {"genre": GENRE, "age": AGE, "muscle": MUSCLE, "poids": POIDS, "hauteur_m": HAUTEUR, "definition": DEFINITION},
         "noeuds": noeuds, "pieds": pieds, "galbe": GALBE, "tete": {"demi_largeur": round(float(np.abs(P[REG == 0][:, 0]).max()), 4)}, "pivots": {k_: [round(x, 5) for x in p] for k_, p in piv.items()}, "tableaux": meta,
         "regions": {"tete": 0, "cou": 1, "tronc": 2, "taille": 3, "bassin": 4, "bras": 5, "avantbras": 6, "main": 7, "cuisse": 8, "jambe": 9, "pied": 10},
     }, ensure_ascii=False, indent=1), encoding="utf-8")

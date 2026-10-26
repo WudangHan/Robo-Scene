@@ -1,7 +1,7 @@
 # Corps humain du robot virtuel — provenance et licences
 
 - **Maillage, cibles de morphologie, squelette, poids et yeux** : MakeHuman (maillage de base hm08,
-  `targets/macrodetails`, `rigs/default.mhskel`, `rigs/default_weights.mhw`, `eyes/high-poly`,
+  `targets/macrodetails`, `targets/torso` et `targets/armslegs` (définition musculaire), `rigs/default.mhskel`, `rigs/default_weights.mhw`, `eyes/high-poly`,
   `eyes/materials/brown_eye.png`), communauté MakeHuman (Data Collection AB, Joel Palmius, Jonas Hauquier),
   publiés sous licence **CC0 1.0** (domaine public) depuis septembre 2020 : dépôt
   https://github.com/makehumancommunity/makehuman (fichier LICENSE.ASSETS.md). Les fichiers `corps.bin`,
