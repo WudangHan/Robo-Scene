@@ -13,7 +13,9 @@ const TYPES = { float32: Float32Array, uint8: Uint8Array, uint32: Uint32Array, u
 /* Échelle de tons de peau de Monk (Ellis Monk ; Google, 2022 ; CC BY 4.0) : Monk 01 à Monk 10. */
 export const TONS_MONK = ["#f6ede4", "#f3e7db", "#f7ead0", "#eadaba", "#d7bd96", "#a07e56", "#825c43", "#604134", "#3a312a", "#292420"];
 
-export async function chargerCorpsHumain(base = "/static/avatar/humain/") {
+let BASE_HUMAIN = "/static/avatar/humain/";          // dossier des données (réutilisable hors de Robo-Scène)
+export async function chargerCorpsHumain(base = BASE_HUMAIN) {
+  BASE_HUMAIN = base;
   const [meta, bin] = await Promise.all([fetch(`${base}corps.json`).then((r) => r.json()), fetch(`${base}corps.bin`).then((r) => r.arrayBuffer())]);
   const t = {};
   for (const [nom, d] of Object.entries(meta.tableaux)) {
@@ -146,8 +148,10 @@ export class CorpsHumain {
     const remap = adoucirPoids(donnees.t, meta);
     this.nOriginal = donnees.t.region.length;                       // sommets d'origine (avant subdivision), en tête
     this.demis = remap.demis;
-    let t = subdiviser(remap.t, () => true);
-    t = subdiviser(t, (r, y) => r === 10 || (r === 9 && y < cy));
+    // affinage : 2 (défaut), 1 (un niveau partout) ou 0 (maillage d'origine, petites vues multiples)
+    const niveaux = donnees.affinage ?? 2;
+    let t = niveaux > 0 ? subdiviser(remap.t, () => true) : remap.t;
+    if (niveaux > 1) t = subdiviser(t, (r, y) => r === 10 || (r === 9 && y < cy));
     this.meta = meta;
     this.noeuds = remap.noeuds;
     const g = new THREE.BufferGeometry();
@@ -599,7 +603,7 @@ function peintreMaillot(m, P, ys) {
 
 /* Texture de l'œil : image de MakeHuman (CC0), iris recoloré à la teinte choisie (luminance conservée). */
 let IMAGE_OEIL = null;
-function textureIris(couleur, base = "/static/avatar/humain/") {
+function textureIris(couleur, base = BASE_HUMAIN) {
   if (typeof document === "undefined") return null;
   const cv = document.createElement("canvas"); cv.width = cv.height = 512;
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
