@@ -187,6 +187,7 @@ export class CorpsHumain {
     this.repos0 = {};
     for (const n of this.noeuds) { const G = this.groupe(n); if (G) this.repos0[n] = G.matrixWorld.clone(); }
     this.reposMains = { g: this.reperesMain("g", true), d: this.reperesMain("d", true) };
+    h.visage.g.updateWorldMatrix(true, false); this.visageRepos = h.visage.g.matrixWorld.clone();   // sangles du protège-oreilles
     for (const s of ["g", "d"]) {
       const y = this.yeux[s];
       if (oui) { O.tete.add(y.pivot); y.pivot.position.copy(O.tete.worldToLocal(y.centre.clone())); y.pivot.visible = true; }

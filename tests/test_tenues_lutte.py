@@ -112,3 +112,32 @@ def test_pied_chausse_orteils_combles():
     assert np.abs(P2 - P).max() < 2e-3                                          # déjà sur l'enveloppe : idempotent
     pied = P[(R == 10) & (P[:, 0] > 0)]
     assert pied[:, 1].min() > -0.01                                              # semelle au sol, pas dessous
+
+
+@pytest.mark.skipif(not NODE, reason="Node.js absent")
+def test_sangles_du_protege_oreilles_par_dessus_la_tete(tmp_path):
+    """26 oct. 2026 : les sangles passent par-dessus le crâne, plaquées sur lui (stylisé et humain) ; la mentonnière
+    passe sous le menton, jamais sous l'occiput."""
+    out = _node(tmp_path, """
+      import fs from "node:fs";
+      import { Humanoide } from "./web/avatar/humanoide.js";
+      import { CorpsHumain } from "./web/avatar/humain.js";
+      const S = JSON.parse(fs.readFileSync("./web/avatar/schema.json", "utf8"));
+      const meta = JSON.parse(fs.readFileSync("./web/avatar/humain/corps.json", "utf8"));
+      const buf = fs.readFileSync("./web/avatar/humain/corps.bin"); const bin = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+      const T = { float32: Float32Array, uint8: Uint8Array, uint32: Uint32Array };
+      const t = Object.fromEntries(Object.entries(meta.tableaux).map(([n, d]) => [n, new T[d.type](bin, d.offset, d.forme.reduce((a, b) => a * b, 1))]));
+      const h = new Humanoide(S); h.humain = new CorpsHumain(h, { meta, t });
+      const mesure = () => h.sangles.map((m) => { const p = m.geometry.attributes.position; let ymax = -9, ymin = 9, zdos = 9, zbas = 0, ybas = 9;
+        for (let i = 0; i < p.count; i++) { const y = p.getY(i), z = p.getZ(i); ymax = Math.max(ymax, y); if (y < ybas) { ybas = y; zbas = z; } if (z < -0.04) zdos = Math.min(zdos, y); }
+        return { ymax: +ymax.toFixed(3), ybas: +ybas.toFixed(3), zbas: +zbas.toFixed(3), zdos: +zdos.toFixed(3), n: p.count }; });
+      h.appliquerApparence({ habillage: "lutteur", chapeau: "protège-oreilles" }); const stylise = mesure();
+      h.appliquerApparence({ style: "humain" }); const humain = mesure();
+      console.log(JSON.stringify({ stylise, humain }));
+    """)
+    for cas in (out["stylise"], out["humain"]):
+        avant, arriere, menton = cas
+        assert avant["n"] > 50 and arriere["n"] > 50 and menton["n"] > 50
+        assert avant["ymax"] > 0.08 and arriere["ymax"] > 0.06                  # par-dessus le crâne
+        assert arriere["zdos"] > -0.01                                           # jamais sous l'occiput
+        assert menton["ybas"] < -0.06 and menton["zbas"] > 0.02                  # sous le menton, à l'avant

@@ -440,16 +440,18 @@ export class Humanoide {
     const pointes = Array.from({ length: 8 }, (_, i) => { const a = (i / 8) * Math.PI * 2, c = maille(new THREE.ConeGeometry(0.014, 0.045, 10), M.or); return pos(c, Math.sin(a) * 0.083, 0.15, Math.cos(a) * 0.083 - 0.004); });
     A.couronne = ajoute(f, "chapeau_couronne", pos(cyl(0.086, 0.086, 0.05, M.or, 40, true), 0, 0.105, -0.004), ...pointes);
     A.calot = ajoute(f, "chapeau_calot", calotte(0.1, 0.92, 0.012));
-    // protège-oreilles de lutte : coquilles rigides sur les oreilles, sangles du sommet et de la nuque, mentonnière
+    // protège-oreilles de lutte : coquilles rigides sur les oreilles, deux sangles par-dessus le crâne, mentonnière
     // à boucle (NCAA, règle 1.5.4 : protège-oreilles à dispositif de verrouillage réglable)
     const coquille = (x) => {
       const c = maille(new THREE.CylinderGeometry(0.043, 0.047, 0.026, 28), M.chapeau); c.rotation.z = Math.PI / 2; pos(c, x * 0.111, -0.004, -0.006);
       const event = maille(new THREE.TorusGeometry(0.024, 0.006, 8, 20), M.accessoire); event.rotation.y = Math.PI / 2; pos(event, x * 0.125, -0.004, -0.006);
       return [c, event];
     };
-    const sangle = (r, rotX, y, z) => { const m = maille(new THREE.TorusGeometry(r, 0.009, 8, 40, Math.PI), M.chapeau); m.scale.set(1, 1.02, 1.6); m.rotation.x = rotX; return pos(m, 0, y, z); };
-    const menton = maille(new THREE.TorusGeometry(0.112, 0.007, 8, 40, Math.PI), M.chapeau); menton.rotation.set(0.55, 0, Math.PI); pos(menton, 0, -0.012, 0.012);
-    A["protège-oreilles"] = ajoute(f, "chapeau_protege_oreilles", ...coquille(1), ...coquille(-1), sangle(0.116, 0, -0.004, -0.012), sangle(0.114, -0.75, -0.002, -0.014), menton);
+    // deux sangles par-dessus la tête (avant du sommet et arrière du sommet, jamais sous l'occiput), plaquées sur le
+    // crâne : leur tracé est ajusté à la tête visible, stylisée ou humaine, par ajusterSangles()
+    // la mentonnière suit de même la mâchoire et le menton (plan incliné vers le bas et l'avant), jamais la nuque
+    this.sangles = [0.3, -0.62, 2.4].map((theta, i) => { const m = maille(new THREE.BufferGeometry(), M.chapeau); m.name = `sangle_protege_oreilles_${i}`; m.userData.theta = theta; return m; });
+    A["protège-oreilles"] = ajoute(f, "chapeau_protege_oreilles", ...coquille(1), ...coquille(-1), ...this.sangles);
     // chaussures de lutte : tige montant au-dessus de la cheville
     for (const s of ["g", "d"]) {
       const tige = maille(new THREE.CylinderGeometry(0.056, 0.05, 0.12, 24), M.chaussures, `pied_${s}`); pos(tige, 0, 0.02, 0.005);
@@ -769,13 +771,81 @@ export class Humanoide {
       if (veut !== this.humain.visible) { this.humain.activer(veut); if (!veut) return this.appliquerApparence({}); }
       else if (veut) { this.masquerStylise(true); this.humain.peindre(); }
     }
+    if (A.chapeau === "protège-oreilles") this.ajusterSangles();
     return A;
+  }
+
+  /* Sangles du protège-oreilles plaquées sur le crâne. Chaque sangle suit un plan passant par l'axe des oreilles,
+     incliné de theta (vers l'avant si positif) ; dans ce plan, le rayon de la tête est relevé tous les 6° sur les
+     points de la tête visible (repère du visage : maillage humain au repos, ou volumes du visage stylisé), plus
+     l'épaisseur des cheveux et un jeu de 2 mm. La sangle est un ruban plat de 22 mm. */
+  ajusterSangles() {
+    const A = this.apparence, f = this.visage.g, humain = this.humain?.visible;
+    const cle = `${humain ? "h" : "s"}|${A.cheveux}|${A.barbe}|${f.scale.toArray().map((x) => x.toFixed(4))}`;
+    if (this._cleSangles === cle) return;
+    this._cleSangles = cle;
+    const pts = [], v = new THREE.Vector3();
+    if (humain) {
+      const H = this.humain, inv = H.visageRepos.clone().invert(), r = H.region, p = H.repos;
+      const ep = { chauve: 0, "rasé": 0.0012, "mi-long": 0.016 }[A.cheveux] ?? 0.006;
+      for (let i = 0; i < r.length; i++) if (r[i] === 0) { v.set(p[3 * i], p[3 * i + 1], p[3 * i + 2]).applyMatrix4(inv); pts.push([v.x, v.y, v.z, v.y > 0 ? ep : A.barbe === "pleine" ? 0.003 : 0]); }
+    } else {
+      const acc = new Set(); for (const g of Object.values(this.os.acc || {})) g.traverse((o) => acc.add(o));
+      f.updateWorldMatrix(true, true);
+      const inv = f.matrixWorld.clone().invert(), M = new THREE.Matrix4();
+      f.traverse((o) => {
+        if (!o.isMesh || acc.has(o)) return;
+        for (let q = o; q && q !== f; q = q.parent) if (!q.visible) return;
+        M.multiplyMatrices(inv, o.matrixWorld);
+        const P = o.geometry.attributes.position;
+        for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(M); pts.push([v.x, v.y, v.z, 0]); }
+      });
+    }
+    const c = new THREE.Vector3(0, -0.004, -0.006), x = new THREE.Vector3(1, 0, 0);
+    for (const m of this.sangles) {
+      const t = m.userData.theta, u = new THREE.Vector3(0, Math.cos(t), Math.sin(t)), n = new THREE.Vector3(0, -Math.sin(t), Math.cos(t));
+      const N = 30, R = new Array(N + 1).fill(0);
+      for (const [px, py, pz, ep] of pts) {
+        const qx = px - c.x, qy = py - c.y, qz = pz - c.z;
+        if (Math.abs(qy * n.y + qz * n.z) > 0.008) continue;
+        const a = qx * x.x, b = qy * u.y + qz * u.z, phi = Math.atan2(b, a);
+        if (phi < 0) continue;
+        const k = Math.round((phi / Math.PI) * N), d = Math.hypot(a, b) + ep;
+        if (d > R[k]) R[k] = d;
+      }
+      // trous comblés par les voisins, puis lissage léger
+      for (let k = 0; k <= N; k++) if (!R[k]) { let a = k, b = k; while (a > 0 && !R[a]) a--; while (b < N && !R[b]) b++; R[k] = Math.max(R[a], R[b]) || 0.11; }
+      const L = R.map((r, k) => (r + (R[k - 1] ?? r) + (R[k + 1] ?? r)) / 3 + 0.002);
+      // tracé : de la coquille gauche (x > 0) à la droite, par le sommet ; les bouts plongent sous les coquilles
+      const chemin = [];
+      for (let k = 2; k <= N - 2; k++) { const phi = (k / N) * Math.PI; chemin.push(c.clone().addScaledVector(x, Math.cos(phi) * L[k]).addScaledVector(u, Math.sin(phi) * L[k])); }
+      m.geometry.dispose(); m.geometry = ruban(chemin, n, t > 1.5 ? 0.018 : 0.022, 0.004);
+    }
   }
   /* position mondiale approximative du milieu des yeux (cadrage, regard) */
   pointYeux(cible = new THREE.Vector3()) {
     this.visage.g.updateWorldMatrix(true, false);
     return cible.set(0, 0.012, 0.08).applyMatrix4(this.visage.g.matrixWorld);
   }
+}
+
+/* Ruban plat (sangle) le long d'un chemin : largeur selon l'axe w, épaisseur vers l'extérieur du chemin. */
+function ruban(chemin, w, largeur, epaisseur) {
+  const pos = [], idx = [], c = chemin.reduce((s, p) => s.add(p), new THREE.Vector3()).multiplyScalar(1 / chemin.length);
+  chemin.forEach((p, i) => {
+    const o = p.clone().sub(c).normalize();
+    for (const [a, b] of [[-1, 0], [1, 0], [1, 1], [-1, 1]]) {
+      const q = p.clone().addScaledVector(w, (a * largeur) / 2).addScaledVector(o, b * epaisseur);
+      pos.push(q.x, q.y, q.z);
+    }
+    if (i) for (let j = 0; j < 4; j++) {
+      const a0 = 4 * (i - 1) + j, a1 = 4 * (i - 1) + ((j + 1) % 4), b0 = 4 * i + j, b1 = 4 * i + ((j + 1) % 4);
+      idx.push(a0, b0, a1, a1, b0, b1);
+    }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+  return g;
 }
 
 /* ── Mains : géométries partagées, carte de pression, accessoires ───────────────── */
