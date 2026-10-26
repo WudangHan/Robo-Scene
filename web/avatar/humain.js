@@ -49,8 +49,8 @@ export class CorpsHumain {
     g.setIndex(new THREE.BufferAttribute(t.indice, 1));
     this.region = t.region;
     this.repos = t.position;
-    this.mat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.55, metalness: 0, sheen: 0.35, sheenRoughness: 0.55,
-      sheenColor: new THREE.Color("#ff8f73"), clearcoat: 0.05, clearcoatRoughness: 0.6 });
+    // (pas de lustre « sheen » global : il teintait de rose les vêtements et les chaussures sombres)
+    this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.58, metalness: 0 });
     this.os = this.noeuds.map(() => { const b = new THREE.Bone(); b.matrixAutoUpdate = false; return b; });
     this.mesh = new THREE.SkinnedMesh(g, this.mat);
     this.mesh.name = "corps-humain"; this.mesh.frustumCulled = false; this.mesh.castShadow = true; this.mesh.receiveShadow = true;
