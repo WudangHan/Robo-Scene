@@ -104,13 +104,13 @@ export class CorpsHumain {
     // coupes du maillot calculées par pixel (encolure, emmanchures, liserés, couture, ourlets) : bords nets quelle que
     // soit la taille des triangles ; les couleurs par sommet portent alors le tissu sans les coupes (peindre, this.gpu)
     // zones (tronc, cou et bras, cuisse) en indicateurs 0/1 : interpolés, ils ne passent jamais par une autre région
-    g.setAttribute("aZones", new THREE.BufferAttribute(Float32Array.from(Array.from(t.region, (r) => [r === 2 || r === 3 ? 1 : 0, r === 1 || r === 5 ? 1 : 0, r === 8 ? 1 : 0]).flat()), 3));
+    g.setAttribute("aZones", new THREE.BufferAttribute(Float32Array.from(Array.from(t.region, (r) => [r === 2 || r === 3 ? 1 : 0, r === 5 ? 1 : 0, r === 8 ? 1 : 0, r === 1 ? 1 : 0]).flat()), 4));
     this.uniformes = { uSans: { value: 0 }, uSinglet: { value: 0 }, uCuissard: { value: 0 }, uCouture: { value: 0 }, uYs: { value: 1.42 },
       uOurlet: { value: 0.6 }, uPeau: { value: new THREE.Color() }, uLiser: { value: new THREE.Color() }, uOurletC: { value: new THREE.Color() } };
     this.gpu = typeof document !== "undefined";
     this.mat.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, this.uniformes);
-      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute vec3 aZones;\nvarying vec3 vRepos;\nvarying vec3 vZones;")
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute vec4 aZones;\nvarying vec3 vRepos;\nvarying vec4 vZones;")
         .replace("#include <begin_vertex>", "#include <begin_vertex>\nvRepos = position; vZones = aZones;");
       sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\n" + GLSL_COUPES)
         .replace("#include <color_fragment>", "#include <color_fragment>\ncouperMaillot(diffuseColor.rgb);");
@@ -334,7 +334,8 @@ export class CorpsHumain {
       const x = p[3 * i], y = p[3 * i + 1], z = p[3 * i + 2], reg = r[i];
       let k = peau;
       const ax = Math.abs(x), dy = y - oe.y, dz = z - oe.z;
-      if (reg === 0 || reg === 1) {
+      const trapeze = reg === 1 && A.manches === "sans" && ax > 0.048 && y < ys + 0.125;   // bretelles sur les trapèzes
+      if (reg === 0 || (reg === 1 && !trapeze)) {
         // cheveux : au-dessus d'une ligne qui descend du front vers la nuque
         const seuil = dz > -0.01 ? 0.05 : dz < -0.11 ? -0.085 : 0.05 - (0.135 * (-0.01 - dz)) / 0.1;
         const calvitie = A.cheveux === "chauve" ? 0 : A.cheveux === "rasé" ? 0.45 : 1;
@@ -343,7 +344,7 @@ export class CorpsHumain {
         else if (reg === 0 && Math.abs(dy + 0.071) < 0.0075 && ax < 0.024 && dz > -0.02) k = levres;                       // lèvres
         else if (reg === 0 && A.barbe !== "aucune" && dy < -0.05 && dz > -0.09 && !(Math.abs(dy + 0.071) < 0.009 && ax < 0.026))
           { k = tmp.copy(peau).lerp(cheveux, A.barbe === "pleine" ? 0.9 : 0.45); mBarbe[i] = 1; }
-      } else if (reg === 2 || reg === 3) {
+      } else if (reg === 2 || reg === 3 || trapeze) {
         k = haut;
         if (A.manches === "sans") {
           // encolure en U, emmanchures larges, liserés (coupe() ; par pixel dans le navigateur : GLSL_COUPES)
@@ -457,6 +458,7 @@ function peintreChaussure(m, P, cheville) {
 function coupe(ax, y, z, ys, singlet, couture) {
   const prof = z > 0.02 ? 0.1 : 0.06, wN = 0.068, e = 0.012;
   const fond = (w) => ys - prof + prof * 0.55 * (Math.min(ax, w) / w) ** 2, bras = ys - 0.19 + 0.6 * Math.max(0, 0.15 - ax);
+  if (y > ys + 0.125) return 1;                                            // cou au-dessus des trapèzes
   if (ax < wN && y > fond(wN)) return 1;
   if (ax > 0.125 && y > bras) return 1;
   if (!singlet) return 0;
@@ -467,11 +469,12 @@ function coupe(ax, y, z, ys, singlet, couture) {
 }
 const GLSL_COUPES = `
 uniform float uSans, uSinglet, uCuissard, uCouture, uYs, uOurlet; uniform vec3 uPeau, uLiser, uOurletC;
-varying vec3 vRepos; varying vec3 vZones;
+varying vec3 vRepos; varying vec4 vZones;
 float coupe(float ax, float y, float z) {
   float prof = z > 0.02 ? 0.1 : 0.06, wN = 0.068, e = 0.012;
   float f0 = uYs - prof + prof * 0.55 * pow(min(ax, wN) / wN, 2.0), f1 = uYs - prof + prof * 0.55 * pow(min(ax, wN + e) / (wN + e), 2.0);
   float bras = uYs - 0.19 + 0.6 * max(0.0, 0.15 - ax);
+  if (y > uYs + 0.125) return 1.0;
   if (ax < wN && y > f0) return 1.0;
   if (ax > 0.125 && y > bras) return 1.0;
   if (uSinglet < 0.5) return 0.0;
@@ -482,8 +485,9 @@ float coupe(float ax, float y, float z) {
 }
 void couperMaillot(inout vec3 c) {
   float ax = abs(vRepos.x), y = vRepos.y;
-  if (uSans > 0.5 && vZones.x > 0.5) { float k = coupe(ax, y, vRepos.z); if (k == 1.0) c = uPeau; else if (k == 2.0) c = uLiser; }
-  else if (uSans > 0.5 && vZones.y > 0.5) c = uPeau;          // cou et bras nus (triangles à cheval sur le tronc)
+  // tronc et base du cou (trapèzes) : les bretelles passent par-dessus l'épaule, de la poitrine jusqu'au dos
+  if (uSans > 0.5 && (vZones.x > 0.5 || vZones.w > 0.5)) { float k = coupe(ax, y, vRepos.z); if (k == 1.0) c = uPeau; else if (k == 2.0) c = uLiser; }
+  else if (uSans > 0.5 && vZones.y > 0.5) c = uPeau;          // bras nus (triangles à cheval sur le tronc)
   if (uCuissard > 0.5 && vZones.z > 0.5) { if (y < uOurlet) c = uPeau; else if (uSinglet > 0.5 && y < uOurlet + 0.025) c = uOurletC; }
 }`;
 
