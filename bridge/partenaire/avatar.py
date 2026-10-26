@@ -19,7 +19,7 @@ TYPES = {"articulation", "emotion", "visage", "geste", "pose", "deplacer", "orie
          "apparence", "camera", "lumiere", "vitesse", "memoriser", "rappeler", "arret", "repeter", "annuler", "aide", "main"}
 APPARENCE_CLES = {"taille", "carrure", "corpulence", "age", "cheveux", "barbe", "manches", "peau", "haut", "bas",
                   "chaussures", "couleur_cheveux", "moustache", "yeux", "matiere", "chapeau", "couleur_chapeau", "cou", "cape",
-                  "jupe", "gants", "accessoire", "habillage", "coupe_bas", "chaussures_montantes", "style"}
+                  "jupe", "gants", "accessoire", "habillage", "coupe_bas", "chaussures_montantes", "style", "modele_chaussures", "modele_maillot"}
 
 
 def schema() -> dict[str, Any]:
@@ -99,6 +99,10 @@ def valider(actions: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
                     raise ValueError(f"valeur inconnue pour {cle}")
                 elif cle == "habillage" and x.get("valeur") not in A.get("habillages", {}):
                     raise ValueError("habillage inconnu")
+                elif cle == "modele_chaussures" and x.get("valeur") not in A.get("modeles_chaussures", {}):
+                    raise ValueError("modèle de chaussures inconnu")
+                elif cle == "modele_maillot" and x.get("valeur") not in A.get("modeles_maillot", {}):
+                    raise ValueError("modèle de maillot inconnu")
                 elif cle in ("gants", "chaussures_montantes"):
                     x["valeur"] = bool(x.get("valeur"))
                 elif cle in ("haut", "bas", "chaussures", "couleur_cheveux", "couleur_chapeau", "accessoire"):

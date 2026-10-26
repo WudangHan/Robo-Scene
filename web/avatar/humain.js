@@ -24,6 +24,51 @@ export async function chargerCorpsHumain(base = "/static/avatar/humain/") {
   return { meta, t };
 }
 
+/* Subdivision par milieux d'arêtes des triangles choisis (choisir(region, y) vrai pour leurs trois sommets) ; les
+   triangles voisins sont coupés en deux ou en trois pour ne laisser aucune fente. Les influences des deux sommets
+   d'une arête sont fusionnées (quatre plus fortes, renormalisées). */
+function subdiviser(t, choisir) {
+  const P = Array.from(t.position), N = Array.from(t.normale), UV = Array.from(t.uv), J = Array.from(t.noeud), W = Array.from(t.poids), R = Array.from(t.region);
+  const I = t.indice, nt = I.length / 3, marque = new Set(), cle = (a, b) => (a < b ? a * 4194304 + b : b * 4194304 + a);
+  const choisi = (v) => choisir(R[v], P[3 * v + 1]);
+  for (let f = 0; f < nt; f++) {
+    const [a, b, c] = [I[3 * f], I[3 * f + 1], I[3 * f + 2]];
+    if (choisi(a) && choisi(b) && choisi(c)) { marque.add(cle(a, b)); marque.add(cle(b, c)); marque.add(cle(c, a)); }
+  }
+  const milieux = new Map();
+  const milieu = (a, b) => {
+    const k = cle(a, b); if (milieux.has(k)) return milieux.get(k);
+    const v = R.length;
+    for (let j = 0; j < 3; j++) P.push((P[3 * a + j] + P[3 * b + j]) / 2);
+    const n = [0, 1, 2].map((j) => N[3 * a + j] + N[3 * b + j]), l = Math.hypot(...n) || 1; N.push(n[0] / l, n[1] / l, n[2] / l);
+    UV.push((UV[2 * a] + UV[2 * b]) / 2, (UV[2 * a + 1] + UV[2 * b + 1]) / 2);
+    const inf = new Map();
+    for (const s of [a, b]) for (let j = 0; j < 4; j++) if (W[4 * s + j] > 0) inf.set(J[4 * s + j], (inf.get(J[4 * s + j]) || 0) + W[4 * s + j] / 2);
+    const top = [...inf].sort((x, y) => y[1] - x[1]).slice(0, 4), somme = top.reduce((x, y) => x + y[1], 0) || 1;
+    for (let j = 0; j < 4; j++) { J.push(top[j] ? top[j][0] : 0); W.push(top[j] ? top[j][1] / somme : 0); }
+    R.push(R[a]); milieux.set(k, v); return v;
+  };
+  const out = [];
+  for (let f = 0; f < nt; f++) {
+    let v = [I[3 * f], I[3 * f + 1], I[3 * f + 2]];
+    const m = [0, 1, 2].map((i) => marque.has(cle(v[i], v[(i + 1) % 3])));
+    const n = m.filter(Boolean).length;
+    if (n === 0) { out.push(...v); continue; }
+    if (n === 3) {
+      const [a, b, c] = v, ab = milieu(a, b), bc = milieu(b, c), ca = milieu(c, a);
+      out.push(a, ab, ca, ab, b, bc, ca, bc, c, ab, bc, ca); continue;
+    }
+    // rotation : n = 1 → l'arête marquée devient (v0, v1) ; n = 2 → l'arête non marquée devient (v2, v0)
+    const r = n === 1 ? m.indexOf(true) : (m.indexOf(false) + 1) % 3;
+    v = [v[r], v[(r + 1) % 3], v[(r + 2) % 3]];
+    const [a, b, c] = v, ab = milieu(a, b);
+    if (n === 1) out.push(a, ab, c, ab, b, c);
+    else { const bc = milieu(b, c); out.push(ab, b, bc, a, ab, bc, a, bc, c); }
+  }
+  return { ...t, position: Float32Array.from(P), normale: Float32Array.from(N), uv: Float32Array.from(UV), noeud: Uint8Array.from(J),
+           poids: Float32Array.from(W), region: Uint8Array.from(R), indice: Uint32Array.from(out) };
+}
+
 /* Repère d'une phalange : x = direction du segment, y = normale palmaire orthogonalisée, z = x × y. */
 function repere(dir, palmaire) {
   const x = dir.clone().normalize();
@@ -35,7 +80,12 @@ function repere(dir, palmaire) {
 export class CorpsHumain {
   constructor(humanoide, donnees) {
     this.h = humanoide;
-    const { meta, t } = donnees;
+    const { meta } = donnees;
+    // maillage affiné au chargement (25 oct. 2026) : un niveau partout, un second sur les pieds et le bas des jambes,
+    // pour que les motifs fins (lacets, bandes, liserés) restent nets ; le fichier téléchargé ne grossit pas
+    const cy = Math.max(meta.pivots.cheville_g[1], meta.pivots.cheville_d[1]) + 0.2;
+    let t = subdiviser(donnees.t, () => true);
+    t = subdiviser(t, (r, y) => r === 10 || (r === 9 && y < cy));
     this.meta = meta;
     this.noeuds = meta.noeuds;
     const g = new THREE.BufferGeometry();
@@ -51,6 +101,20 @@ export class CorpsHumain {
     this.repos = t.position;
     // (pas de lustre « sheen » global : il teintait de rose les vêtements et les chaussures sombres)
     this.mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.58, metalness: 0 });
+    // coupes du maillot calculées par pixel (encolure, emmanchures, liserés, couture, ourlets) : bords nets quelle que
+    // soit la taille des triangles ; les couleurs par sommet portent alors le tissu sans les coupes (peindre, this.gpu)
+    // zones (tronc, cou et bras, cuisse) en indicateurs 0/1 : interpolés, ils ne passent jamais par une autre région
+    g.setAttribute("aZones", new THREE.BufferAttribute(Float32Array.from(Array.from(t.region, (r) => [r === 2 || r === 3 ? 1 : 0, r === 1 || r === 5 ? 1 : 0, r === 8 ? 1 : 0]).flat()), 3));
+    this.uniformes = { uSans: { value: 0 }, uSinglet: { value: 0 }, uCuissard: { value: 0 }, uCouture: { value: 0 }, uYs: { value: 1.42 },
+      uOurlet: { value: 0.6 }, uPeau: { value: new THREE.Color() }, uLiser: { value: new THREE.Color() }, uOurletC: { value: new THREE.Color() } };
+    this.gpu = typeof document !== "undefined";
+    this.mat.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, this.uniformes);
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute vec3 aZones;\nvarying vec3 vRepos;\nvarying vec3 vZones;")
+        .replace("#include <begin_vertex>", "#include <begin_vertex>\nvRepos = position; vZones = aZones;");
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\n" + GLSL_COUPES)
+        .replace("#include <color_fragment>", "#include <color_fragment>\ncouperMaillot(diffuseColor.rgb);");
+    };
     this.os = this.noeuds.map(() => { const b = new THREE.Bone(); b.matrixAutoUpdate = false; return b; });
     this.mesh = new THREE.SkinnedMesh(g, this.mat);
     this.mesh.name = "corps-humain"; this.mesh.frustumCulled = false; this.mesh.castShadow = true; this.mesh.receiveShadow = true;
@@ -250,6 +314,19 @@ export class CorpsHumain {
     const P = this.meta.pivots, oe = new THREE.Vector3(...P.oeil_g).add(new THREE.Vector3(...P.oeil_d)).multiplyScalar(0.5);
     const ys = (P.epaule_g[1] + P.epaule_d[1]) / 2, genou = (P.genou_g[1] + P.genou_d[1]) / 2, cheville = (P.cheville_g[1] + P.cheville_d[1]) / 2;
     const singlet = A.manches === "sans" && A.coupe_bas === "cuissard";
+    // modèle de chaussures de lutte (25 oct. 2026) : couleurs et motif peints sur le pied et la tige
+    const modele = h.schema.apparence.modeles_chaussures?.[A.modele_chaussures];
+    const chaussure = modele?.couleurs ? peintreChaussure(modele, P, cheville) : null;
+    const montantes = A.chaussures_montantes || !!chaussure, hauteurTige = chaussure ? modele.hauteur : 0.1;
+    // modèle de maillot de lutte (25 oct. 2026) : tissu, motif et liserés peints sur le tronc, le bassin et les cuisses
+    const mm = singlet ? h.schema.apparence.modeles_maillot?.[A.modele_maillot] : null;
+    const maillot = mm?.couleurs ? peintreMaillot(mm, P, ys) : null;
+    const liser = maillot ? new THREE.Color(mm.couleurs.liseres) : acc, ourl = maillot ? new THREE.Color(mm.couleurs.ourlets || mm.couleurs.liseres) : acc;
+    const couture = mm?.motif === "nuages";
+    const U = this.uniformes;
+    U.uSans.value = A.manches === "sans" ? 1 : 0; U.uSinglet.value = singlet ? 1 : 0; U.uCuissard.value = A.coupe_bas === "cuissard" ? 1 : 0;
+    U.uCouture.value = couture ? 1 : 0; U.uYs.value = ys; U.uOurlet.value = genou + 0.12;
+    U.uPeau.value.copy(peau); U.uLiser.value.copy(liser); U.uOurletC.value.copy(ourl);
     const c = this.couleurs, r = this.region, p = this.repos;
     const tmp = new THREE.Color();
     const nv = r.length, mCheveux = new Uint8Array(nv), mSourcils = new Uint8Array(nv), mBarbe = new Uint8Array(nv);
@@ -269,26 +346,28 @@ export class CorpsHumain {
       } else if (reg === 2 || reg === 3) {
         k = haut;
         if (A.manches === "sans") {
-          // encolure en U, plus profonde devant que dans le dos ; emmanchures larges (maillot de lutte)
-          const prof = z > 0.02 ? 0.1 : 0.06;
-          if (y > ys - prof && ax < 0.07 - 0.25 * Math.max(0, ys - y - 0.02)) k = peau;
-          if (ax > 0.125 && y > ys - 0.19) k = peau;
-          if (singlet && k === haut && ((y > ys - prof - 0.018 && ax < 0.082) || (ax > 0.113 && y > ys - 0.2))) k = acc;   // liserés
+          // encolure en U, emmanchures larges, liserés (coupe() ; par pixel dans le navigateur : GLSL_COUPES)
+          const cp = this.gpu ? 0 : coupe(ax, y, z, ys, singlet, couture);
+          if (cp === 1) k = peau; else if (cp === 2) k = liser;
         }
+        if (maillot && k === haut) k = maillot(x, y, z);
       } else if (reg === 5) k = A.manches === "longues" || (A.manches === "courtes" && y > ys - 0.17) ? haut : peau;
       else if (reg === 6) k = A.manches === "longues" ? haut : peau;
       else if (reg === 7) k = A.gants ? acc : peau;
-      else if (reg === 4) k = bas;
+      else if (reg === 4) k = maillot ? maillot(x, y, z) : bas;
       else if (reg === 8) {
         const ourlet = genou + 0.12;
-        k = A.coupe_bas === "cuissard" && y < ourlet ? peau : bas;
-        if (singlet && y >= ourlet && y < ourlet + 0.025) k = acc;                            // bandes au bas des cuisses
-      } else if (reg === 9) k = A.coupe_bas === "cuissard" ? (A.chaussures_montantes && y < cheville + 0.1 ? chaus : peau) : (A.chaussures_montantes && y < cheville + 0.1 ? chaus : bas);
-      else if (reg === 10) k = chaus;
+        k = A.coupe_bas === "cuissard" && y < ourlet && !this.gpu ? peau : bas;
+        if (maillot && k === bas) k = maillot(x, y, z);
+        if (singlet && y >= ourlet && y < ourlet + 0.025 && !this.gpu) k = ourl;              // bandes au bas des cuisses
+      } else if (reg === 9) {
+        const dansTige = montantes && y < cheville + hauteurTige;
+        k = dansTige ? (chaussure ? chaussure(x, y, z, true) : chaus) : A.coupe_bas === "cuissard" ? peau : bas;
+      } else if (reg === 10) k = chaussure ? chaussure(x, y, z, false) : chaus;
       c[3 * i] = k.r; c[3 * i + 1] = k.g; c[3 * i + 2] = k.b;
     }
     this.mesh.geometry.attributes.color.needsUpdate = true;
-    if (this.matGalbe) this.matGalbe.color.copy(bas);
+    if (this.matGalbe) this.matGalbe.color.copy(maillot ? maillot(0, genou + 0.3, 0.09) : bas);
     // coques : cheveux (épaisseur selon la coiffure, plus fine sur les bords), sourcils, barbe
     this.matCheveux = this.matCheveux || new THREE.MeshStandardMaterial({ roughness: 0.92 });
     this.matCheveux.color.copy(cheveux);
@@ -302,6 +381,143 @@ export class CorpsHumain {
     this.matIris.map = textureIris(h.mat.iris.color.getStyle());
     this.matIris.needsUpdate = true;
   }
+}
+
+/* Peintre d'un modèle de chaussure de lutte : renvoie la couleur d'un sommet du pied ou de la tige (repère du corps au
+   repos ; pointe du pied vers +z). Motifs : chevrons, dégradé, touches de couleur, bandes, obliques. Aucune marque ni
+   aucun logo n'est reproduit : les motifs sont génériques. */
+function peintreChaussure(m, P, cheville) {
+  const k = Object.fromEntries(Object.entries(m.couleurs).map(([n, v]) => [n, new THREE.Color(v)]));
+  const sol = cheville - 0.075, haut = cheville + m.hauteur, tmp = new THREE.Color();
+  const axeX = { g: P.cheville_g[0], d: P.cheville_d[0] };
+  return (x, y, z, tige) => {
+    const ax = x - (x > 0 ? axeX.g : axeX.d), cote = Math.sign(x) * ax;     // cote > 0 : côté extérieur du pied
+    const h = y - sol, av = z - 0.02;                                      // hauteur au-dessus du sol, avancée vers la pointe
+    if (!tige && h < 0.018) return k.semelle;                              // semelle
+    if (k.intermediaire && !tige && h < 0.032) return k.intermediaire;     // semelle intermédiaire
+    if (y > haut - 0.012) return k.col;                                   // bord du col
+    // laçage : bande centrale sur le dessus, du cou-de-pied au haut de la tige
+    if (Math.abs(ax) < 0.014 && z > 0.025 && av < 0.12 && (tige || h > 0.045)) {
+      const pas = ((y + z) * 70) % 1;
+      if (pas < 0.55 || Math.abs(ax) < 0.004) return k.lacets;
+    }
+    switch (m.motif) {
+      case "chevrons": {                                                   // chevrons pointant vers l'avant
+        const t = ((av * 1.0 - Math.abs(h - 0.075) * 0.9) * 28) % 1;
+        return Math.abs(ax) > 0.018 && h > 0.03 && (t + 1) % 1 < 0.32 ? (Math.floor((av + h) * 40) % 2 ? k.accent : tmp.copy(k.accent).lerp(k.tige, 0.35)) : k.tige;
+      }
+      case "degrade": {                                                    // noir à l'avant, orange puis rouge vers le talon
+        const u = Math.min(1, Math.max(0, (0.05 - av) / 0.16 + (h - 0.03) * 1.5));
+        return u < 0.15 ? k.tige : tmp.copy(k.tige).lerp(u > 0.7 ? k.accent2 : k.accent, Math.min(1, (u - 0.15) * 1.6));
+      }
+      case "accents": {                                                    // talon, bande latérale et col violets
+        if (av < -0.06 && h > 0.03) return k.accent;
+        if (Math.abs(h - 0.055) < 0.006 && Math.abs(ax) > 0.02) return k.accent;
+        return k.tige;
+      }
+      case "bandes": {                                                     // contrefort et bandes blanches
+        if (av < -0.055 && h > 0.025 && h < 0.09) return k.accent;
+        if (Math.abs(ax) > 0.02 && Math.abs(h - (0.035 + 0.25 * Math.max(0, 0.1 - av))) < 0.007) return k.accent;
+        if (tige && Math.abs(ax) > 0.02 && ((y * 60) % 1) < 0.18) return k.accent;
+        return k.tige;
+      }
+      case "col_noir": {                                                   // haut de tige et contrefort noirs, diagonale fine
+        if (h > m.hauteur + 0.075 - 0.05 || (av < -0.05 && h > 0.02)) return k.accent;
+        if (Math.abs(ax) > 0.02 && h > 0.03 && Math.abs(h - 0.03 - (0.1 - av) * 0.35) < 0.004) return k.accent;
+        return k.tige;
+      }
+      case "liseres": {                                                    // deux liserés dorés qui remontent vers le talon
+        if (Math.abs(ax) > 0.02 && h > 0.025 && av < 0.08) {
+          const base = 0.04 + Math.max(0, 0.08 - av) * 0.32;
+          if (Math.abs(h - base) < 0.0045 || Math.abs(h - base - 0.016) < 0.0045) return k.accent;
+        }
+        return k.tige;
+      }
+      case "bicolore": {                                                   // avant-pied blanc, arrière et tige bleus, bandes argent
+        const bleu = h > 0.07 - Math.max(0, 0.06 - av) * 0.5 || av < -0.04;
+        if (!bleu) return k.tige;
+        if (Math.abs(ax) > 0.02 && h > 0.04) { const t = ((h * 0.8 - av * 0.7) * 30) % 1; if ((t + 1) % 1 < 0.14) return k.accent2; }
+        return k.accent;
+      }
+      case "obliques": {                                                   // bandes obliques argentées sur les côtés
+        if (Math.abs(ax) > 0.02 && h > 0.03) {
+          const t = ((h * 0.9 + av * 0.6) * 22) % 1;
+          if (cote > 0 ? t < 0.22 : t < 0.18) return k.accent;
+        }
+        return k.tige;
+      }
+    }
+    return k.tige;
+  };
+}
+
+/* Coupes du haut sans manches, au repos (ax = |x|) : 0 tissu, 1 peau (encolure en U arrondie, plus profonde devant ;
+   emmanchures), 2 liseré (bande de 12 mm autour des ouvertures du maillot de lutte ; couture sous la poitrine).
+   GLSL_COUPES reprend exactement ces formules pour le rendu par pixel. */
+function coupe(ax, y, z, ys, singlet, couture) {
+  const prof = z > 0.02 ? 0.1 : 0.06, wN = 0.068, e = 0.012;
+  const fond = (w) => ys - prof + prof * 0.55 * (Math.min(ax, w) / w) ** 2, bras = ys - 0.19 + 0.6 * Math.max(0, 0.15 - ax);
+  if (ax < wN && y > fond(wN)) return 1;
+  if (ax > 0.125 && y > bras) return 1;
+  if (!singlet) return 0;
+  if (ax < wN + e && y > fond(wN + e) - e) return 2;
+  if (ax > 0.125 - e && y > bras - e) return 2;
+  if (couture && Math.abs(y - (ys - 0.2 + 2.6 * Math.min(ax, 0.12) ** 2)) < 0.005) return 2;
+  return 0;
+}
+const GLSL_COUPES = `
+uniform float uSans, uSinglet, uCuissard, uCouture, uYs, uOurlet; uniform vec3 uPeau, uLiser, uOurletC;
+varying vec3 vRepos; varying vec3 vZones;
+float coupe(float ax, float y, float z) {
+  float prof = z > 0.02 ? 0.1 : 0.06, wN = 0.068, e = 0.012;
+  float f0 = uYs - prof + prof * 0.55 * pow(min(ax, wN) / wN, 2.0), f1 = uYs - prof + prof * 0.55 * pow(min(ax, wN + e) / (wN + e), 2.0);
+  float bras = uYs - 0.19 + 0.6 * max(0.0, 0.15 - ax);
+  if (ax < wN && y > f0) return 1.0;
+  if (ax > 0.125 && y > bras) return 1.0;
+  if (uSinglet < 0.5) return 0.0;
+  if (ax < wN + e && y > f1 - e) return 2.0;
+  if (ax > 0.125 - e && y > bras - e) return 2.0;
+  if (uCouture > 0.5 && abs(y - (uYs - 0.2 + 2.6 * pow(min(ax, 0.12), 2.0))) < 0.005) return 2.0;
+  return 0.0;
+}
+void couperMaillot(inout vec3 c) {
+  float ax = abs(vRepos.x), y = vRepos.y;
+  if (uSans > 0.5 && vZones.x > 0.5) { float k = coupe(ax, y, vRepos.z); if (k == 1.0) c = uPeau; else if (k == 2.0) c = uLiser; }
+  else if (uSans > 0.5 && vZones.y > 0.5) c = uPeau;          // cou et bras nus (triangles à cheval sur le tronc)
+  if (uCuissard > 0.5 && vZones.z > 0.5) { if (y < uOurlet) c = uPeau; else if (uSinglet > 0.5 && y < uOurlet + 0.025) c = uOurletC; }
+}`;
+
+/* Peintre d'un modèle de maillot de lutte : couleur d'un sommet du tronc, du bassin ou des cuisses (repère du corps
+   au repos). Motifs : uni, chiné, ton sur ton, nuages avec couture sous la poitrine, flancs en maille. Aucun logo,
+   drapeau ni inscription des photographies de référence n'est reproduit : seuls les couleurs et le type de motif. */
+function peintreMaillot(m, P, ys) {
+  const k = Object.fromEntries(Object.entries(m.couleurs).map(([n, v]) => [n, new THREE.Color(v)]));
+  const hanche = Math.abs(P.hanche_g[0]), tmp = new THREE.Color();
+  const bruit = (x, y, z) => { const s = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453; return s - Math.floor(s); };
+  return (x, y, z) => {
+    const ax = Math.abs(x);
+    switch (m.motif) {
+      case "chine": {                                                      // fils clairs et sombres mêlés
+        const b = bruit(x * 900, y * 900, z * 900);
+        return tmp.copy(k.corps).multiplyScalar(0.86 + 0.28 * b);
+      }
+      case "ton_sur_ton": {                                                // grandes formes sublimées plus sombres
+        const v = Math.sin(x * 24 + y * 15) + Math.sin(y * 21 - z * 17 + x * 9) + 0.6 * Math.sin((x + z) * 41 - y * 8);
+        return v > 1.05 ? k.accent : v > 0.8 ? tmp.copy(k.corps).lerp(k.accent, 0.5) : k.corps;
+      }
+      case "nuages": {                                                     // nuages pâles sous la couture de poitrine (coupe())
+        const couture = ys - 0.2 + 2.6 * Math.min(ax, 0.12) ** 2;
+        if (y < couture) { const v = Math.sin(x * 33 + y * 11) + Math.sin(y * 27 - x * 19 + z * 23); if (v > 0.9) return k.accent; }
+        return k.corps;
+      }
+      case "flancs": {                                                     // flancs du tronc et côtés des cuisses en maille
+        const cuisse = y < P.hanche_g[1] - 0.06;
+        const flanc = cuisse ? ax - hanche > 0.045 : ax > 0.105 && z > -0.075 && z < 0.06 && y > ys - 0.5;
+        return flanc ? (bruit(x * 400, y * 400, z * 400) > 0.5 ? k.accent : tmp.copy(k.accent).multiplyScalar(0.8)) : k.corps;
+      }
+    }
+    return k.corps;
+  };
 }
 
 /* Texture de l'œil : image de MakeHuman (CC0), iris recoloré à la teinte choisie (luminance conservée). */

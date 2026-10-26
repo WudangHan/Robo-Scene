@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import struct
 from pathlib import Path
 
@@ -437,6 +438,10 @@ def main():
         pad = (-off) % 4
         if pad:
             blocs.append(b"\0" * pad); off += pad
+    # pied chaussé : orteils et voûte comblés jusqu'à l'enveloppe convexe du pied (chaussure_pleine.py)
+    sys.path.insert(0, str(Path(__file__).parent))
+    from chaussure_pleine import combler_orteils
+    combler_orteils(P, N, REG, {c: piv[f"cheville_{c}"] for c in "gd"})
     for nom, arr in (("position", P), ("normale", N), ("uv", UV), ("noeud", J), ("poids", W), ("region", REG), ("indice", I),
                      ("yeux_position", YP), ("yeux_uv", YUV), ("yeux_cote", YC), ("yeux_indice", YI)):
         ajoute(nom, arr)

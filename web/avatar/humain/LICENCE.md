@@ -10,3 +10,5 @@
   Google, licence **CC BY 4.0** — dix couleurs, Monk 01 à Monk 10.
 - La silhouette et le costume de lutteur s'inspirent de photographies de compétition fournies par le chercheur ;
   aucun visage, aucune personne réelle et aucun logo n'y sont reproduits.
+- Les modèles de maillots et de chaussures de lutte reprennent les couleurs et les types de motifs de photographies
+  de produits fournies par le chercheur ; aucun logo, aucune marque, aucun drapeau ni aucune inscription n'y figure.

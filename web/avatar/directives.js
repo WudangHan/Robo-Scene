@@ -268,14 +268,33 @@ function apparence(c, schema) {
   if (singlet) {
     // maillot de lutte d'une pièce : sans manches, cuissard ; la couleur dite habille le haut et le bas
     A("manches", "sans"); A("coupe_bas", "cuissard");
-    const col = couleurDans(c.slice(singlet.index), schema);
-    if (col) { A("haut", col); A("bas", col); }
+    // modèles de maillots (25 oct. 2026) : chiné, motif ton sur ton, bleu roi, blanc à liserés rouges, noir à flancs
+    const s2 = c.slice(singlet.index), rouge = /\brouge/.test(s2), bleu = /\bbleu/.test(s2);
+    const mod = /\bchine/.test(s2) ? (rouge ? "rouge_chine" : "bleu_chine")
+      : /\b(motifs?|graphiques?|imprime\w*|ton sur ton|sublime\w*)\b/.test(s2) ? (rouge ? "rouge_graphique" : bleu ? "bleu_graphique" : null)
+      : /\bbleu roi\b/.test(s2) ? "bleu_roi"
+      : /\bblanc\w*\b/.test(s2) && rouge || /\bnuage/.test(s2) ? "blanc_rouge"
+      : /\b(flancs?|maille)\b/.test(s2) ? "noir_flancs" : null;
+    const col = couleurDans(s2, schema);
+    if (mod) A("modele_maillot", mod);
+    else { if (col) { A("haut", col); A("bas", col); } A("modele_maillot", "uni"); }
   } else if (/\b(sans manches|debardeur)\b/.test(c)) A("manches", "sans");
   else if (/\bmanches? courtes?\b/.test(c)) A("manches", "courtes");
   else if (/\bmanches? longues?\b/.test(c)) A("manches", "longues");
   if (/\b(cuissard|short|bermuda|jambes nues)\b/.test(c)) A("coupe_bas", RETRAIT.test(c) ? "pantalon" : "cuissard");
   else if (/\b(pantalon long|pantalon)\b/.test(c) && /\b(mets|enfile|porte)\b/.test(c)) A("coupe_bas", "pantalon");
-  if (/\b(chaussures (de lutte|montantes)|bottines de lutte)\b/.test(c)) A("chaussures_montantes", !RETRAIT.test(c));
+  // modèles de chaussures de lutte (25 oct. 2026)
+  const modele = /\bchaussures?\b|\bsouliers?\b|\bbottines?\b/.test(c) && !RETRAIT.test(c)
+    ? (/\bchevrons?\b/.test(c) ? "bleu_chevrons" : /\b(orange|degrade)\b/.test(c) ? "noir_orange"
+      : /\blacets? (vert|verts|lime|fluo)\b|\bcol noir\b/.test(c) ? "blanc_noir_lime"
+      : /\b(bandes?|liseres?|touches?) (d ?or|dore\w*)\b|\bblanc\w*[\s-]+(et\s+)?(or|dore\w*)\b/.test(c) ? "blanc_or"
+      : /\bbleu\w*( roi)?[\s-]+(et\s+)?blanc|\bblanc\w*[\s-]+(et\s+)?bleu/.test(c) ? "bleu_blanc_argent"
+      : /\bargent/.test(c) ? "noir_argent_violet"
+      : /\bviolet/.test(c) ? "noir_violet" : /\bmarine\b/.test(c) && /\b(lutte|montantes?|bandes?|blanches?)\b/.test(c) ? "marine_blanc"
+      : /\bunies?\b/.test(c) ? "uni" : null) : null;
+  if (modele) { A("modele_chaussures", modele); if (modele !== "uni") A("chaussures_montantes", true); }
+  else if (/\b(chaussures?|souliers?)\b/.test(c) && !RETRAIT.test(c) && couleurDans(c, schema)) A("modele_chaussures", "uni");   // une couleur dite remplace le modèle
+  else if (/\b(chaussures (de lutte|montantes)|bottines de lutte)\b/.test(c)) A("chaussures_montantes", !RETRAIT.test(c));
   // style du corps (25 oct. 2026) : humain (MakeHuman) ou stylisé ; tons de peau de l'échelle de Monk (1 à 10)
   if (/\b(version|corps|style|apparence|deviens|sois|mode) (tres )?(humaine?|realiste|reel|reelle)\b|\b(humain|realiste) (style|version)\b/.test(c)) A("style", "humain");
   else if (/\b(version|corps|style|apparence|redeviens|mode) (stylise|robot|robotique|stylisee)\b/.test(c)) A("style", "stylisé");
@@ -631,7 +650,8 @@ export const EXEMPLES = [
   "signe de la victoire", "serre le poing", "écarte les doigts", "pianote", "relâche la main", "prends la coupe", "main en coupe",
   "plie le poignet", "étends le poignet", "incline le poignet vers le pouce", "incline le poignet vers le petit doigt",
   "tourne le poignet", "paume vers le haut", "paumes vers le bas", "tourne les poignets vers l'extérieur", "redresse le poignet",
-  "roule les poignets", "habille-toi en lutteur", "mets un protège-oreilles", "mets un maillot de lutte rouge", "mets des chaussures de lutte", "passe en version humaine", "peau monk 8", "redeviens stylisé",
+  "roule les poignets", "mets les chaussures à chevrons", "mets les chaussures à dégradé orange", "mets les chaussures à touches violettes",
+  "mets les chaussures de lutte marine à bandes blanches", "mets les chaussures à bandes argent", "mets les chaussures blanches à lacets lime", "mets les chaussures à liserés dorés", "mets les chaussures bleues et blanches", "mets le maillot de lutte bleu chiné", "mets le maillot de lutte rouge chiné", "mets le maillot de lutte rouge à motifs", "mets le maillot de lutte bleu roi", "mets le maillot de lutte bleu à motifs", "mets le maillot de lutte blanc à liserés rouges", "mets le maillot de lutte noir à flancs en maille", "habille-toi en lutteur", "mets un protège-oreilles", "mets un maillot de lutte rouge", "mets des chaussures de lutte", "passe en version humaine", "peau monk 8", "redeviens stylisé",
 ];
 
 const VIDES = new Set(["le", "la", "les", "un", "une", "des", "de", "du", "d", "l", "a", "au", "aux", "et", "ou", "ton", "ta", "tes", "te", "toi", "moi",
@@ -852,9 +872,12 @@ const VERBES_DIRE =/^(dis|dit|dire|prononce|recite|declame|reponds|chuchote|murm
 export function decouper(texte) {
   const guillemets = [];
   const protege = String(texte || "").replace(/[«“"]\s*([^»”"]+?)\s*[»”"]/g, (_, t) => `⟦${guillemets.push(t) - 1}⟧`);
+  // « bleues et blanches », « blanc et or » : deux couleurs d'un même objet ne séparent pas la consigne (25 oct. 2026)
+  const COUL = "(?:bleu|blanc|noir|rouge|vert|jaune|violet|orange|gris|argent|dor[ée])\\p{L}*(?: roi| marine)?|or";
+  const protege2 = protege.replace(new RegExp(`\\b(${COUL})\\s+et\\s+(${COUL})\\b`, "giu"), "$1-$2");
   const restaurer = (s) => s.replace(/⟦(\d+)⟧/g, (_, i) => guillemets[Number(i)]);
   const clauses = [];
-  for (const phrase of protege.split(/(?<!\d)[.;!?\n]+(?!\d)/)) {
+  for (const phrase of protege2.split(/(?<!\d)[.;!?\n]+(?!\d)/)) {
     for (const bloc of phrase.split(/\s*,?\s+(?:et puis|puis|ensuite|apres quoi|après quoi|enfin)\s+/i)) {
       const b = bloc.trim();
       if (!b) continue;
@@ -965,8 +988,10 @@ export function valider(actions, schema) {
         else if (x.cle === "habillage" && !(A.habillages || {})[x.valeur]) { rejets.push({ action: a, motif: "habillage inconnu" }); continue; }
         else if (["couleur_chapeau", "accessoire"].includes(x.cle) && !(x.valeur in A.couleurs) && !/^#[0-9a-f]{6}$/i.test(String(x.valeur))) { rejets.push({ action: a, motif: "couleur inconnue" }); continue; }
         else if (x.cle === "gants" || x.cle === "chaussures_montantes") x.valeur = !!x.valeur;
+        else if (x.cle === "modele_chaussures" && !(x.valeur in (A.modeles_chaussures || {}))) { rejets.push({ action: a, motif: "modèle de chaussures inconnu" }); continue; }
+        else if (x.cle === "modele_maillot" && !(x.valeur in (A.modeles_maillot || {}))) { rejets.push({ action: a, motif: "modèle de maillot inconnu" }); continue; }
         else if (!["taille", "carrure", "corpulence", "age", "cheveux", "barbe", "manches", "peau", "haut", "bas", "chaussures", "couleur_cheveux", "moustache", "yeux",
-          "matiere", "chapeau", "couleur_chapeau", "cou", "cape", "jupe", "gants", "accessoire", "habillage", "coupe_bas", "chaussures_montantes", "style"].includes(x.cle)) { rejets.push({ action: a, motif: "attribut d'apparence inconnu" }); continue; }
+          "matiere", "chapeau", "couleur_chapeau", "cou", "cape", "jupe", "gants", "accessoire", "habillage", "coupe_bas", "chaussures_montantes", "style", "modele_chaussures", "modele_maillot"].includes(x.cle)) { rejets.push({ action: a, motif: "attribut d'apparence inconnu" }); continue; }
         break;
       }
       case "main": {

@@ -499,7 +499,7 @@ def test_habillages(tmp_path):
     assert out["mets ton habit de soirée"] == [["habillage", "soiree"]]
     assert out["habille-toi en lutteur"] == [["habillage", "lutteur"]]
     assert out["mets un casque de lutte rouge"] == [["chapeau", "protège-oreilles"], ["couleur_chapeau", "rouge"]]
-    assert out["mets un maillot de lutte rouge"] == [["manches", "sans"], ["coupe_bas", "cuissard"], ["haut", "rouge"], ["bas", "rouge"]]
+    assert out["mets un maillot de lutte rouge"] == [["manches", "sans"], ["coupe_bas", "cuissard"], ["haut", "rouge"], ["bas", "rouge"], ["modele_maillot", "uni"]]
     assert out["déguise-toi en clown"] == [["habillage", "clown"]]
     assert out["mets un chapeau melon noir"] == [["chapeau", "melon"], ["couleur_chapeau", "noir"]]
     assert out["mets un haut-de-forme"] == [["chapeau", "haut-de-forme"]]      # pas lu comme le « haut » du costume

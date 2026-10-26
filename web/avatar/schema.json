@@ -73,6 +73,27 @@
     "coupe_bas":  ["pantalon", "cuissard"],
     "peau":       ["très claire", "claire", "mate", "olive", "brune", "foncée", "Monk 01", "Monk 02", "Monk 03", "Monk 04", "Monk 05", "Monk 06", "Monk 07", "Monk 08", "Monk 09", "Monk 10"],
     "style":      ["stylisé", "humain"],
+    "modeles_chaussures": {
+      "uni": {"libelle": "Unies (couleur des chaussures)", "description": "Chaussures d'une seule couleur, celle du menu Chaussures."},
+      "bleu_chevrons": {"libelle": "Montantes bleues à chevrons", "description": "Tige très haute bleu roi, chevrons blancs et argentés sur les côtés, lacets bleus, semelle blanche.", "couleurs": {"tige": "#1f4fbf", "accent": "#dfe6f2", "lacets": "#2a5bd0", "semelle": "#f2f2ee", "col": "#173d96"}, "motif": "chevrons", "hauteur": 0.16},
+      "noir_orange": {"libelle": "Noires à dégradé orange", "description": "Tige noire en suède, dégradé orange et rouge vers le talon, lacets et semelle orange.", "couleurs": {"tige": "#141414", "accent": "#f2932b", "accent2": "#d8432a", "lacets": "#f29a2e", "semelle": "#f39a35", "col": "#c9422e"}, "motif": "degrade", "hauteur": 0.11},
+      "noir_violet": {"libelle": "Noires à touches violettes", "description": "Tige noire perforée, talon, col et bande latérale violets, lacets et semelle noirs.", "couleurs": {"tige": "#151515", "accent": "#8b3fd6", "lacets": "#1c1c1c", "semelle": "#1a1a1a", "col": "#8b3fd6"}, "motif": "accents", "hauteur": 0.11},
+      "marine_blanc": {"libelle": "Marine et blanches", "description": "Tige bleu marine en maille, bandes et contrefort blancs, semelle intermédiaire blanche.", "couleurs": {"tige": "#1d2f56", "accent": "#f2f2f2", "lacets": "#1d2f56", "semelle": "#1d2f56", "intermediaire": "#f4f4f4", "col": "#1d2f56"}, "motif": "bandes", "hauteur": 0.12},
+      "noir_argent_violet": {"libelle": "Noires à bandes argent, lacets violets", "description": "Tige noire, bandes obliques argentées sur les côtés, lacets et semelle violets.", "couleurs": {"tige": "#161616", "accent": "#c9ccd2", "lacets": "#8a4fe0", "semelle": "#8a4fe0", "col": "#161616"}, "motif": "obliques", "hauteur": 0.11},
+      "blanc_noir_lime": {"libelle": "Blanches à col noir, lacets lime", "description": "Tige blanche translucide, col et contrefort noirs, fine diagonale noire sur les côtés, lacets vert lime, semelle noire.", "couleurs": {"tige": "#f1f2f0", "accent": "#151515", "lacets": "#b8ec78", "semelle": "#161616", "col": "#151515"}, "motif": "col_noir", "hauteur": 0.14},
+      "blanc_or": {"libelle": "Blanches en suède à liserés dorés", "description": "Tige blanche en suède, deux liserés dorés métallisés vers le talon, lacets blancs, semelle crème.", "couleurs": {"tige": "#f3f2ee", "accent": "#d2a63a", "lacets": "#fbfbfa", "semelle": "#e9e7df", "col": "#f3f2ee"}, "motif": "liseres", "hauteur": 0.13},
+      "bleu_blanc_argent": {"libelle": "Bleu roi et blanches, touches argent", "description": "Avant-pied blanc, tige, col et talon bleu roi, fines bandes argentées, lacets bleus, semelle gris clair.", "couleurs": {"tige": "#f2f3f5", "accent": "#2347b8", "accent2": "#c4c9d1", "lacets": "#2347b8", "semelle": "#d8dbe0", "col": "#2347b8"}, "motif": "bicolore", "hauteur": 0.13}
+    },
+    "modeles_maillot": {
+      "uni": {"libelle": "Uni (couleurs Haut, Pantalon, Accessoire)", "description": "Maillot d'une seule couleur, celle du haut et du bas ; liserés de la couleur d'accessoire."},
+      "bleu_chine": {"libelle": "Bleu acier chiné, liserés marine", "description": "Maillot bleu acier au tissu chiné, encolure, emmanchures et ourlets bleu marine.", "couleurs": {"corps": "#5d80b4", "liseres": "#22304f"}, "motif": "chine"},
+      "rouge_chine": {"libelle": "Rouge chiné, liserés bordeaux", "description": "Maillot rouge au tissu chiné, encolure, emmanchures et ourlets bordeaux.", "couleurs": {"corps": "#c9343b", "liseres": "#7c1d24"}, "motif": "chine"},
+      "rouge_graphique": {"libelle": "Rouge à motif ton sur ton", "description": "Maillot rouge vif orné d'un grand motif sublimé rouge sombre, ton sur ton.", "couleurs": {"corps": "#c8242c", "accent": "#8f141b", "liseres": "#b11f27"}, "motif": "ton_sur_ton"},
+      "bleu_roi": {"libelle": "Bleu roi uni", "description": "Maillot bleu roi d'une seule teinte, liserés assortis, coupe épurée.", "couleurs": {"corps": "#1f5fd6", "liseres": "#1a54c0"}, "motif": "uni"},
+      "bleu_graphique": {"libelle": "Bleu à motif ton sur ton, ourlets clairs", "description": "Maillot bleu orné d'un grand motif sublimé bleu sombre, bandes bleu clair au bas des cuisses.", "couleurs": {"corps": "#1e66da", "accent": "#0f3f9e", "liseres": "#1e66da", "ourlets": "#4c9af2"}, "motif": "ton_sur_ton"},
+      "blanc_rouge": {"libelle": "Blanc nuagé à liserés rouges", "description": "Maillot blanc à motif de nuages gris très pâle, encolure, emmanchures, couture sous la poitrine et ourlets rouges.", "couleurs": {"corps": "#f5f5f3", "accent": "#dfe2e6", "liseres": "#d7322b"}, "motif": "nuages"},
+      "noir_flancs": {"libelle": "Noir à flancs en maille", "description": "Maillot noir mat, flancs et côtés des cuisses en maille anthracite.", "couleurs": {"corps": "#121212", "accent": "#3b3d43", "liseres": "#121212"}, "motif": "flancs"}
+    },
     "matiere":    ["tissu", "satin", "cuir", "métal"],
     "chapeau":    ["aucun", "melon", "haut-de-forme", "béret", "casquette", "couronne", "calot", "protège-oreilles"],
     "cou":        ["aucun", "cravate", "nœud papillon", "collerette", "foulard"],

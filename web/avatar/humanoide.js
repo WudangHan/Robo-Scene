@@ -51,7 +51,7 @@ export const APPARENCE_DEFAUT = {
   matiere: "tissu", chapeau: "aucun", couleur_chapeau: "noir", cou: "aucun", cape: "aucune", jupe: "aucune", gants: false,
   accessoire: "bordeaux", habillage: "repetition",
   // lutteur (25 oct. 2026) : longueur du bas (pantalon ou cuissard) et chaussures montant au-dessus de la cheville
-  coupe_bas: "pantalon", chaussures_montantes: false,
+  coupe_bas: "pantalon", chaussures_montantes: false, modele_chaussures: "uni", modele_maillot: "uni",
   style: "stylisé",                                   // « humain » : corps humain issu de MakeHuman (humain.js)
 };
 /* Rendu des matières (MeshStandardMaterial : rugosité, métallicité ; la scène n'a pas de carte d'environnement,
@@ -62,7 +62,7 @@ export const MATIERES = {
 };
 /* Champs qu'un habillage remplace ; le corps (taille, âge, peau, cheveux, barbe, yeux) n'est jamais touché. */
 export const CHAMPS_HABILLAGE = ["haut", "bas", "chaussures", "manches", "matiere", "chapeau", "couleur_chapeau", "cou", "cape",
-  "jupe", "gants", "accessoire", "coupe_bas", "chaussures_montantes"];
+  "jupe", "gants", "accessoire", "coupe_bas", "chaussures_montantes", "modele_chaussures", "modele_maillot"];
 
 function std(color, roughness = 0.75, extra = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness: 0, ...extra });
@@ -736,7 +736,9 @@ export class Humanoide {
     const ch = new THREE.Color(couleur(A.couleur_cheveux, "#6b4a2f")).lerp(new THREE.Color("#a7a7a4"), gris);
     M.cheveux.color.copy(ch); M.barbe.color.copy(ch).multiplyScalar(0.9); M.sourcils.color.copy(ch).multiplyScalar(0.62);
     M.iris.color.set(YEUX[A.yeux] || YEUX.brun);
-    M.haut.color.set(couleur(A.haut, "#1f2b4a")); M.bas.color.set(couleur(A.bas, "#7d8086")); M.chaussures.color.set(couleur(A.chaussures, "#1b1b1d"));
+    // modèle de maillot de lutte (25 oct. 2026) : la couleur du corps du maillot habille le haut et le bas
+    const maillot = A.manches === "sans" && A.coupe_bas === "cuissard" ? this.schema.apparence.modeles_maillot?.[A.modele_maillot]?.couleurs : null;
+    M.haut.color.set(maillot?.corps || couleur(A.haut, "#1f2b4a")); M.bas.color.set(maillot?.corps || couleur(A.bas, "#7d8086")); M.chaussures.color.set(this.schema.apparence.modeles_chaussures?.[A.modele_chaussures]?.couleurs?.tige || couleur(A.chaussures, "#1b1b1d"));
     const [rh, mh] = (MATIERES[A.matiere] || MATIERES.tissu).haut, [rb, mb] = (MATIERES[A.matiere] || MATIERES.tissu).bas;
     Object.assign(M.haut, { roughness: rh, metalness: mh }); Object.assign(M.bas, { roughness: rb, metalness: mb });
     M.jupe.color.copy(M.bas.color); Object.assign(M.jupe, { roughness: rb, metalness: mb });
@@ -745,7 +747,7 @@ export class Humanoide {
     M.mains.roughness = A.gants ? 0.5 : 0.62;
     const acc = O.acc;
     for (const k of ["melon", "haut-de-forme", "béret", "casquette", "couronne", "calot", "protège-oreilles"]) acc[k].visible = A.chapeau === k;
-    for (const s of ["g", "d"]) acc[`tige_${s}`].visible = !!A.chaussures_montantes;
+    for (const s of ["g", "d"]) acc[`tige_${s}`].visible = !!A.chaussures_montantes && A.style !== "humain";   // le corps humain peint sa tige
     O.ceinture.visible = !(A.manches === "sans" && A.coupe_bas === "cuissard");   // maillot d'une pièce : pas de ceinture
     for (const k of ["cravate", "nœud papillon", "collerette", "foulard"]) acc[k].visible = A.cou === k;
     acc.cape_courte.visible = A.cape === "courte"; acc.cape_longue.visible = A.cape === "longue";

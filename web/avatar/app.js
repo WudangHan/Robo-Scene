@@ -126,7 +126,7 @@ function appliquerApparence(cle, valeur, relatif) {
   const A = humain.apparence;
   if (cle === "habillage") {
     const h = (SCHEMA.apparence.habillages || {})[valeur]; if (!h) return;
-    humain.appliquerApparence({ ...h.valeurs, habillage: valeur });
+    humain.appliquerApparence({ modele_chaussures: "uni", modele_maillot: "uni", ...h.valeurs, habillage: valeur });
     ecrireLS("robo-scene-avatar-apparence", humain.apparence); majApparence(); return;
   }
   if (CHAMPS_HABILLAGE.includes(cle)) humain.apparence.habillage = "";        // tenue retouchée : personnalisée
@@ -602,6 +602,8 @@ function majApparence() {
   const hex = (n) => (/^#/.test(n) ? n : SCHEMA.apparence.couleurs[n] || "#888888");
   for (const k of ["haut", "bas", "chaussures", "couleur_cheveux", "couleur_chapeau", "accessoire"]) $(`#ap-${k}`).value = hex(A[k]);
   for (const k of ["matiere", "chapeau", "cou", "cape", "jupe", "coupe_bas", "style"]) $(`#ap-${k}`).value = A[k];
+  $("#ap-modele_chaussures").value = A.modele_chaussures || "uni";
+  $("#ap-modele_maillot").value = A.modele_maillot || "uni";
   $("#style").value = A.style || "stylisé";
   $("#ap-gants").checked = !!A.gants; $("#ap-chaussures_montantes").checked = !!A.chaussures_montantes;
   const h = A.habillage || "";
@@ -623,6 +625,10 @@ for (const k of ["matiere", "chapeau", "cou", "cape", "jupe", "coupe_bas", "styl
 for (const k of ["couleur_chapeau", "accessoire"]) $(`#ap-${k}`).oninput = (e) => appliquerApparence(k, e.target.value);
 $("#ap-gants").onchange = (e) => appliquerApparence("gants", e.target.checked);
 $("#ap-chaussures_montantes").onchange = (e) => appliquerApparence("chaussures_montantes", e.target.checked);
+$("#ap-modele_chaussures").innerHTML = Object.entries(SCHEMA.apparence.modeles_chaussures).map(([k, m]) => `<option value="${k}" title="${echapper(m.description)}">${echapper(m.libelle)}</option>`).join("");
+$("#ap-modele_chaussures").onchange = (e) => { appliquerApparence("modele_chaussures", e.target.value); if (e.target.value !== "uni") appliquerApparence("chaussures_montantes", true); };
+$("#ap-modele_maillot").innerHTML = Object.entries(SCHEMA.apparence.modeles_maillot).map(([k, m]) => `<option value="${k}" title="${echapper(m.description)}">${echapper(m.libelle)}</option>`).join("");
+$("#ap-modele_maillot").onchange = (e) => { appliquerApparence("modele_maillot", e.target.value); appliquerApparence("manches", "sans"); appliquerApparence("coupe_bas", "cuissard"); };
 $("#ap-cheveux").innerHTML = SCHEMA.apparence.cheveux.map((x) => `<option>${x}</option>`).join("");
 $("#ap-barbe").innerHTML = SCHEMA.apparence.barbe.map((x) => `<option>${x}</option>`).join("");
 $("#ap-manches").innerHTML = SCHEMA.apparence.manches.map((x) => `<option>${x}</option>`).join("");
