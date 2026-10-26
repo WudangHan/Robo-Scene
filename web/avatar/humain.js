@@ -24,6 +24,64 @@ export async function chargerCorpsHumain(base = "/static/avatar/humain/") {
   return { meta, t };
 }
 
+/* Poids d'habillage adoucis (26 oct. 2026). Les poids MakeHuman du bras s'étendent jusqu'au sternum : bras levé
+   à 170°, la poitrine était entraînée (bourrelets sous l'aisselle). 1. Sur le cou et le tronc, l'influence de
+   l'épaule s'éteint entre 9 et 16 cm du pivot ; le reste revient à la poitrine. 2. Os « à mi-rotation » aux
+   épaules, coudes, poignets, hanches et genoux : dans la zone de transition (poids partagés entre le segment et
+   son parent), la part commune m = min(parent, enfant) passe à un os qui ne tourne que de la moitié de l'angle —
+   la peau se plie en deux temps au lieu de s'écraser (approximation du lissage à quaternions doubles). */
+function adoucirPoids(t, meta) {
+  const noeuds = meta.noeuds.slice(), I = (n) => noeuds.indexOf(n);
+  const J = Uint8Array.from(t.noeud), W = Float32Array.from(t.poids), P = t.position, R = t.region, n = R.length;
+  const lisse = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+  for (const s of ["g", "d"]) {
+    const ie = I(`epaule_${s}`), ip = I("poitrine"), piv = meta.pivots[`epaule_${s}`];
+    for (let v = 0; v < n; v++) {
+      if (R[v] > 3) continue;                                        // cou, tronc, taille seulement
+      const d = Math.hypot(P[3 * v] - piv[0], P[3 * v + 1] - piv[1], P[3 * v + 2] - piv[2]);
+      // devant l'aisselle (pli du grand pectoral), l'influence du bras s'éteint plus tôt : le pectoral s'étire vers
+      // le bras levé au lieu d'être emporté avec lui
+      const devant = P[3 * v + 2] > piv[2] + 0.02 && Math.abs(P[3 * v]) < Math.abs(piv[0]) - 0.01;
+      const f = 1 - (devant ? lisse(0.04, 0.1, d) : lisse(0.09, 0.16, d));
+      for (let k = 0; k < 4; k++) if (J[4 * v + k] === ie && W[4 * v + k] > 0) {
+        const retire = W[4 * v + k] * (1 - f); W[4 * v + k] -= retire;
+        const kp = [0, 1, 2, 3].find((j) => J[4 * v + j] === ip && W[4 * v + j] > 0) ?? [0, 1, 2, 3].reduce((a, j) => (W[4 * v + j] < W[4 * v + a] ? j : a), 0);
+        if (J[4 * v + kp] !== ip) { J[4 * v + kp] = ip; W[4 * v + kp] = 0; }
+        W[4 * v + kp] += retire;
+      }
+    }
+  }
+  const demis = [];
+  const paires = [];
+  for (const s of ["g", "d"]) paires.push(
+    [[`clav_${s}`, "poitrine"], `epaule_${s}`, `epaule_${s}`], [[`epaule_${s}`], `coude_${s}`, `coude_${s}`], [[`coude_${s}`], `main_${s}`, `main_${s}`],
+    [["bassin", "lombaires"], `hanche_${s}`, `hanche_${s}`], [[`hanche_${s}`], `genou_${s}`, `genou_${s}`]);
+  for (const [parents, enfant, pivot] of paires) {
+    const ip = parents.map(I), ie = I(enfant), id = noeuds.length;
+    noeuds.push(`demi_${enfant}`);
+    demis.push({ parent: ip[0], enfant: ie, indice: id, pivot: new THREE.Vector3(...meta.pivots[pivot]) });
+    for (let v = 0; v < n; v++) {
+      let a = 0, b = 0;
+      for (let k = 0; k < 4; k++) { const j = J[4 * v + k]; if (ip.includes(j)) a += W[4 * v + k]; else if (j === ie) b += W[4 * v + k]; }
+      const m = Math.min(a, b);
+      if (m < 0.02) continue;
+      // retire m de l'enfant et, proportionnellement, des parents ; l'os à mi-rotation reçoit 2m
+      let place = -1;
+      for (let k = 0; k < 4; k++) {
+        const j = J[4 * v + k];
+        if (j === ie) { W[4 * v + k] -= m; if (W[4 * v + k] < 1e-4) { W[4 * v + k] = 0; place = k; } }
+        else if (ip.includes(j)) { W[4 * v + k] -= (m * W[4 * v + k]) / a; if (W[4 * v + k] < 1e-4) { W[4 * v + k] = 0; if (place < 0) place = k; } }
+      }
+      if (place < 0) place = [0, 1, 2, 3].reduce((x, k) => (W[4 * v + k] < W[4 * v + x] ? k : x), 0);
+      // la plus petite influence restante cède sa place si besoin (renormalisation ensuite)
+      J[4 * v + place] = id; W[4 * v + place] = 2 * m;
+      let somme = 0; for (let k = 0; k < 4; k++) somme += W[4 * v + k];
+      for (let k = 0; k < 4; k++) W[4 * v + k] /= somme || 1;
+    }
+  }
+  return { t: { ...t, noeud: J, poids: W }, noeuds, demis };
+}
+
 /* Subdivision par milieux d'arêtes des triangles choisis (choisir(region, y) vrai pour leurs trois sommets) ; les
    triangles voisins sont coupés en deux ou en trois pour ne laisser aucune fente. Les influences des deux sommets
    d'une arête sont fusionnées (quatre plus fortes, renormalisées). */
@@ -84,10 +142,14 @@ export class CorpsHumain {
     // maillage affiné au chargement (25 oct. 2026) : un niveau partout, un second sur les pieds et le bas des jambes,
     // pour que les motifs fins (lacets, bandes, liserés) restent nets ; le fichier téléchargé ne grossit pas
     const cy = Math.max(meta.pivots.cheville_g[1], meta.pivots.cheville_d[1]) + 0.2;
-    let t = subdiviser(donnees.t, () => true);
+    // poids d'habillage adoucis (26 oct. 2026) : influence du bras limitée à l'épaule, os « à mi-rotation »
+    const remap = adoucirPoids(donnees.t, meta);
+    this.nOriginal = donnees.t.region.length;                       // sommets d'origine (avant subdivision), en tête
+    this.demis = remap.demis;
+    let t = subdiviser(remap.t, () => true);
     t = subdiviser(t, (r, y) => r === 10 || (r === 9 && y < cy));
     this.meta = meta;
-    this.noeuds = meta.noeuds;
+    this.noeuds = remap.noeuds;
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(t.position, 3));
     g.setAttribute("normal", new THREE.BufferAttribute(t.normale, 3));
@@ -261,6 +323,15 @@ export class CorpsHumain {
         b.matrixWorld.multiplyMatrices(inv, h.os.tete.matrixWorld).multiply(tmp.copy(this.repos0.tete).invert()).multiply(local);
       }
     });
+    // os à mi-rotation : parent · (moitié de la rotation enfant/parent autour du pivot de l'articulation)
+    const q = new THREE.Quaternion(), qi = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
+    for (const d of this.demis) {
+      const Sp = this.os[d.parent].matrixWorld, Sc = this.os[d.enfant].matrixWorld;
+      tmp.copy(Sp).invert().multiply(Sc).decompose(p, q, s);
+      q.slerp(qi.identity(), 0.5);
+      tmp2.makeTranslation(d.pivot.x, d.pivot.y, d.pivot.z).multiply(tmp.makeRotationFromQuaternion(q)).multiply(new THREE.Matrix4().makeTranslation(-d.pivot.x, -d.pivot.y, -d.pivot.z));
+      this.os[d.indice].matrixWorld.multiplyMatrices(Sp, tmp2);
+    }
   }
 
   /* Visage : mâchoire (ouverture de la bouche), paupières (clignement), regard (rotation des yeux). */

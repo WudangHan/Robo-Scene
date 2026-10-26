@@ -411,14 +411,17 @@ def test_contact_main_visage(tmp_path):
           const spec = Object.values(CONTACTS[nom]).at(-1);
           const ecarts = Object.entries(spec).map(([k, [point, rep, dec]]) => {
             const s = k === "X" ? "d" : k, r = REPERES_VISAGE[rep] || REPERES_CORPS[rep];
-            const l = (REPERES_CORPS[rep] ? h.os.poitrine : h.visage.g).worldToLocal(h.pointMain(s, point));
-            return Math.hypot(l.x - r[0] - dec[0], l.y - r[1] - dec[1], l.z - r[2] - dec[2]);
+            const G = REPERES_CORPS[rep] ? h.os.poitrine : h.visage.g, l = G.worldToLocal(h.pointMain(s, point));
+            // repère sous la peau : la main se pose à la surface (garde-corps, 26 oct. 2026) ; l'écart toléré en tient compte
+            const sous = h.garde.penetration(G.localToWorld(new h.racine.position.constructor(r[0] + dec[0], r[1] + dec[1], r[2] + dec[2])), 0.006);
+            return Math.hypot(l.x - r[0] - dec[0], l.y - r[1] - dec[1], l.z - r[2] - dec[2]) - (sous ? sous.profondeur : 0);
           });
           out[`${nom}/${regard}`] = Math.max(...ecarts);
         }
       }
       // témoin : sans la passe de contact, « réfléchir » laissait le poing sous le menton, vers le cou
-      const h = new Humanoide(S), a = new Animateur(h, S); a.vivant = false; a.vitesse = 25; a.prendrePose("repos");
+      // (garde-corps coupé : depuis le 26 oct. 2026, il écarte de lui-même le poing du cou)
+      const h = new Humanoide(S), a = new Animateur(h, S); h.evitement = false; a.vivant = false; a.vitesse = 25; a.prendrePose("repos");
       await a.jouerGeste("reflechir", { tenir: true }); a.definirContacts(null);
       let t = 0; for (let i = 0; i < 200; i++) { t += 0.02; a.maj(0.02, t, B); }
       h.racine.updateMatrixWorld(true);

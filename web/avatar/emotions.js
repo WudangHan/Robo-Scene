@@ -108,7 +108,10 @@ export const GESTES = {
     if (dir === "gauche" || dir === "droite") { p["epaule_X.flexion"] = 20; p["epaule_X.abduction"] = 85; }
     return [{ t: 0, p, regard: dir === "devant" ? "public" : dir }];
   },
-  poing_leve: () => [{ t: 0, p: { "epaule_X.flexion": 165, "epaule_X.abduction": 15, "coude_X.flexion": 20, "main_X.fermeture": 100 }, au: { au4: 0.4, au24: 0.4 } }],
+  // (26 oct. 2026) bras levés : l'abduction s'applique après la flexion (ordre ZXY) ; au-delà de 90° de flexion,
+  // une abduction positive ramène le bras vers la tête. Bras tendu en l'air : abduction légèrement négative ;
+  // bras en V : grande abduction et petite flexion.
+  poing_leve: () => [{ t: 0, p: { "epaule_X.flexion": 165, "epaule_X.abduction": -8, "coude_X.flexion": 20, "main_X.fermeture": 100 }, au: { au4: 0.4, au24: 0.4 } }],
   main_coeur: () => [{ t: 0, p: { "epaule_d.flexion": 32, "epaule_d.rotation": 68, "coude_d.flexion": 118, "main_d.fermeture": 10, "tete.inclinaison": 8, "tete.flexion": 6 },
                        au: { au1: 0.4, au12: 0.3 } }],
   gratter_tete: (r) => [
@@ -188,7 +191,7 @@ Object.assign(GESTES, {
     { t: 0, p: { "epaule_X.flexion": 91, "epaule_X.abduction": -2, "epaule_X.rotation": 4, "coude_X.flexion": 118, "poignet_X.flexion": 34, "main_X.fermeture": 0, "tete.flexion": -4 } },
     finDe(1.9)],
   bras_au_ciel: () => [
-    { t: 0, p: { "epaule_g.flexion": 165, "epaule_d.flexion": 165, "epaule_g.abduction": 25, "epaule_d.abduction": 25, "coude_g.flexion": 10, "coude_d.flexion": 10,
+    { t: 0, p: { "epaule_g.flexion": 15, "epaule_d.flexion": 15, "epaule_g.abduction": 150, "epaule_d.abduction": 150, "coude_g.flexion": 10, "coude_d.flexion": 10,
                  "main_g.fermeture": 0, "main_d.fermeture": 0, "tete.flexion": -15 }, au: { au6: 0.8, au12: 1, au25: 0.8, au26: 0.4 } },
     finDe(2.2, {})],
   mains_jointes: () => [{ t: 0, p: { "epaule_g.flexion": 45, "epaule_d.flexion": 45, "epaule_g.rotation": 65, "epaule_d.rotation": 65, "coude_g.flexion": 115,
@@ -201,8 +204,9 @@ Object.assign(GESTES, {
     { t: 0, p: { "epaule_X.flexion": 40, "epaule_X.abduction": 10, "epaule_X.rotation": 30, "coude_X.flexion": 90, "main_X.fermeture": 0, "tete.rotation": 25 }, au: { au9: 0.4, au4: 0.4 } },
     ...osc(3 * r, 0.3, 0.4, { "epaule_X.abduction": 45, "poignet_X.flexion": -40 }, { "epaule_X.abduction": 10, "poignet_X.flexion": 20 }), finDe(0.6 + 0.9 * r, {})],
   chut: () => [{ t: 0, p: { "epaule_d.flexion": 68, "epaule_d.abduction": -10, "epaule_d.rotation": 57, "coude_d.flexion": 123, "poignet_d.flexion": -26, "main_d.fermeture": 75, pointe_d: 1 }, au: { au18: 0.7, au2: 0.3 } }, finDe(2.0, {})],
-  mains_dos: () => [{ t: 0, p: { "epaule_g.flexion": -30, "epaule_d.flexion": -30, "epaule_g.abduction": 5, "epaule_d.abduction": 5, "epaule_g.rotation": 40, "epaule_d.rotation": 40,
-                                 "coude_g.flexion": 70, "coude_d.flexion": 70, "tete.flexion": -4 } }],
+  // (26 oct. 2026) paumes derrière le bas du dos (angles obtenus par cinématique inverse sur le corps humain)
+  mains_dos: () => [{ t: 0, p: { "epaule_g.flexion": -50, "epaule_d.flexion": -50, "epaule_g.abduction": 14, "epaule_d.abduction": 14, "epaule_g.rotation": 61, "epaule_d.rotation": 61,
+                                 "coude_g.flexion": 65, "coude_d.flexion": 65, "tete.flexion": -4 } }],
   pouce_leve: () => [{ t: 0, p: { "epaule_X.flexion": 60, "coude_X.flexion": 80, "epaule_X.rotation": -20, "main_X.fermeture": 100 }, au: { au12: 0.7, au6: 0.4 } }, finDe(1.6, {})],
   se_designer: () => [{ t: 0, p: { "epaule_d.flexion": 35, "epaule_d.rotation": 70, "coude_d.flexion": 120, "main_d.fermeture": 80, pointe_d: 1, "tete.flexion": 10 }, au: { au1: 0.5, au2: 0.5 } }, finDe(1.6, {})],
   tete_mains: () => [{ t: 0, p: { "epaule_g.flexion": 105, "epaule_g.abduction": 64, "epaule_g.rotation": -63, "coude_g.flexion": 117, "poignet_g.flexion": 32, "epaule_d.flexion": 105, "epaule_d.abduction": 64, "epaule_d.rotation": -63, "coude_d.flexion": 117, "poignet_d.flexion": 32, "tete.flexion": 22, "tronc.flexion": 15 }, au: { au1: 0.8, au4: 0.6, au15: 0.7, au43: 0.5 } }],
@@ -343,7 +347,7 @@ Object.assign(POSES, {
   penseur: { "bassin.abaissement": 46, "hanche_g.flexion": 88, "hanche_d.flexion": 88, "genou_g.flexion": 88, "genou_d.flexion": 88, "hanche_g.abduction": 8, "hanche_d.abduction": 8,
              "tronc.flexion": 30, "tete.flexion": 10, "epaule_d.flexion": 101, "epaule_d.abduction": -10, "epaule_d.rotation": 70, "coude_d.flexion": 126, "poignet_d.flexion": 27, "main_d.fermeture": 70,
              "epaule_g.flexion": 30, "epaule_g.rotation": 50, "coude_g.flexion": 70 },
-  statue: { "epaule_d.flexion": 170, "epaule_d.abduction": 10, "coude_d.flexion": 5, "main_d.fermeture": 90, "epaule_g.flexion": 30, "epaule_g.rotation": 60, "coude_g.flexion": 100,
+  statue: { "epaule_d.flexion": 170, "epaule_d.abduction": -8, "coude_d.flexion": 5, "main_d.fermeture": 90, "epaule_g.flexion": 30, "epaule_g.rotation": 60, "coude_g.flexion": 100,
             "tete.flexion": -8, "hanche_g.flexion": 8, "genou_g.flexion": 6 },
 });
 

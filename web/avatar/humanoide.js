@@ -5,6 +5,7 @@
    photoréaliste, est volontaire (voir le guide : vallée de l'étrange). */
 import * as THREE from "three";
 import { DOIGTS, CAPTEURS, PAUME, OBJETS, cinematique, anglesPosture, poseObjet } from "./mains.js";
+import { GardeCorps } from "./garde.js";
 
 const R = THREE.MathUtils.degToRad;
 const lerp = THREE.MathUtils.lerp;
@@ -263,6 +264,8 @@ export class Humanoide {
     const neck = maille(new THREE.CylinderGeometry(0.046, 0.05, 0.11, 18), M.peau, "tete"); neck.position.y = 0.045; cou.add(neck);
     O.tete = groupe("tete", cou, 0, 0.085, 0.004);
     this.visage = new Visage(O.tete, M);
+    this.garde = new GardeCorps(this);
+    this._qz = new THREE.Quaternion();           // la main et l'avant-bras restent hors du corps (garde.js)
     for (const [s, x] of [["g", 1], ["d", -1]]) {
       const clav = (O[`clav_${s}`] = groupe(`clav_${s}`, poitrine, 0.04 * x, 0.22, 0));
       const ep = (O[`epaule_${s}`] = groupe(`epaule_${s}`, clav, 0.165 * x, 0, 0));
@@ -491,10 +494,7 @@ export class Humanoide {
     O.cou.rotation.set(R(hf * 0.4), R(hr * 0.35), -R(hi * 0.4));
     O.tete.rotation.set(R(hf * 0.6), R(hr * 0.65), -R(hi * 0.6));
     for (const [s, x] of [["g", 1], ["d", -1]]) {
-      O[`clav_${s}`].rotation.z = x * R(v(`epaule_${s}.haussement`) + Math.max(0, v(`epaule_${s}.abduction`) - 90) * 0.25);
-      const ep = O[`epaule_${s}`];
-      ep.rotation.set(-R(v(`epaule_${s}.flexion`)), -x * R(v(`epaule_${s}.rotation`)), x * R(v(`epaule_${s}.abduction`) + REPOS_BRAS));
-      O[`coude_${s}`].rotation.x = -R(v(`coude_${s}.flexion`) + REPOS_COUDE);
+      this.regleBras(s, P, [v(`epaule_${s}.flexion`), v(`epaule_${s}.abduction`), v(`epaule_${s}.rotation`), v(`coude_${s}.flexion`)], false);
       // poignet humain (25 oct. 2026) : pronation-supination de l'avant-bras (y), flexion-extension (z, vers la
       // paume), inclinaison radiale-cubitale (x) ; au repos, le pouce est devant et la paume tournée vers la cuisse
       O[`poignet_${s}`].rotation.set(R(v(`poignet_${s}.deviation`)), -x * R(v(`poignet_${s}.rotation`)), -x * R(v(`poignet_${s}.flexion`)));
@@ -515,6 +515,13 @@ export class Humanoide {
     }
     O.tabouret.visible = !!extra.tabouret;
     if (extra.ancrage !== false && !extra.tabouret) this.ancrer(P, extra);
+    // garde-corps (26 oct. 2026) : bras écarté du corps quand une pose ou un geste y ferait entrer la main
+    if (this.evitement !== false && extra.evitement !== false && !extra.sansHumain) {
+      const A = this.apparence;
+      this.garde.construire(`${this.humain?.visible ? "h" : "s"}|${A.taille}|${A.carrure}|${A.corpulence}|${A.age}`);
+      this.racine.updateMatrixWorld(true);
+      this.garde.eviter(P, Object.fromEntries((extra.contacts || []).map((c) => [c.s, c.poids ?? 1])));
+    }
     if (extra.contacts) this.toucherVisage(P, extra.contacts);
     if (this.humain?.visible && !extra.sansHumain) this.humain.maj();
   }
@@ -594,12 +601,21 @@ export class Humanoide {
       default: return main.localToWorld(v.set(0, -0.06, 0));
     }
   }
-  regleBras(s, P, q) {
-    const O = this.os, x = s === "g" ? 1 : -1;
-    O[`clav_${s}`].rotation.z = x * R((P[`epaule_${s}.haussement`] || 0) + Math.max(0, q[1] - 90) * 0.25);
-    O[`epaule_${s}`].rotation.set(-R(q[0]), -x * R(q[2]), x * R(q[1] + REPOS_BRAS));
+  /* Bras : clavicule (haussement + rythme scapulaire), épaule (flexion, rotation, abduction), coude. La part
+     scapulaire élève l'articulation de l'épaule sans changer la direction du bras commandée : l'épaule tourne
+     d'autant en sens inverse (sinon, bras levés, les deux bras se croisaient au-dessus de la tête). */
+  regleBras(s, P, q, maj = true) {
+    const O = this.os, x = s === "g" ? 1 : -1, sc = rythmeScapulaire(q[0], q[1]);
+    O[`clav_${s}`].rotation.z = x * R((P[`epaule_${s}.haussement`] || 0) + sc);
+    const ep = O[`epaule_${s}`];
+    // abduction structurelle toujours vers l'extérieur : + vers le bas, − bras levé (ordre ZXY : l'abduction
+    // s'applique après la flexion ; un décalage fixe penchait les bras levés vers la tête)
+    ep.rotation.set(-R(q[0]), -x * R(q[2]), x * R(q[1] + REPOS_BRAS * Math.cos(R(q[0]))));
+    if (sc) ep.quaternion.premultiply(this._qz.setFromAxisAngle(AXE_Z, -x * R(sc)));
     O[`coude_${s}`].rotation.x = -R(q[3] + REPOS_COUDE);
-    O[`clav_${s}`].updateMatrixWorld(true);
+    // poignet (contacts : la main se pose à plat) : flexion, inclinaison, rotation, comme dans appliquer()
+    if (q.length > 4) O[`poignet_${s}`].rotation.set(R(q[5]), -x * R(q[6]), -x * R(q[4]));
+    if (maj) O[`clav_${s}`].updateMatrixWorld(true);
   }
   toucherVisage(P, contacts) {
     const D = this.schema.dofs, f = this.visage.g;
@@ -612,35 +628,29 @@ export class Humanoide {
     for (const c of contacts) {
       const s = c.s, w = clamp(c.poids ?? 1, 0, 1);
       if (w < 0.01) continue;
-      const noms = ["flexion", "abduction", "rotation"].map((k) => `epaule_${s}.${k}`).concat([`coude_${s}.flexion`]);
+      // épaule, coude et poignet : le point de contact atteint sa cible, les autres points de la main et de
+      // l'avant-bras restent hors du corps (garde-corps) — la main se pose au lieu d'entrer dans la poitrine
+      const noms = ["flexion", "abduction", "rotation"].map((k) => `epaule_${s}.${k}`).concat([`coude_${s}.flexion`], ["flexion", "deviation", "rotation"].map((k) => `poignet_${s}.${k}`));
       const bornes = noms.map((n) => [D[n].min, D[n].max]);
       const q0 = noms.map((n) => P[n] || 0);
       const cible = (c.groupe === "poitrine" ? this.os.poitrine : f).localToWorld(new THREE.Vector3(...c.local));
-      const ecart = (q) => { this.regleBras(s, P, q); return cible.clone().sub(this.pointMain(s, c.point)); };
-      const delta = this.ikDelta[s] || [0, 0, 0, 0];
+      // repère tombé sous la peau (corps humain plus épais que le robot stylisé) : ramené à la surface + 6 mm
+      const sous = this.garde.segments ? this.garde.penetration(cible, 0.006) : null;
+      if (sous) cible.addScaledVector(sous.normale, sous.profondeur);
+      const delta = this.ikDelta[s]?.length === q0.length ? this.ikDelta[s] : q0.map(() => 0);
       let q = q0.map((v, i) => clamp(v + delta[i], bornes[i][0], bornes[i][1]));
-      for (let it = 0; it < 8; it++) {
-        const e = ecart(q);
-        if (e.length() < 0.004) break;
-        // Jacobien numérique (m par degré), puis pas des moindres carrés amortis : dq = Jᵀ (J Jᵀ + λ² I)⁻¹ e
-        const J = q.map((_, i) => {
-          const qq = q.slice(); qq[i] += 1;
-          return e.clone().sub(ecart(qq));                       // dérivée du point de la main (m/°)
-        });
-        const A = new THREE.Matrix3(), l2 = 0.006 * 0.006;
-        const m = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-        for (const j of J) { const a = [j.x, j.y, j.z]; for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) m[r * 3 + k] += a[r] * a[k]; }
-        m[0] += l2; m[4] += l2; m[8] += l2;
-        A.set(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8]).invert();
-        const y = e.clone().applyMatrix3(A);
-        q = q.map((v, i) => {
-          const d = clamp(J[i].dot(y), -20, 20);
-          return clamp(v + d, bornes[i][0], bornes[i][1]);
-        });
+      q = this.garde.resoudreBras(s, P, q, { cible, point: c.point, iterations: 14, marge: 0.004 });
+      // départ à chaud bloqué (main coincée contre le cou ou la poitrine) : nouvel essai depuis la pose voulue
+      if (this.garde.residu > 0.01) {
+        const r1 = this.garde.residu, q2 = this.garde.resoudreBras(s, P, q0.slice(), { cible, point: c.point, iterations: 14, marge: 0.004 });
+        if (this.garde.residu < r1) q = q2;
       }
       this.ikDelta[s] = q.map((v, i) => v - q0[i]);
-      // dosage : de la pose voulue (poids 0) à la pose de contact (poids 1)
-      this.regleBras(s, P, q0.map((v, i) => v + (q[i] - v) * w));
+      // dosage : de la pose voulue (poids 0) à la pose de contact (poids 1) ; pendant l'approche, le bras
+      // mélangé reste lui aussi hors du corps
+      let qm = q0.map((v, i) => v + (q[i] - v) * w);
+      if (w < 0.999 && this.garde.segments) qm = this.garde.resoudreBras(s, P, qm, { iterations: 8 });
+      this.regleBras(s, P, qm);
     }
   }
 
@@ -827,6 +837,15 @@ export class Humanoide {
     this.visage.g.updateWorldMatrix(true, false);
     return cible.set(0, 0.012, 0.08).applyMatrix4(this.visage.g.matrixWorld);
   }
+}
+
+/* Rythme scapulo-huméral (26 oct. 2026) : au-delà de 60° d'élévation du bras (devant ou sur le côté), l'omoplate
+   et la clavicule montent d'environ un quart de l'angle supplémentaire ; l'épaule se hausse, l'aisselle s'ouvre
+   au lieu de se pincer. (Inférence : rapport simplifié ; le rythme mesuré est voisin de 2:1 gléno-huméral/scapulaire.) */
+const AXE_Z = new THREE.Vector3(0, 0, 1);
+function rythmeScapulaire(flexion, abduction) {
+  const e = Math.max(flexion, abduction, Math.hypot(Math.max(0, flexion), Math.max(0, abduction)) * 0.8);
+  return Math.max(0, Math.min(e, 180) - 60) * 0.22;
 }
 
 /* Ruban plat (sangle) le long d'un chemin : largeur selon l'axe w, épaisseur vers l'extérieur du chemin. */
