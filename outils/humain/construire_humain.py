@@ -184,7 +184,9 @@ def galbe_masculin(v, corps, joints):
     hl, hr = joints["upperleg01.L"]["tete"], joints["upperleg01.R"]["tete"]
     idx = np.array(corps)
     P = v[idx]
-    milieu = (np.abs(P[:, 0]) < 0.006) & (P[:, 1] > hl[1] - 0.2) & (P[:, 1] < hl[1])
+    # sommets de la ligne médiane du maillage symétrique (x = 0 exactement) : les cuisses très musclées s'approchent
+    # du plan médian sans y être, et ne doivent pas être prises pour la fourche (26 oct. 2026)
+    milieu = (np.abs(P[:, 0]) < 1e-5) & (P[:, 1] > hl[1] - 0.2) & (P[:, 1] < hl[1])
     fourche = P[milieu, 1].min()                           # point le plus bas du bassin, entre les jambes
     pubis = milieu & (P[:, 1] < fourche + 0.07)
     zf = P[pubis, 2].max()                                 # avant du pubis
