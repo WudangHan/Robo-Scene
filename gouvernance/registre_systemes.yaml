@@ -71,6 +71,20 @@ systemes:
     mesures: "Aiguillage D03 ; clé d'un projet avec facturation SEULEMENT (services payants) ; paramètres appliqués consignés (température et top_p ignorés par Argon : écart consigné, A-08)"
     version_courante: gemini-4-argon ; gemini-3.8-flash
     statut: "Ajouté au code le 2026-10-20 ; inscription à la politique G.5 et fiche fournisseur F-11 à établir. Conditions additionnelles de l'API Gemini (maj. 2026-04-28) : services gratuits = échanges employés par Google et relus par des personnes, d'où l'interdiction du niveau gratuit ; services payants = pas d'emploi pour améliorer les produits, journalisation limitée dans le temps."
+  SI-11:
+    nom: "Synthèse vocale neuronale distante : Eleven v3 (ElevenLabs), voix neuronales d'Azure AI Speech (fr-CA), gpt-4o-mini-tts (OpenAI)"
+    fournisseur: "F-12 (ElevenLabs) ; F-13 (Microsoft Azure) ; F-08 (OpenAI)"
+    usage: "Voix humaine du partenaire, du robot virtuel, de la direction d'exercices et du robot physique (bridge/voix) ; répliques de pièces et consignes NON sensibles seulement (D03)"
+    risque: modere
+    mesures: "Aiguillage D03 avant tout envoi (contenu sensible : Piper local seulement, sinon voix locale du navigateur) ; aucune voix d'une personne réelle (voix de bibliothèque, aucun clonage) ; cache local avec métadonnées de provenance (moteur, modèle, voix, commande envoyée) ; journal de séance ; régime machinique jamais rendu par une voix neuronale"
+    statut: "Ajouté au code le 2026-10-31 ; inscription à la politique G.5 et fiches fournisseurs F-12 et F-13 à établir, conditions d'usage des données des éditeurs à vérifier avant tout usage avec des personnes participantes"
+  SI-12:
+    nom: "Piper (MIT ; voix VITS en ONNX), synthèse vocale locale hors ligne"
+    fournisseur: F-14
+    usage: "Repli local de SI-11 ; seul moteur vocal admis pour un contenu sensible (D03)"
+    risque: faible
+    mesures: "Exécution sur le poste du pont ; aucun texte ne quitte l'ordinateur ; licence de chaque voix à vérifier (siwis CC BY 4.0)"
+    statut: "Ajouté au code le 2026-10-31 ; inscription à la politique G.5 à établir"
 
 fournisseurs:
   F-01: Anthropic
@@ -82,3 +96,6 @@ fournisseurs:
   F-10: "xAI (Grok) — fiche fournisseur à établir"
   F-11: "Google (API Gemini, services payants) — fiche fournisseur à établir"
   F-08: "OpenAI — fiche v1.0 du 12 oct. 2026 (G5_Fiche_fournisseur_F-08_OpenAI_v1.0.docx)"
+  F-12: "ElevenLabs (Eleven v3) — fiche fournisseur à établir"
+  F-13: "Microsoft (Azure AI Speech) — fiche fournisseur à établir"
+  F-14: "Projet Piper (Open Home Foundation) et auteurs des voix — fiche à établir"

@@ -50,6 +50,9 @@ export class Parole {
     this.surBattement = null;     // rappel(forme) : battement sur un mot accentué
     this.surMot = null;
     this.choix = null;            // nom de voix imposé par l'utilisateur
+    this.energie = null;          // énergie du son neuronal en cours (0–1), null avec la voix du navigateur
+    this.lecteur = globalThis.VoixNeurale ? new globalThis.VoixNeurale.Lecteur() : null;
+    this.bloque = false;
     this.charger();
   }
   charger() {
@@ -64,7 +67,8 @@ export class Parole {
     return ca(masc) || masc[0] || ca(this.voix) || this.voix[0];
   }
   annuler() {
-    this.jeton++; this.actif = false; this.ligne = null;
+    this.jeton++; this.actif = false; this.ligne = null; this.energie = null;
+    this.lecteur?.annuler();
     try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
   }
   /* segments : [{texte, pause_apres_ms}] ; prosodie : {debit, hauteur, volume} */
@@ -102,6 +106,42 @@ export class Parole {
       if (j === this.jeton) speechSynthesis.speak(u); else { clearTimeout(garde); fin(); }
     });
   }
+  /* Son rendu par une voix neuronale : audio = {url, duree_ms, mots:[{mot, t_ms}]}. La bouche suit l'énergie
+     du signal (ouverture) et les visèmes de la graphie (forme) ; l'horloge des visèmes se recale sur le début
+     de chaque mot quand le moteur le fournit, sinon sur la durée réelle du son. Résout true (dit), false
+     (interrompu) ou "bloque" (le navigateur refuse la lecture faute d'interaction avec la page). */
+  async direAudio(audio, texte, { volume = 1 } = {}) {
+    if (!this.lecteur || !audio?.url) return false;
+    const j = ++this.jeton; this.actif = true; this.bloque = false;
+    try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
+    const mots = [...texte.matchAll(/[\p{L}\p{N}'’-]+/gu)].map((m) => ({ c: m.index, n: m[0].length, mot: m[0], fait: false }));
+    mots.forEach((m, k) => { const apres = texte.slice(m.c + m.n, m.c + m.n + 2); m.accent = m.n >= 7 || /[,;:!?]/.test(apres) || k === mots.length - 1; });
+    const dur = Math.max(400, audio.duree_ms || texte.length / 13.5 * 1000);
+    const ligne = (this.ligne = { texte, vis: visemes(texte), cps: texte.length / (dur / 1000) * 1.08, ancre: { c: 0, t: performance.now() }, mots, son: false });
+    // Débuts des mots (alignement du moteur) rapportés aux positions dans le texte
+    const reperes = [];
+    let k = 0;
+    for (const m of audio.mots || []) {
+      const plie = (x) => x.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+      while (k < mots.length && plie(mots[k].mot) !== plie(m.mot)) k++;
+      if (k < mots.length) { reperes.push({ c: mots[k].c, t_ms: m.t_ms }); k++; }
+    }
+    this.energie = null;
+    let t0 = performance.now();
+    const ok = await this.lecteur.jouer(audio.url, {
+      volume,
+      surDebut: () => { t0 = performance.now(); ligne.ancre = { c: 0, t: t0 }; ligne.son = true; },
+      surEnergie: (e) => {
+        if (j !== this.jeton) return;
+        this.energie = e;
+        const ecoule = performance.now() - t0;
+        while (reperes.length && reperes[0].t_ms <= ecoule) { const r = reperes.shift(); ligne.ancre = { c: r.c, t: t0 + r.t_ms }; }
+      },
+    });
+    if (!ok && this.lecteur.dernierBloque) { this.bloque = true; if (j === this.jeton) { this.actif = false; this.ligne = null; this.energie = null; } return "bloque"; }
+    if (j === this.jeton) { this.actif = false; this.ligne = null; this.energie = null; }
+    return ok && j === this.jeton;
+  }
   /* appelé à chaque image : renvoie la contribution de la bouche */
   maj(dt) {
     const cible = { jaw: 0, pucker: 0, stretch: 0, press: 0 };
@@ -110,6 +150,11 @@ export class Parole {
       const c = L.ancre.c + (performance.now() - L.ancre.t) / 1000 * L.cps;
       const v = L.vis.find((x) => c >= x.i && c < x.i + x.n);
       if (v && VIS[v.v]) Object.assign(cible, VIS[v.v]);
+      if (this.energie !== null) {                                // son neuronal : l'ouverture suit le signal
+        const e = Math.min(1, this.energie * 1.6);
+        if (e < 0.06) { cible.jaw = 0; cible.stretch *= 0.3; cible.pucker *= 0.5; }
+        else cible.jaw = Math.max(cible.press ? 0 : 0.08, (cible.jaw || 0.3) * (0.45 + 0.75 * e));
+      }
       for (const m of L.mots) if (!m.fait && c >= m.c) { m.fait = true; this.surMot?.(m); if (m.accent) this.surBattement?.(m); }
     }
     const k = 1 - Math.exp(-dt / 0.045);                         // lissage (coarticulation sommaire)

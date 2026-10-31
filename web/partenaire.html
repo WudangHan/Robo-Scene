@@ -23,6 +23,12 @@
     <label class="pastille neutre bascule" id="st-avatar" title="Le robot virtuel (page « Robot virtuel » ouverte dans ce navigateur) donne sa voix et son visage aux répliques du partenaire">
       <input type="checkbox" id="avatar-voix"> Robot virtuel <a href="/avatar" target="robo-scene-avatar" id="avatar-ouvrir">ouvrir</a>
     </label>
+    <label class="pastille neutre bascule" id="st-voix" title="Voix humaine : moteur neuronal dirigeable rendu par le pont (sinon voix du navigateur, une phrase à la fois)">
+      <input type="checkbox" id="voix-neurale" checked> Voix humaine <span id="voix-moteur">—</span>
+    </label>
+    <label class="pastille neutre bascule" id="st-voix-robot" title="Les répliques du partenaire sont jouées par le haut-parleur du robot physique (capacité « audio »)">
+      <input type="checkbox" id="voix-robot"> Voix sur le robot
+    </label>
     <label class="pastille neutre">Acteur
       <select id="acteur-courant"><option value="">— aucun —</option></select>
     </label>
@@ -112,6 +118,8 @@
         <label>Style <select id="r-style"></select></label>
         <label class="case"><input type="checkbox" id="r-consignes"> Consignes de jeu pour l'acteur (émotion et intensité)</label>
         <label class="case"><input type="checkbox" id="r-didas" checked> Lire les didascalies</label>
+        <label class="case"><input type="checkbox" id="r-prerendu" checked> Préparer d'avance la voix humaine de toutes les répliques du partenaire</label>
+        <p class="petit" id="r-voix-etat" aria-live="polite"></p>
         <fieldset><legend>Mesures (selon les consentements de l'acteur)</legend>
           <label class="case"><input type="checkbox" id="r-micro" checked> Détection vocale locale (latences, durées, pauses)</label>
           <label class="case"><input type="checkbox" id="r-stt"> Transcription (fidélité au texte)</label>
@@ -293,6 +301,7 @@
 <script src="/static/i18n.js"></script>
 <script src="/static/pont.js"></script>
 <script src="/static/voix-direction.js"></script>
+<script src="/static/voix-neurale.js"></script>
 <script src="/static/partenaire.js"></script>
 </body>
 </html>

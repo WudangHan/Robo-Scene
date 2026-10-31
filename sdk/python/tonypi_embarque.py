@@ -160,7 +160,7 @@ class TonyPi(PiloteRobot):
     propulsion = True
 
     def __init__(self, profil: dict, a_blanc: bool = False, dossier_actions: str = "/home/pi/TonyPi/ActionGroups",
-                 tts: str = "", capteurs: tuple[str, ...] = ()):
+                 tts: str = "", capteurs: tuple[str, ...] = (), lecteur: str = "aplay -q"):
         self.arts = profil["articulations"]
         self.articulations = [(a["nom"], float(a["min"]), float(a["max"]), float(a.get("repos", 0))) for a in self.arts]
         r = profil.get("robot", {})
@@ -169,6 +169,8 @@ class TonyPi(PiloteRobot):
         super().__init__()
         self.hw = Materiel(a_blanc, dossier_actions)
         self.tts = shlex.split(tts) if tts else []
+        self.lecteur = shlex.split(lecteur) if lecteur else []
+        self._son: subprocess.Popen | None = None
         self.ids_bus = [numero(a) for a in self.arts if genre(a) == "bus"]
         self.geste_en_cours: str | None = None
         self.marche: str | None = None
@@ -206,6 +208,8 @@ class TonyPi(PiloteRobot):
 
     def figer(self) -> None:
         self.marche = None
+        if getattr(self, "_son", None) and self._son.poll() is None:
+            self._son.terminate()                   # l'arrêt coupe aussi la voix en cours
         self.hw.figer(self.ids_bus)
         if self.geste_en_cours:
             self.evenement("geste", nom=self.geste_en_cours, etat="interrompu")
@@ -263,6 +267,20 @@ class TonyPi(PiloteRobot):
         if not self.tts or not texte.strip():
             return False
         subprocess.Popen([*self.tts, texte], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+
+    def jouer_audio(self, donnees: bytes, format: str, texte: str = "") -> bool:
+        """Voix neuronale rendue par le pont : fichier temporaire joué par le lecteur choisi (aplay pour le WAV)."""
+        if not self.lecteur or format not in ("wav", "mp3") or (format == "mp3" and self.lecteur[0] == "aplay"):
+            return False
+        import tempfile
+        if self._son and self._son.poll() is None:
+            self._son.terminate()                 # une nouvelle réplique coupe la précédente, comme sur scène
+        f = tempfile.NamedTemporaryFile(prefix="robo-voix-", suffix="." + format, delete=False)
+        f.write(donnees)
+        f.close()
+        self._son = subprocess.Popen(["sh", "-c", '"$@"; rm -f "$0"', f.name, *self.lecteur, f.name],
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return True
 
     def lumiere(self, m: dict[str, Any]) -> bool:
@@ -383,6 +401,7 @@ if __name__ == "__main__":
     ap.add_argument("--tcp", type=int, default=3333)
     ap.add_argument("--actions", default="/home/pi/TonyPi/ActionGroups")
     ap.add_argument("--tts", default="", help='commande de synthèse vocale, ex. "espeak-ng -v fr -s 150"')
+    ap.add_argument("--lecteur", default="aplay -q", help='lecteur des voix rendues par le pont (WAV), ex. "aplay -q" ; "" pour désactiver')
     ap.add_argument("--capteurs", default="", help="liste séparée par des virgules : ultrasons, toucher")
     ap.add_argument("--camera", type=int, default=0, help="port du flux MJPEG (0 : pas de flux)")
     ap.add_argument("--a-blanc", action="store_true")
@@ -390,5 +409,5 @@ if __name__ == "__main__":
     if a.camera:
         servir_mjpeg(a.camera)
     robot = TonyPi(charger_profil(a.profil), a.a_blanc, a.actions, a.tts,
-                   tuple(x.strip() for x in a.capteurs.split(",") if x.strip()))
+                   tuple(x.strip() for x in a.capteurs.split(",") if x.strip()), a.lecteur)
     robot.servir_tcp(a.tcp)

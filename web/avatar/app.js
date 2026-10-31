@@ -136,8 +136,31 @@ function appliquerApparence(cle, valeur, relatif) {
   ecrireLS("robo-scene-avatar-apparence", humain.apparence);
   majApparence();
 }
-async function parler(texte, { maniere = null, emotion = null, prosodieImposee = null, segments = null } = {}) {
+/* Voix humaine : son rendu par le pont (moteur neuronal) ; true, false ou "bloque" (lecture refusée). */
+async function parlerAudio(audio, texte, volume) {
+  sousTitre(texte);
+  ditsRecemment.push({ texte, t: Date.now() }); if (ditsRecemment.length > 6) ditsRecemment.shift();
+  dicteeRef?.suspendre();
+  let ok;
+  try { ok = await parole.direAudio(audio, texte, { volume }); }
+  finally { dicteeRef?.reprendre(); }
+  if (ok === "bloque") { sousTitre(""); journal({ html: "Son bloqué par le navigateur : cliquez une fois dans cette fenêtre pour autoriser la voix.", classe: "alerte" }); }
+  else if (ok) setTimeout(() => { if (!parole.actif) sousTitre(""); }, 900);
+  return ok;
+}
+async function parler(texte, { maniere = null, emotion = null, prosodieImposee = null, segments = null, audio = null } = {}) {
   const e = emotion || anim.emotion;
+  if (audio?.url) return parlerAudio(audio, texte || (segments || []).map((s) => s.texte).join(" "), prosodieImposee?.volume ?? 1);
+  if (!segments && !prosodieImposee && texte && VNa?.actif() && $("#voix-neurale").checked) {
+    const r = await VNa.rendre({ texte, role: "avatar", personnage: "robot virtuel",
+      variation: { emotion: e.nom, intensite: maniere === "crie" ? Math.max(9, e.intensite || 0) : (e.intensite ?? 5) },
+      marques: { chuchote: maniere === "chuchote" } }, 12000);
+    if (r?.statut === "audio") {
+      if (maniere === "crie") anim.battre(1.2);
+      const ok = await parlerAudio(r, texte, maniere === "chuchote" ? 0.6 : 1);
+      if (ok !== "bloque") return ok;
+    }
+  }
   const p = prosodieImposee || prosodie(e.nom, e.intensite);
   let { debit, hauteur, volume } = p;
   hauteur *= Number($("#voix-hauteur").value || 0.92);
@@ -717,15 +740,23 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ══════════ Pont local (facultatif) : journal, interprète Claude, jumeau du robot ══════════ */
+/* Voix humaine du robot virtuel (web/voix-neurale.js) : rendue par le pont, repli sur la voix du navigateur */
+const VNa = globalThis.VoixNeurale ? globalThis.VoixNeurale.creer({ envoyer: (op, d) => pont.envoyer(op, d) }) : null;
+if (VNa) {
+  VNa.surEtat = (m) => { $("#voix-neurale-etat").textContent = m.actif ? `moteur : ${m.actif}` : "aucun moteur disponible (voix du navigateur)"; };
+  $("#voix-neurale").checked = lireLS("robo-scene-avatar-voix-neurale", "1") !== "0";
+  $("#voix-neurale").onchange = (e) => ecrireLS("robo-scene-avatar-voix-neurale", e.target.checked ? "1" : "0");
+}
 const pont = {
   ws: null, ouvert: false, ia: false, cfg: null, attentes: new Map(), n: 0, estop: false,
   connecter() {
     const P = window.ROBO_PONT; if (!P) return;
     try { this.ws = new WebSocket(P.url); } catch (e) { return; }
-    this.ws.onopen = () => { this.ouvert = true; P.ouvert(); this.envoyer("p_avatar_etat"); this.dialogue?.pontOuvert(); majPont(); };
+    this.ws.onopen = () => { this.ouvert = true; P.ouvert(); this.envoyer("p_avatar_etat"); VNa?.demanderEtat(); this.dialogue?.pontOuvert(); majPont(); };
     this.ws.onclose = () => { this.ouvert = false; this.ia = false; P.ferme(); this.dialogue?.pontFerme(); majPont(); setTimeout(() => this.connecter(), 2500); };
     this.ws.onmessage = (ev) => {
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (VNa?.surMessage(m)) return;
       if (/^(ia_moteurs|ia_choix|dialogue|dialogue_refus|dialogue_oublier)$/.test(m.type)) { this.dialogue?.recevoir(m); return; }
       if (m.type === "config") { this.cfg = m; majPont(); }
       else if (m.type === "etat") { this.estop = !!(m.arret ?? m.estop); jumeau.surEtat(m); }
@@ -868,6 +899,10 @@ if (canal) {
       if (m.nom) $("#replique-perso").textContent = m.nom;
       let ok = true;
       if (r.parler === false) { sousTitre((r.segments || []).map((s) => s.texte).join(" ")); await attendre(r.duree_estimee_ms || 1500); }
+      else if (r.audio?.url) {
+        ok = await parler("", { segments: r.segments, audio: r.audio, prosodieImposee: { volume: m.volume ?? 1 } });
+        if (ok === "bloque") { canal.postMessage({ t: "fini", jeton: m.jeton, ok: false, bloque: true }); return; }
+      }
       else ok = await parler("", { segments: r.segments, prosodieImposee: { debit: r.debit || 1, hauteur: r.hauteur || 1, volume: m.volume ?? r.volume ?? 0.9, pause: 0 } });
       canal.postMessage({ t: "fini", jeton: m.jeton, ok });
     }

@@ -129,7 +129,8 @@
         <select id="replique-emotion" aria-label="Émotion de la réplique"></select>
         <button id="btn-dire" class="primaire">Dire</button><button id="btn-taire">Taire</button>
       </div>
-      <div class="ligne petit"><label for="voix">Voix</label><select id="voix"></select></div>
+      <div class="ligne petit"><label><input type="checkbox" id="voix-neurale" checked> Voix humaine neuronale (pont)</label> <span id="voix-neurale-etat" class="petit">—</span></div>
+      <div class="ligne petit"><label for="voix">Voix du navigateur (repli)</label><select id="voix"></select></div>
       <div class="ligne petit"><label for="voix-hauteur">Registre</label><input type="range" id="voix-hauteur" min="0.6" max="1.2" step="0.02" value="0.92"></div>
       <div class="ligne petit">
         <label><input type="checkbox" id="vivant" checked> présence vivante (respiration, regard, clignements)</label>
@@ -321,6 +322,7 @@
 
 <script src="/static/i18n.js"></script>
 <script src="/static/pont.js"></script>
+<script src="/static/voix-neurale.js"></script>
 <script type="module" src="/static/avatar/app.js"></script>
 </body>
 </html>

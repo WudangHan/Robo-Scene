@@ -31,7 +31,7 @@ langage = "python"
 simulation = true            # jusqu'au relevé servo par servo (sens, bornes) à réception du robot
 actif = true
 sequences = "tonypi-pro"
-capacites = ["batterie", "distance", "imu", "chute", "toucher", "manette", "lumiere", "dire", "camera", "gestes_natifs"]
+capacites = ["batterie", "distance", "imu", "chute", "toucher", "manette", "lumiere", "dire", "audio", "camera", "gestes_natifs"]
 notes = "Bipède : l'arrêt fige les servos à leur position (jamais de coupure du couple) et interrompt le geste natif en cours ; la marche n'existe que par les gestes natifs de Hiwonder."
 gestes_natifs = [
   "stand", "stand_slow", "wave", "bow", "chest", "twist", "squat", "left_hand", "right_hand", "lift_left_hand",

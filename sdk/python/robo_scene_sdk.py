@@ -12,6 +12,8 @@ Deux façons de le relier au pont :
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import socket
 import sys
@@ -56,6 +58,11 @@ class PiloteRobot:
 
     def dire(self, texte: str) -> bool:
         """Synthèse vocale embarquée (v2) ; renvoyer False si le robot n'en dispose pas."""
+        return False
+
+    def jouer_audio(self, donnees: bytes, format: str, texte: str = "") -> bool:
+        """Son déjà rendu par le pont (voix neuronale du partenaire, v2.2) : le jouer sur le haut-parleur du robot.
+        Renvoyer False si le robot ne sait pas jouer de son (le pont se rabat alors sur « dire »)."""
         return False
 
     def lumiere(self, m: dict[str, Any]) -> bool:
@@ -105,7 +112,7 @@ class PiloteRobot:
             self.figer()
         elif t == "reset":
             self.estop = False
-        elif t in ("servos", "drive", "geste", "dire") and self.estop:
+        elif t in ("servos", "drive", "geste", "dire", "audio") and self.estop:
             self._envoyer({"t": "err", "msg": "estop"})
         elif t == "servos":
             deg = m.get("deg", [])
@@ -126,6 +133,15 @@ class PiloteRobot:
         elif t == "dire":
             if not self.dire(str(m.get("texte", ""))[:500]):
                 self._envoyer({"t": "err", "msg": "synthèse vocale embarquée indisponible", "niveau": "info"})
+        elif t == "audio":
+            try:
+                donnees = base64.b64decode(str(m.get("b64", "")), validate=True)
+            except (ValueError, binascii.Error):
+                donnees = b""
+            if not donnees or not self.jouer_audio(donnees, str(m.get("format", "wav")), str(m.get("texte", ""))[:500]):
+                # repli : synthèse embarquée du texte, s'il y en a une
+                if not (m.get("texte") and self.dire(str(m["texte"])[:500])):
+                    self._envoyer({"t": "err", "msg": "lecture audio indisponible", "niveau": "info"})
         elif t == "lumiere":
             if not self.lumiere(m):
                 self._envoyer({"t": "err", "msg": "lumières non prises en charge", "niveau": "info"})

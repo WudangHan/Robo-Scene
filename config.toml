@@ -68,6 +68,54 @@ regime = "humain"                  # "humain" (émulation) ou "machinique" (qual
 souffleur_delai_s = 4.0            # silence de l'acteur avant que le souffleur donne le début de la réplique
 fin_replique_silence_ms = 1200     # silence qui marque la fin d'une réplique de l'acteur
 
+[voix]
+# Voix humaine du partenaire, du robot virtuel, de la direction d'exercices et du robot physique (bridge/voix).
+# Moteurs neuronaux « dirigeables » essayés dans cet ordre ; un moteur sans clé ou sans voix configurée est sauté.
+# Clés à placer dans l'environnement du pont, jamais dans ce fichier :
+#   ELEVENLABS_API_KEY · AZURE_SPEECH_KEY (+ AZURE_SPEECH_REGION) · OPENAI_API_KEY
+# Un contenu sensible (D03 : nom de la liste de blocage, courriel, téléphone, mention confidentielle) ne part
+# jamais vers un moteur distant : seul Piper (local) est admis, sinon la voix locale du navigateur.
+ordre = ["elevenlabs", "azure", "openai", "piper"]
+langue = "fr-CA"
+dossier_cache = "voix/cache"        # sous [donnees].dossier ; une réplique déjà rendue ne coûte plus rien
+prerendu = true                     # rendre toutes les répliques du partenaire dès le début de la répétition
+
+[voix.elevenlabs]                   # Eleven v3 : le jeu le plus expressif (balises [soupire], [chuchote]…)
+modele = "eleven_v3"
+# Identifiants de voix de VOTRE bibliothèque ElevenLabs (choisir des voix québécoises) ; vide = moteur sauté
+voix_partenaire = []                # ex. ["identifiant_voix_1", "identifiant_voix_2"] : une par personnage
+voix_avatar = []
+[voix.elevenlabs.direction]         # profils de la direction d'exercices → identifiant de voix
+
+[voix.azure]                        # voix neuronales natives du Québec, réglées phrase par phrase (SSML)
+region = "canadacentral"            # ou AZURE_SPEECH_REGION
+voix_partenaire = ["fr-CA-ThierryNeural", "fr-CA-SylvieNeural", "fr-CA-AntoineNeural", "fr-CA-JeanNeural"]
+voix_avatar = ["fr-CA-AntoineNeural"]
+[voix.azure.direction]
+mathilde = "fr-CA-SylvieNeural"
+etienne = "fr-CA-ThierryNeural"
+sophie = "fr-FR-DeniseNeural"
+gabriel = "fr-CA-JeanNeural"
+claire = "fr-FR-EloiseNeural"
+laurent = "fr-FR-HenriNeural"
+
+[voix.openai]                       # gpt-4o-mini-tts : consigne de jeu en langage naturel (accent demandé)
+modele = "gpt-4o-mini-tts"
+accent = "québécois"
+voix_partenaire = ["ash", "coral", "onyx", "sage"]
+voix_avatar = ["ash"]
+[voix.openai.direction]
+mathilde = "coral"
+etienne = "onyx"
+sophie = "nova"
+gabriel = "sage"
+claire = "shimmer"
+laurent = "ash"
+
+[voix.piper]                        # local et hors ligne : pip install piper-tts ; voix de France seulement
+dossier_modeles = "~/.local/share/piper"
+voix_partenaire = []                # ex. ["fr_FR-tom-medium", "fr_FR-siwis-medium"]
+
 # ─────────────────────────────────────────────────────────────
 #  Plateforme intégrée (cahier des fonctions v1.0)
 # ─────────────────────────────────────────────────────────────

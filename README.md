@@ -176,7 +176,7 @@ Ouvrir <http://127.0.0.1:8765/partenaire> (lien « Partenaire » dans l'en-tête
 | Onglet | Rôle |
 |---|---|
 | **Formation** | Les 97 exercices du *Livret d'exercices pour acteurs* (trois années), restitués tels quels : fiche technique, déroulement minuté, variantes, note pédagogique. Le partenaire guide l'exercice à voix haute avec minuteurs ; le robot peut l'accompagner (souffle en quatre temps, immobilité, miroir lent). Séance type composée selon la structure du livret, calendrier de progression, grille d'auto-évaluation hebdomadaire. |
-| **Répétition** | Le partenaire donne les répliques des autres rôles (voix de synthèse, une voix par personnage) et écoute l'acteur. Il souffle le début de la réplique après un silence réglable ; il propose une mémorisation progressive (texte, initiales, premier mot, masqué). Mesures : reprise de réplique, durée, pauses, débit, intensité, fidélité au texte. Trajectoire longitudinale des passages. |
+| **Répétition** | Le partenaire donne les répliques des autres rôles (voix humaine neuronale pré-rendue, une voix par personnage ; voir « Voix humaine ») et écoute l'acteur. Il souffle le début de la réplique après un silence réglable ; il propose une mémorisation progressive (texte, initiales, premier mot, masqué). Mesures : reprise de réplique, durée, pauses, débit, intensité, fidélité au texte. Trajectoire longitudinale des passages. |
 | **Variations** | Pour chaque réplique : indices textuels (didascalies, lexique, ponctuation) et trois propositions — lecture du texte, contre-emploi, mélange de deux affects (exercice 5.3 du livret) — avec intensité de 1 à 10 et cinq styles (exercice 6.3). Deux régimes de rendu : **émulation humaine** (prosodie et posture) ou **voie machinique** (facteurs d'effort de Laban — poids, temps, espace, flux — et voix aplatie ou signal tonal sans mots). L'effort peut être composé directement, sans étiquette émotionnelle. |
 | **Analyse de pièce** | Distribution de la parole, réseau de coprésence, matrice des configurations, stichomythies, tirades, fiche de personnage (questions de Stanislavski et quatre couches du livret). Lecture interprétative (fable, modèle actantiel, enjeux, pistes de jeu, place du robot) avec une clé API ; les citations non retrouvées mot pour mot dans la pièce sont retirées. |
 | **Répertoire** | Recherche croisée dans DraCor (24 corpus, dont 1 940 pièces françaises et Shakespeare) par nombre d'hommes, de femmes, de personnages, genre et époque, puis import du texte intégral avec sa licence. Import de vos propres textes (collage, .txt, .docx). Liens vers les catalogues CEAD, Playwrights Guild of Canada, Le Proscenium, Théâtre-contemporain.net, Doollee et Folger Shakespeare. |
@@ -190,6 +190,25 @@ Ouvrir <http://127.0.0.1:8765/partenaire> (lien « Partenaire » dans l'en-tête
 - La **transcription** utilise la reconnaissance vocale du navigateur ; le partenaire exige le traitement local lorsque le navigateur l'offre (`processLocally`). Sinon, selon le navigateur, l'audio peut être traité par un service distant ; c'est pourquoi elle exige un consentement distinct.
 - La **caméra** (expérimentale) estime la pose avec MediaPipe dans le navigateur ; le modèle se télécharge depuis Internet au premier usage ; seules des grandeurs cinématiques sont conservées.
 - Les voix disponibles dépendent du système (sur macOS : Réglages Système › Accessibilité › Contenu énoncé, pour ajouter des voix françaises du Canada ou de France).
+
+### Voix humaine (moteurs neuronaux dirigeables)
+
+La voix du navigateur hachait les répliques : chaque virgule ouvrait un nouvel énoncé, et l'émotion se réduisait à trois curseurs fixés pour toute la réplique. Le module `bridge/voix` la remplace par une **partition prosodique** (`partition.py`) : une phrase par énoncé, type intonatif (assertion, question, exclamation, suspension), arc de la réplique (la colère monte, la tristesse s'éteint), débit, hauteur et intensité propres à chaque phrase, qualité de voix (pleine, soufflée, chuchotée, brisée, éclatante), respirations et mot d'insistance. La partition est traduite pour chaque moteur :
+
+| Moteur (`[voix].ordre`) | Clé dans l'environnement du pont | Ce qui est envoyé |
+|---|---|---|
+| **ElevenLabs, Eleven v3** — le jeu le plus expressif | `ELEVENLABS_API_KEY` + identifiants de voix dans `[voix.elevenlabs]` | texte balisé (`[sighs]`, `[whispers]`, `[angry]`…), vitesse et stabilité ; alignement des mots pour les lèvres |
+| **Azure AI Speech** — voix québécoises natives (Thierry, Sylvie, Antoine, Jean) | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | SSML phrase par phrase (prosodie, insistance, silences) |
+| **OpenAI, gpt-4o-mini-tts** | `OPENAI_API_KEY` | consigne de jeu en langage naturel (accent québécois, état, arc, insistances) |
+| **Piper** — local, hors ligne, voix de France | aucune (`pip install piper-tts` et un modèle `.onnx`) | une synthèse par phrase, tempo et variabilité réglés |
+
+- Le moteur actif s'affiche dans l'en-tête (« Voix humaine · azure ») ; décocher la case revient à la voix du navigateur, désormais dite **une phrase à la fois**.
+- **Pré-rendu** : au début d'une répétition, toutes les répliques du partenaire sont rendues d'avance et rangées dans `donnees/voix/cache/` ; une réplique déjà rendue se rejoue sans délai, sans coût et toujours identique (séances comparables).
+- **Aiguillage D03** : un contenu sensible ne part jamais vers un moteur distant (Piper seulement, sinon voix locale du navigateur). Le régime machinique n'est jamais rendu par une voix neuronale.
+- **Distribution** : une voix par personnage (attribution automatique, ou opération `voix_distribuer`) ; les six profils de la direction d'exercices ont leur voix par moteur (`[voix.<moteur>.direction]`).
+- **Robot virtuel** : il joue le son rendu ; la bouche suit l'énergie du signal et, avec Eleven v3, le début réel de chaque mot. Sa propre parole (directives, dialogue) passe aussi par la voix humaine.
+- **Robot physique** : case « Voix sur le robot » ; le son est envoyé au robot (`{"t": "audio", "b64": …}`) s'il déclare la capacité `audio`, sinon il est dit par sa synthèse embarquée. Sur le TonyPi Pro, recopier `sdk/python/robo_scene_sdk.py` et `tonypi_embarque.py` (option `--lecteur "aplay -q"`).
+- Chaque son porte ses métadonnées de provenance (moteur, modèle, voix, commande envoyée) : registre des systèmes SI-11 et SI-12.
 
 ### Incarnation robotique
 

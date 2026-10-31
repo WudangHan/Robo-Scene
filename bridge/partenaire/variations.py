@@ -248,11 +248,25 @@ def rendu_voix(texte: str, v: dict[str, Any], regime: str = "humain",
     if marques.get("aparte") or marques.get("chuchote"):
         volume -= 0.3
     debit = round(min(1.6, max(0.6, debit)), 2)
-    segs = _segments(texte, pause)
-    duree = sum(syllabes(s["texte"]) for s in segs) / (5.2 * debit) * 1000 + sum(s["pause_apres_ms"] for s in segs)
-    return {"parler": bool(st["voix"]), "debit": debit, "hauteur": round(min(1.6, max(0.4, hauteur)), 2),
-            "volume": round(min(1.0, max(0.15, volume)), 2), "type_voix": regime,
-            "segments": segs, "duree_estimee_ms": int(duree)}
+    hauteur = round(min(1.6, max(0.4, hauteur)), 2)
+    volume = round(min(1.0, max(0.15, volume)), 2)
+    partition = None
+    if regime == "machinique":
+        segs = _segments(texte, pause)      # voie tonale : une impulsion par syllabe, la découpe fine lui convient
+    else:
+        # Voix humaine : partition prosodique (bridge/voix/partition.py) — un énoncé par PHRASE, jamais par
+        # virgule (chaque énoncé repartait de zéro et hachait la réplique), prosodie propre à chaque phrase.
+        from ..voix import partition as P
+        partition = P.construire(texte, {**v, "_pause": pause}, regime=regime, marques=marques,
+                                 base={"debit": debit, "hauteur": hauteur, "volume": volume})
+        segs = P.vers_navigateur(partition)
+    duree = sum(syllabes(s["texte"]) / (5.2 * s.get("debit", debit)) * 1000 + s["pause_apres_ms"] for s in segs)
+    r = {"parler": bool(st["voix"]), "debit": debit, "hauteur": hauteur, "volume": volume, "type_voix": regime,
+         "segments": segs, "duree_estimee_ms": int(duree)}
+    if partition is not None:
+        r["partition"] = partition
+        r["marques"] = marques
+    return r
 
 
 CANON = {"base": ("base", "socle", "rotation", "taille"), "epaule": ("epaule", "bras", "shoulder"),

@@ -18,10 +18,11 @@ const cachePieces = new Map();
 
 function connecter() {
   ws = new WebSocket(window.ROBO_PONT.url);
-  ws.onopen = async () => { window.ROBO_PONT.ouvert(); await chargerEtat(); };
+  ws.onopen = async () => { window.ROBO_PONT.ouvert(); VN.demanderEtat(); await chargerEtat(); };
   ws.onclose = () => { window.ROBO_PONT.ferme(); majLien("interface"); setTimeout(connecter, 1500); };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
+    if (VN.surMessage(m)) return;
     if (m.type === "etat") return surEtatRobot(m);
     if (m.type === "journal" && (m.niveau === "alerte" || m.niveau === "refus")) return toast(m.msg);
     if (m.type === "p_erreur") {
@@ -33,6 +34,20 @@ function connecter() {
   };
 }
 function envoyer(op, data = {}) { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ op, ...data })); }
+/* Voix humaine : moteur neuronal du pont (web/voix-neurale.js) */
+const VN = VoixNeurale.creer({ envoyer });
+VN.surEtat = (m) => {
+  const ok = VN.actif(), voulu = $("#voix-neurale").checked;
+  const lib = (m.moteurs || []).find((x) => x.id === m.actif);
+  $("#voix-moteur").textContent = m.actif ? `· ${m.actif}` : "· navigateur";
+  $("#st-voix").className = "pastille bascule " + (ok ? "ok" : voulu ? "avert" : "neutre");
+  $("#st-voix").title = ok ? `Voix humaine : ${lib?.libelle || m.actif} (cache local, pré-rendu des répliques)`
+    : "Aucun moteur neuronal disponible : " + (m.moteurs || []).map((x) => `${x.id} (${x.motif || x.derniere_erreur || "?"})`).join(", ")
+      + ". Voix du navigateur, une phrase à la fois. Voir config.toml [voix].";
+};
+try { $("#voix-neurale").checked = localStorage.getItem("robo-scene-voix-neurale") !== "0"; } catch (e) {}
+VN.actifVoulu = $("#voix-neurale").checked;
+$("#voix-neurale").onchange = (e) => { VN.actifVoulu = e.target.checked; try { localStorage.setItem("robo-scene-voix-neurale", e.target.checked ? "1" : "0"); } catch (x) {} VN.etat && VN.surEtat(VN.etat); };
 function demander(op, data = {}) {
   return new Promise((ok, ko) => {
     if (!enAttente.has(op)) enAttente.set(op, []);
@@ -147,7 +162,7 @@ const Avatar = {
     this.canal.onmessage = (ev) => {
       const m = ev.data || {};
       if (m.t === "pong") { this.vu = Date.now(); this.maj(); }
-      if (m.t === "fini" && this.attentes.has(m.jeton)) { this.attentes.get(m.jeton)(); this.attentes.delete(m.jeton); }
+      if (m.t === "fini" && this.attentes.has(m.jeton)) { this.attentes.get(m.jeton)(m); this.attentes.delete(m.jeton); }
     };
     try { $("#avatar-voix").checked = localStorage.getItem("robo-scene-avatar-voix-partenaire") === "1"; } catch (e) {}
     $("#avatar-voix").onchange = (e) => { try { localStorage.setItem("robo-scene-avatar-voix-partenaire", e.target.checked ? "1" : "0"); } catch (x) {} this.maj(); };
@@ -164,18 +179,18 @@ const Avatar = {
   dire(rendu, opts) {
     const jeton = ++this.jeton;
     return new Promise((fin) => {
-      const garde = setTimeout(() => { this.attentes.delete(jeton); fin(); }, (rendu.duree_estimee_ms || 3000) * 2 + 4000);
-      this.attentes.set(jeton, () => { clearTimeout(garde); fin(); });
+      const garde = setTimeout(() => { this.attentes.delete(jeton); fin({}); }, Math.max(rendu.audio?.duree_ms || 0, rendu.duree_estimee_ms || 3000) * 2 + 4000);
+      this.attentes.set(jeton, (m) => { clearTimeout(garde); fin(m || {}); });
       this.canal.postMessage({ t: "dire", jeton, rendu, volume: opts.volume, variation: opts.variation || null, nom: opts.nom || null });
     });
   },
-  taire() { if (this.canal) this.canal.postMessage({ t: "taire" }); for (const f of this.attentes.values()) f(); this.attentes.clear(); },
+  taire() { if (this.canal) this.canal.postMessage({ t: "taire" }); for (const f of this.attentes.values()) f({}); this.attentes.clear(); },
 };
 Avatar.init();
 
 /* ══════════ Voix : synthèse, voix machinique, signal tonal ══════════ */
 const Voix = {
-  voix: [], jeton: 0, audio: null,
+  voix: [], jeton: 0, audio: null, lecteur: new VoixNeurale.Lecteur(),
   charger() {
     const lire = () => { this.voix = (speechSynthesis.getVoices() || []).filter((v) => v.lang && v.lang.toLowerCase().startsWith("fr")); };
     if ("speechSynthesis" in window) { lire(); speechSynthesis.onvoiceschanged = lire; }
@@ -189,6 +204,7 @@ const Voix = {
   annuler() {
     this.jeton++;
     Avatar.taire();
+    this.lecteur.annuler();
     if ("speechSynthesis" in window) speechSynthesis.cancel();
     if (this.audio) { try { this.audio.close(); } catch (e) {} this.audio = null; }
   },
@@ -198,6 +214,9 @@ const Voix = {
   async dire(rendu, { indexVoix = 0, tonale = false, volume = null, variation = null, nom = null, direction = false, voixObjet = null } = {}) {
     const j = ++this.jeton;
     if (direction) tonale = false;
+    // Voix humaine neuronale (pont) : réplique jouée, non lue ; repli sur le navigateur si indisponible
+    if (!tonale && rendu.parler && (rendu.partition || direction) && await this.neurale(rendu, j, { indexVoix, volume, variation, nom, direction })) return;
+    if (j !== this.jeton) return;
     if (!tonale && !direction && Avatar.actif()) { await Avatar.dire(rendu, { volume, variation, nom }); return; }   // le robot virtuel parle
     if (!rendu.parler) { await attendre(rendu.duree_estimee_ms); return; }     // film muet : le texte s'affiche, le corps joue
     if (tonale) return this.tonale(rendu, j);
@@ -219,6 +238,37 @@ const Voix = {
       }
       if (seg.pause_apres_ms) await attendre(seg.pause_apres_ms);
     }
+  },
+  /* Vrai si la réplique a été dite (ou annulée) par la voie neuronale ; faux pour passer au repli. */
+  async neurale(rendu, j, { indexVoix = 0, volume = null, variation = null, nom = null, direction = false }) {
+    if (!VN.actif() || (direction && Direction.reglages.localesSeulement)) return false;
+    const texte = VoixNeurale.texteDe(rendu);
+    if (!texte) return false;
+    let a = rendu.audio && rendu.audio.url ? rendu.audio : null;
+    if (!a) {
+      const demande = direction
+        ? { texte, role: "direction", profil: rendu.profil || Direction.reglages.profil, personnage: `direction:${rendu.profil || Direction.reglages.profil}` }
+        : { texte, variation, regime: rendu.type_voix || "humain", marques: rendu.marques || null, personnage: nom || "",
+            indice: Math.max(0, indexVoix - 1), base: { debit: rendu.debit, hauteur: rendu.hauteur, volume: rendu.volume } };
+      const r = await VN.rendre(demande, 20000);
+      if (j !== this.jeton) return true;
+      if (!r || r.statut !== "audio") { if (r?.motif) $("#r-voix-etat").textContent = `Voix du navigateur : ${r.motif}`; return false; }
+      a = r;
+    }
+    if (j !== this.jeton) return true;
+    if (!direction && $("#voix-robot").checked) {           // le robot physique joue le son sur son haut-parleur
+      VN.surRobot(a.cle, texte);
+      await attendre((a.duree_ms || rendu.duree_estimee_ms || 2000) + 250);
+      return true;
+    }
+    if (!direction && Avatar.actif()) {
+      const m = await Avatar.dire({ ...rendu, audio: a }, { volume, variation, nom });
+      if (!m.bloque || j !== this.jeton) return true;
+      toast("Le robot virtuel ne peut pas encore jouer de son : cliquez une fois dans sa fenêtre. Le son est joué ici.", "info");
+    }
+    const ok = await this.lecteur.jouer(a.url, { volume: volume ?? 1, analyser: false });
+    if (!ok && this.lecteur.dernierBloque) toast("Le navigateur bloque la lecture du son : cliquez dans la page, puis relancez.", "info");
+    return ok || j !== this.jeton;
   },
   /* Voie non anthropomorphe : une impulsion sonore par syllabe ; le rythme suit l'effort de temps,
      l'enveloppe suit le flux (contenu = détaché, libre = lié), la hauteur glisse selon l'espace. */
@@ -678,6 +728,18 @@ const Repetition = {
     if (acteur && !consent.mesures_vocales) toast("Sans consentement « mesures vocales », ce passage ne sera pas conservé.");
     this.plan = await demander("p_repet_demarrer", { piece: $("#r-piece").value, roles, scenes, niveau: +$("#r-niveau").value, souffleur_delai_s: +$("#r-souffleur").value,
       variation_mode: $("#r-varmode").value, regime: $("#r-regime").value, style: $("#r-style").value, consignes: $("#r-consignes").checked, acteur });
+    VN.oublier();
+    if (VN.actif() && $("#r-prerendu").checked && !this.options.tonale) {
+      const items = VoixNeurale.itemsRepetition(this.plan);
+      if (items.length) {
+        $("#r-voix-etat").textContent = `Voix humaine : préparation de ${items.length} réplique(s)…`;
+        VN.prerendre(items, (m) => {
+          $("#r-voix-etat").textContent = m.fait >= m.total
+            ? `Voix humaine prête : ${m.total} réplique(s) (${VN.moteur()}), rejouées depuis le cache local.`
+            : `Voix humaine : ${m.fait}/${m.total} réplique(s) prête(s)${m.statut === "repli" && m.motif ? ` — ${m.motif}` : ""}`;
+        });
+      }
+    } else $("#r-voix-etat").textContent = VN.actif() ? "" : "Voix du navigateur (aucun moteur neuronal disponible).";
     if (this.options.micro) this.options.micro = await Micro.demarrer();
     if (this.options.camera) this.options.camera = await Camera.demarrer();
     this.actif = true; this.i = 0; this.enPause = false; this.finCue = performance.now();
@@ -700,7 +762,7 @@ const Repetition = {
         $("#r-precedent").innerHTML = `<span class="nom">${echapper(it.nom)} · ${echapper(it.variation.etiquette)}</span>${echapper(it.texte)}${it.didascalies.length ? ` <span class="didascalie">(${it.didascalies.map(echapper).join(" ; ")})</span>` : ""}`;
         Micro.muet = true;
         envoyer("p_repet_geste", { replique: it.id, variation: it.variation, duree_ms: it.voix.duree_estimee_ms });
-        await Voix.dire({ ...it.voix, effort: it.effort }, { indexVoix: 1 + persos.indexOf(it.perso), tonale: this.options.tonale, variation: it.variation, nom: it.nom });
+        await Voix.dire({ ...it.voix, effort: it.effort, audio: VN.prerendu(it.id) }, { indexVoix: 1 + persos.indexOf(it.perso), tonale: this.options.tonale, variation: it.variation, nom: it.nom });
         await attendre(150); Micro.muet = false;
         this.finCue = performance.now();
       } else {

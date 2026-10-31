@@ -53,6 +53,10 @@ class Controleur:
         self.dossier_sequences = ds if ds.is_absolute() else RACINE / ds
         self.service = ServiceModeles(cfg.get("modeles", {}), self.donnees)
         self.dialogue = Dialogue(self.service)
+        # Voix humaine (partenaire, robot virtuel, direction, robot physique) : même aiguillage D03 que les modèles
+        from .voix import ServiceVoix
+        self.voix = ServiceVoix(cfg.get("voix", {}), self.donnees, routeur=self.service.routeur,
+                                journal=lambda action, **d: self.seance.evenement(action, **d))
         # ── Flotte ──
         self.robots: dict[str, RobotConnecte] = {}
         d0 = depuis_config_console(cfg)
@@ -267,16 +271,42 @@ class Controleur:
         await r.envoyer({"t": "geste_arret"})
         self.seance.evenement("cmd", type="geste_natif_arret", robot=r.id)
 
-    async def cmd_dire(self, texte: str, origine: str, robot: str | None = None) -> None:
+    async def cmd_dire(self, texte: str, origine: str, robot: str | None = None,
+                       variation: dict[str, Any] | None = None) -> None:
         r = self._r(robot)
         r.securite._verifier_arme()
         texte = str(texte or "").strip()[:500]
         if not texte:
             return
+        if "audio" in r.desc.capacites:
+            rendu = await self.voix.rendre(texte, variation, role="robot", personnage=r.id)
+            if rendu["statut"] == "audio" and await self.cmd_audio(rendu["cle"], origine, robot):
+                return
         if "dire" not in r.desc.capacites:
             raise CommandeRefusee(f"{r.id} ne déclare pas de voix embarquée")
         await r.envoyer({"t": "dire", "texte": texte})
         self.seance.evenement("cmd", type="dire", robot=r.id, origine=origine, texte=texte)
+
+    async def cmd_audio(self, cle: str, origine: str, robot: str | None = None) -> bool:
+        """Envoie au robot physique un son déjà rendu (cache vocal) : le robot le joue sur son haut-parleur.
+        Faux si le robot ne déclare pas la capacité « audio » ou si le son est absent ou trop lourd."""
+        r = self._r(robot)
+        r.securite._verifier_arme()
+        if "audio" not in r.desc.capacites:
+            return False
+        meta = self.voix._depuis_cache(str(cle or ""))
+        if not meta:
+            return False
+        donnees = (self.voix.cache / meta["fichier"]).read_bytes()
+        if len(donnees) > 4 * 1024 * 1024:
+            await self.log(f"{r.id} : son trop long pour la liaison du robot ({len(donnees) // 1024} ko)", "avert")
+            return False
+        import base64
+        await r.envoyer({"t": "audio", "format": meta["format"], "texte": meta.get("texte", "")[:500],
+                         "b64": base64.b64encode(donnees).decode("ascii")})
+        self.seance.evenement("cmd", type="audio", robot=r.id, origine=origine, cle=cle, moteur=meta["moteur"],
+                              voix=meta["voix"], duree_ms=meta["duree_ms"])
+        return True
 
     async def cmd_lumiere(self, rgb: list, origine: str, robot: str | None = None) -> None:
         r = self._r(robot)
@@ -693,6 +723,9 @@ class Controleur:
         if op in ("ia_moteurs", "ia_choisir", "dialogue", "dialogue_oublier"):
             await self._traiter_dialogue(ws, m)
             return
+        if isinstance(op, str) and op.startswith("voix_"):
+            await self._traiter_voix(ws, m)
+            return
         if isinstance(op, str) and op.startswith("drone_"):
             await self._traiter_drone(ws, m)
             return
@@ -719,7 +752,7 @@ class Controleur:
             elif op == "geste_natif_arret":
                 await self.cmd_geste_natif_arret(rob)
             elif op == "robot_dire":
-                await self.cmd_dire(m.get("texte", ""), str(m.get("origine", "manuel"))[:20], rob)
+                await self.cmd_dire(m.get("texte", ""), str(m.get("origine", "manuel"))[:20], rob, m.get("variation"))
             elif op == "robot_lumiere":
                 await self.cmd_lumiere(m.get("rgb"), str(m.get("origine", "manuel"))[:20], rob)
             elif op == "repos":
@@ -936,6 +969,58 @@ class Controleur:
         except (KeyError, ValueError, TypeError) as exc:
             await ws.send_json({"type": "dialogue_refus", "ref": ref, "op": op, "msg": str(exc)})
 
+    async def _traiter_voix(self, ws: web.WebSocketResponse, m: dict[str, Any]) -> None:
+        """Voix humaine : état des moteurs, rendu d'une réplique, pré-rendu d'une répétition, distribution des
+        voix, lecture sur le robot physique. Réponses « voix_* » portant le jeton de la demande."""
+        op, jeton = m["op"], m.get("jeton")
+        try:
+            if op == "voix_etat":
+                await ws.send_json({"type": "voix_etat", **self.voix.etat()})
+            elif op == "voix_rendre":
+                r = await self.voix.rendre(str(m.get("texte", ""))[:5000], m.get("variation"),
+                                           regime=m.get("regime", "humain"), marques=m.get("marques"),
+                                           personnage=str(m.get("personnage", ""))[:80], role=m.get("role", "partenaire"),
+                                           indice=int(m.get("indice", 0) or 0), profil=m.get("profil"),
+                                           base=m.get("base"), confidentiel=bool(m.get("confidentiel")),
+                                           prise=int(m.get("prise", 0) or 0), moteur=m.get("moteur") or None,
+                                           parler=m.get("parler", True) is not False)
+                await ws.send_json({"type": "voix_rendu", "jeton": jeton, **r})
+            elif op == "voix_prerendre":
+                items = list(m.get("items") or [])[:400]
+
+                async def progres(fait: int, total: int, r: dict[str, Any]) -> None:
+                    if not ws.closed:
+                        await ws.send_json({"type": "voix_progres", "jeton": jeton, "fait": fait, "total": total,
+                                            "id": r.get("id"), "statut": r["statut"], "url": r.get("url"),
+                                            "cle": r.get("cle"), "duree_ms": r.get("duree_ms"),
+                                            "moteur": r.get("moteur"), "mots": r.get("mots", []),
+                                            "motif": r.get("motif", "")})
+
+                async def tache() -> None:
+                    try:
+                        await self.voix.prerendre(items, progres)
+                    except Exception as exc:  # réseau, disque : le pré-rendu s'interrompt sans gêner la répétition
+                        if not ws.closed:
+                            await ws.send_json({"type": "voix_erreur", "jeton": jeton, "msg": f"{exc}"})
+                asyncio.create_task(tache())
+                await ws.send_json({"type": "voix_prerendu_lance", "jeton": jeton, "total": len(items)})
+            elif op == "voix_distribuer":
+                d = self.voix.distribuer(str(m["personnage"])[:80], m["moteur"], m.get("voix", ""))
+                await ws.send_json({"type": "voix_etat", **self.voix.etat(), "distribution": d})
+            elif op == "voix_robot":
+                ok = await self.cmd_audio(m.get("cle", ""), "partenaire:voix", m.get("robot"))
+                if not ok and m.get("texte"):
+                    try:
+                        await self.cmd_dire(m["texte"], "partenaire:voix", m.get("robot"))
+                        ok = True
+                    except CommandeRefusee:
+                        ok = False
+                await ws.send_json({"type": "voix_robot", "jeton": jeton, "ok": ok})
+            else:
+                raise ValueError(f"opération inconnue : {op}")
+        except (CommandeRefusee, KeyError, ValueError, TypeError, OSError) as exc:
+            await ws.send_json({"type": "voix_erreur", "jeton": jeton, "op": op, "msg": f"{exc}"})
+
     async def _traiter_partenaire(self, ws: web.WebSocketResponse, m: dict[str, Any]) -> None:
         op = m["op"]
         try:
@@ -1005,6 +1090,22 @@ async def ws_handler(request: web.Request) -> web.WebSocketResponse:
     return ws
 
 
+async def servir_voix(request: web.Request) -> web.StreamResponse:
+    """Sons rendus (cache vocal). En-têtes CORS pour la page hébergée autorisée : le robot virtuel lit le signal
+    (analyseur Web Audio) pour animer la bouche, ce que le navigateur n'autorise qu'avec CORS."""
+    ctl: Controleur = request.app[CTL]
+    p = ctl.voix.chemin(request.match_info["nom"])
+    if p is None:
+        raise web.HTTPNotFound(text="son inconnu")
+    rep = web.FileResponse(p, headers={"Content-Type": "audio/wav" if p.suffix == ".wav" else "audio/mpeg",
+                                       "Cache-Control": "private, max-age=31536000, immutable"})
+    origine = request.headers.get("Origin")
+    if origine and origine_autorisee(request, ctl.cfg["serveur"].get("origines_autorisees", [])):
+        rep.headers["Access-Control-Allow-Origin"] = origine
+        rep.headers["Vary"] = "Origin"
+    return rep
+
+
 def _page(nom: str):
     async def servir(_: web.Request) -> web.FileResponse:
         return web.FileResponse(RACINE / "web" / nom)
@@ -1016,7 +1117,7 @@ async def _revalider(request: web.Request, handler):
     """Pages et scripts de l'interface : toujours revalidés (ETag / Last-Modified), jamais pris tels quels dans le
     cache du navigateur ; sans cela, une mise à jour de web/ restait invisible tant que le cache n'expirait pas."""
     reponse = await handler(request)
-    if request.method in ("GET", "HEAD") and not request.path.startswith(("/api", "/ws")):
+    if request.method in ("GET", "HEAD") and not request.path.startswith(("/api", "/ws", "/voix/")):
         reponse.headers.setdefault("Cache-Control", "no-cache")
     return reponse
 
@@ -1068,6 +1169,7 @@ def creer_app(cfg: dict[str, Any]) -> web.Application:
     app.router.add_get("/drone", _page("drone.html"))
     app.router.add_get("/chien", _page("chien.html"))
     app.router.add_get("/ws", ws_handler)
+    app.router.add_get("/voix/{nom}", servir_voix)
     from . import plateforme
     plateforme.monter(app, ctl)
     app.router.add_static("/static", RACINE / "web")
