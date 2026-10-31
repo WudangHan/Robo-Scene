@@ -400,3 +400,29 @@ def test_pont_envoie_le_son_au_robot(tmp_path):
         assert envoyes[-1]["t"] == "audio" and base64.b64decode(envoyes[-1]["b64"])[:4] == b"RIFF"
 
     asyncio.run(scenario())
+
+
+@pytest.mark.skipif(not NODE, reason="Node.js absent")
+def test_repli_navigateur_phrases_et_voix_naturelles():
+    script = """
+      require("./web/voix-neurale.js");
+      const V = globalThis.VoixNeurale;
+      // segments d'un ancien pont : découpés à chaque virgule
+      const segs = [{ texte: "Hélas,", pause_apres_ms: 230 }, { texte: "mon ami,", pause_apres_ms: 230 },
+                    { texte: "je ne reviendrai jamais.", pause_apres_ms: 420 }, { texte: "Tu m'entends ?", pause_apres_ms: 0 }];
+      const p = V.phrasesNavigateur(segs, { debit: 0.9, hauteur: 0.95 });
+      const voix = [{ name: "Eddy (Français (Canada))", lang: "fr-CA" }, { name: "Thomas", lang: "fr-FR" },
+                    { name: "Microsoft Antoine Online (Natural) - French (Canada)", lang: "fr-CA", localService: false },
+                    { name: "Amélie (Premium)", lang: "fr-CA" }, { name: "Samantha", lang: "en-US" }];
+      console.log(JSON.stringify({ p, c: V.classerVoix(voix).map((v) => v.name),
+                                   l: V.classerVoix(voix, { localesSeulement: true }).map((v) => v.name) }));
+    """
+    r = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=60, cwd=RACINE)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert [s["texte"] for s in out["p"]] == ["Hélas, mon ami, je ne reviendrai jamais.", "Tu m'entends ?"]
+    assert out["p"][0]["pause_apres_ms"] >= 380 and out["p"][-1]["pause_apres_ms"] == 0
+    assert out["p"][1]["hauteur"] > out["p"][0]["hauteur"] * 0.99          # question : finale plus haute
+    assert out["c"][0].startswith("Microsoft Antoine") and out["c"][1] == "Amélie (Premium)"
+    assert out["c"][-1].startswith("Eddy") and "Samantha" not in out["c"]
+    assert not any("Online" in n for n in out["l"])                        # D03 : voix locales seulement

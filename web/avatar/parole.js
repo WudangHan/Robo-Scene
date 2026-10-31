@@ -39,7 +39,7 @@ export function estEcho(entendu, ditsRecemment) {
 }
 
 function voixMasculine(v) {
-  return /thomas|daniel|nicolas|paul|henri|jacques|antoine|f[ée]lix|mathieu|guillaume|jean|louis|olivier|eddy|reed|rocko|grandpa|male|homme|masculin/i.test(v.name);
+  return /thomas|daniel|nicolas|paul|henri|jacques|antoine|f[ée]lix|mathieu|guillaume|jean|louis|olivier|male|homme|masculin/i.test(v.name);
 }
 
 export class Parole {
@@ -62,9 +62,14 @@ export class Parole {
   voixChoisie() {
     if (!this.voix.length) return null;
     if (this.choix) { const v = this.voix.find((x) => x.name === this.choix); if (v) return v; }
-    const masc = this.voix.filter(voixMasculine);
+    // La plus naturelle d'abord (neuronale, Premium, améliorée), masculine si possible, français du Canada à égalité
+    const V = globalThis.VoixNeurale;
+    const liste = V ? V.classerVoix(this.voix) : this.voix;
+    const meilleure = V ? V.qualiteVoix(liste[0]) : 1;
+    const bonnes = V ? liste.filter((v) => V.qualiteVoix(v) >= meilleure) : liste;
+    const masc = bonnes.filter(voixMasculine);
     const ca = (l) => l.find((v) => /fr-ca/i.test(v.lang));
-    return ca(masc) || masc[0] || ca(this.voix) || this.voix[0];
+    return ca(masc) || masc[0] || ca(bonnes) || bonnes[0] || this.voix[0];
   }
   annuler() {
     this.jeton++; this.actif = false; this.ligne = null; this.energie = null;
@@ -78,7 +83,7 @@ export class Parole {
     try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
     for (const seg of segments) {
       if (j !== this.jeton) return false;
-      await this.segment(seg.texte, { debit, hauteur, volume, parler }, j);
+      await this.segment(seg.texte, { debit: seg.debit ?? debit, hauteur: seg.hauteur ?? hauteur, volume, parler }, j);
       if (seg.pause_apres_ms && j === this.jeton) { this.ligne = null; await new Promise((r) => setTimeout(r, seg.pause_apres_ms)); }
     }
     if (j === this.jeton) { this.actif = false; this.ligne = null; }

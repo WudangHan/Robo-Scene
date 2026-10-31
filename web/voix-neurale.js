@@ -157,7 +157,53 @@
     }
   }
 
-  const api = { base, absolue, creer, itemsRepetition, texteDe, Lecteur };
+  /* ── Repli sur la voix du navigateur ────────────────────────────────────────────────────────────
+     1) Jamais un énoncé par virgule : les segments qui finissent par « , ; : » sont rattachés à la phrase
+        suivante (un ancien pont découpait encore ainsi ; chaque énoncé repartait de zéro et hachait la
+        réplique). 2) Tempo propre à chaque phrase si le pont ne l'a pas fixé. 3) Les voix les plus naturelles
+        d'abord : neuronales (« Natural », dont les voix québécoises de Microsoft Edge), « Premium »,
+        « Améliorée », puis standard ; les voix anciennes ou de fantaisie en dernier. */
+  function phrasesNavigateur(segments, base = {}) {
+    const out = [];
+    let cour = null;
+    for (const s of segments || []) {
+      const t = String(s.texte || "").trim();
+      if (!t) continue;
+      if (!cour) cour = { ...s, texte: t };
+      else cour.texte += " " + t;
+      cour.pause_apres_ms = s.pause_apres_ms || 0;
+      if (!/[,;:]$/.test(t) || cour.texte.length > 260) { out.push(cour); cour = null; }
+    }
+    if (cour) out.push(cour);
+    let g = 0x811c9dc5;
+    const txt = out.map((x) => x.texte).join(" ");
+    for (let i = 0; i < txt.length; i++) { g ^= txt.charCodeAt(i); g = Math.imul(g, 0x01000193); }
+    const alea = () => { g = (g + 0x6d2b79f5) >>> 0; let t = g; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    return out.map((x, i) => {
+      const d = x.debit ?? (base.debit || 1) * (1 + (alea() - 0.5) * 0.08) * (i === out.length - 1 && out.length > 2 ? 0.96 : 1);
+      const fin = x.texte.slice(-1);
+      const h = x.hauteur ?? (base.hauteur || 1) * (fin === "?" ? 1.04 : fin === "!" ? 1.03 : 1) * (1 + (alea() - 0.5) * 0.03);
+      const pause = i === out.length - 1 ? 0 : Math.max(x.pause_apres_ms || 0, fin === "…" ? 650 : 380);
+      return { ...x, debit: +Math.min(1.6, Math.max(0.6, d)).toFixed(3), hauteur: +Math.min(1.6, Math.max(0.4, h)).toFixed(3), pause_apres_ms: pause };
+    });
+  }
+  const ANCIENNES = /\beddy\b|\bflo\b|grandma|grandpa|\breed\b|rocko|\bsandy\b|shelley|compact|espeak|robot|albert|bad news|good news|\bbells\b|boing|bubbles|cellos|jester|\borgan\b|superstar|trinoids|whisper|wobble|zarvox|bahh/i;
+  function qualiteVoix(v) {
+    const n = (v && v.name) || "";
+    if (ANCIENNES.test(n)) return 0;
+    if (/natural|neural|naturel/i.test(n)) return 4;
+    if (/premium/i.test(n)) return 3;
+    if (/enhanced|am[ée]lior[ée]e?|siri/i.test(n)) return 2;
+    return 1;
+  }
+  /* Voix françaises de la meilleure à la moins bonne ; à qualité égale, le français du Canada d'abord. */
+  function classerVoix(voix, { localesSeulement = false } = {}) {
+    return (voix || []).filter((v) => v && /^fr/i.test(v.lang || "") && (!localesSeulement || v.localService !== false))
+      .map((v, i) => ({ v, s: qualiteVoix(v) * 10 + (/fr[-_]ca/i.test(v.lang) ? 3 : 0) + (v.localService !== false ? 1 : 0), i }))
+      .sort((a, b) => b.s - a.s || a.i - b.i).map((x) => x.v);
+  }
+
+  const api = { base, absolue, creer, itemsRepetition, texteDe, Lecteur, phrasesNavigateur, qualiteVoix, classerVoix };
   racine.VoixNeurale = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

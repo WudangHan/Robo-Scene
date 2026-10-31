@@ -166,9 +166,11 @@ async function parler(texte, { maniere = null, emotion = null, prosodieImposee =
   hauteur *= Number($("#voix-hauteur").value || 0.92);
   if (maniere === "chuchote") { volume = 0.35; debit *= 0.92; }
   if (maniere === "crie") { volume = 1; debit *= 1.08; hauteur *= 1.12; anim.battre(1.2); }
-  const segs = segments || texte.split(/(?<=[.!?…;:,])\s+/).filter(Boolean).map((s) => ({
-    texte: s, pause_apres_ms: /[.!?…]$/.test(s) ? Math.max(120, 320 * (1 + (p.pause || 0))) : /[,;:]$/.test(s) ? Math.max(60, 140 * (1 + (p.pause || 0))) : 0,
+  // Une phrase par énoncé (jamais par virgule : chaque énoncé repartait de zéro et hachait la parole)
+  const brut = segments || texte.split(/(?<=[.!?…])\s+/).filter(Boolean).map((s) => ({
+    texte: s, pause_apres_ms: /[.!?…]$/.test(s) ? Math.max(120, 320 * (1 + (p.pause || 0))) : 0,
   }));
+  const segs = globalThis.VoixNeurale ? globalThis.VoixNeurale.phrasesNavigateur(brut, { debit, hauteur }) : brut;
   sousTitre(segs.map((s) => s.texte).join(" "));
   // Anti-écho : la dictée ne doit pas entendre le robot (voir Dictee) ; on mémorise ce qu'il dit
   ditsRecemment.push({ texte, t: Date.now() }); if (ditsRecemment.length > 6) ditsRecemment.shift();

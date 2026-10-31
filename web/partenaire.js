@@ -18,7 +18,11 @@ const cachePieces = new Map();
 
 function connecter() {
   ws = new WebSocket(window.ROBO_PONT.url);
-  ws.onopen = async () => { window.ROBO_PONT.ouvert(); VN.demanderEtat(); await chargerEtat(); };
+  ws.onopen = async () => {
+    window.ROBO_PONT.ouvert(); VN.demanderEtat();
+    setTimeout(() => { if (!VN.etat) { VN.pontAncien = true; conseilVoix(); } }, 4000);   // pont antérieur à la voix humaine
+    await chargerEtat();
+  };
   ws.onclose = () => { window.ROBO_PONT.ferme(); majLien("interface"); setTimeout(connecter, 1500); };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
@@ -36,6 +40,17 @@ function connecter() {
 function envoyer(op, data = {}) { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ op, ...data })); }
 /* Voix humaine : moteur neuronal du pont (web/voix-neurale.js) */
 const VN = VoixNeurale.creer({ envoyer });
+/* Ce que l'opératrice entend, et comment obtenir mieux (affiché sous les réglages de la répétition). */
+function conseilVoix() {
+  const el = $("#r-voix-etat"); if (!el) return;
+  if (VN.actif()) { el.textContent = `Voix humaine : ${VN.moteur()} (rendu par le pont, mis en cache).`; return; }
+  const v = Voix.pour(1), q = v ? VoixNeurale.qualiteVoix(v) : -1;
+  const nom = v ? `${v.name}${q >= 4 ? " — neuronale" : q === 3 ? " — Premium" : q === 2 ? " — améliorée" : " — standard (robotique)"}` : "aucune voix française";
+  const pourquoi = VN.pontAncien ? "Le pont n'est pas à jour (git pull dans le dossier de la console, puis relancer bash lancer.command). "
+    : VN.etat ? "Aucun moteur neuronal n'a de clé sur le pont (ELEVENLABS_API_KEY, AZURE_SPEECH_KEY ou OPENAI_API_KEY). " : "";
+  const mieux = q >= 4 ? "" : " Sans clé, la voix la plus humaine s'obtient en ouvrant cette page dans Microsoft Edge (voix neuronales québécoises Antoine, Jean, Thierry et Sylvie), ou en installant une voix française Premium (macOS : Réglages Système › Accessibilité › Contenu énoncé › Voix du système).";
+  el.textContent = `${pourquoi}Voix du navigateur : ${nom}.${mieux}`;
+}
 VN.surEtat = (m) => {
   const ok = VN.actif(), voulu = $("#voix-neurale").checked;
   const lib = (m.moteurs || []).find((x) => x.id === m.actif);
@@ -44,6 +59,7 @@ VN.surEtat = (m) => {
   $("#st-voix").title = ok ? `Voix humaine : ${lib?.libelle || m.actif} (cache local, pré-rendu des répliques)`
     : "Aucun moteur neuronal disponible : " + (m.moteurs || []).map((x) => `${x.id} (${x.motif || x.derniere_erreur || "?"})`).join(", ")
       + ". Voix du navigateur, une phrase à la fois. Voir config.toml [voix].";
+  conseilVoix();
 };
 try { $("#voix-neurale").checked = localStorage.getItem("robo-scene-voix-neurale") !== "0"; } catch (e) {}
 VN.actifVoulu = $("#voix-neurale").checked;
@@ -192,14 +208,24 @@ Avatar.init();
 const Voix = {
   voix: [], jeton: 0, audio: null, lecteur: new VoixNeurale.Lecteur(),
   charger() {
-    const lire = () => { this.voix = (speechSynthesis.getVoices() || []).filter((v) => v.lang && v.lang.toLowerCase().startsWith("fr")); };
+    const lire = () => { this.voix = (speechSynthesis.getVoices() || []).filter((v) => v.lang && v.lang.toLowerCase().startsWith("fr")); try { conseilVoix(); } catch (e) {} };
     if ("speechSynthesis" in window) { lire(); speechSynthesis.onvoiceschanged = lire; }
   },
-  pour(index) {
-    if (!this.voix.length) return null;
-    const ca = this.voix.filter((v) => /fr-ca/i.test(v.lang));
-    const pool = ca.length && index === 0 ? ca : this.voix;
+  /* Voix du navigateur (repli) : toujours du meilleur niveau de qualité disponible (neuronale, Premium,
+     améliorée…) ; si ce niveau n'offre qu'une voix, les personnages se distinguent par un léger écart de
+     hauteur plutôt que par une voix plus robotique. */
+  pour(index, localesSeulement = false) {
+    const liste = VoixNeurale.classerVoix(this.voix, { localesSeulement });
+    if (!liste.length) return null;
+    const q = VoixNeurale.qualiteVoix(liste[0]);
+    const pool = liste.filter((v) => VoixNeurale.qualiteVoix(v) === q);
     return pool[index % pool.length];
+  },
+  ecartHauteur(index, localesSeulement = false) {
+    const liste = VoixNeurale.classerVoix(this.voix, { localesSeulement });
+    const n = liste.filter((v) => VoixNeurale.qualiteVoix(v) === VoixNeurale.qualiteVoix(liste[0])).length || 1;
+    const tour = Math.floor(index / n);
+    return tour === 0 ? 1 : [1, 0.93, 1.07, 0.88, 1.12][tour % 5];
   },
   annuler() {
     this.jeton++;
@@ -215,20 +241,25 @@ const Voix = {
     const j = ++this.jeton;
     if (direction) tonale = false;
     // Voix humaine neuronale (pont) : réplique jouée, non lue ; repli sur le navigateur si indisponible
-    if (!tonale && rendu.parler && (rendu.partition || direction) && await this.neurale(rendu, j, { indexVoix, volume, variation, nom, direction })) return;
+    if (!tonale && rendu.parler && rendu.type_voix !== "machinique" && (rendu.partition || direction || variation) && await this.neurale(rendu, j, { indexVoix, volume, variation, nom, direction })) return;
     if (j !== this.jeton) return;
     if (!tonale && !direction && Avatar.actif()) { await Avatar.dire(rendu, { volume, variation, nom }); return; }   // le robot virtuel parle
     if (!rendu.parler) { await attendre(rendu.duree_estimee_ms); return; }     // film muet : le texte s'affiche, le corps joue
     if (tonale) return this.tonale(rendu, j);
     const dispo = "speechSynthesis" in window && (this.voix.length || voixObjet);
-    for (const seg of rendu.segments) {
+    const segments = direction ? rendu.segments : VoixNeurale.phrasesNavigateur(rendu.segments, rendu);
+    const localesSeulement = this._localesSeulement; this._localesSeulement = false;
+    for (const seg of segments) {
       if (j !== this.jeton) return;
       if (dispo) {
         await new Promise((fin) => {
           const u = new SpeechSynthesisUtterance(seg.texte);
-          const v = voixObjet || this.pour(indexVoix); u.lang = (v && v.lang) || "fr-CA"; if (v) u.voice = v;
+          const v = voixObjet || this.pour(indexVoix, localesSeulement); u.lang = (v && v.lang) || "fr-CA"; if (v) u.voice = v;
           const debit = seg.debit ?? rendu.debit;
-          u.rate = debit; u.pitch = seg.hauteur ?? rendu.hauteur; u.volume = volume ?? rendu.volume;
+          let h = (seg.hauteur ?? rendu.hauteur) * (voixObjet ? 1 : this.ecartHauteur(indexVoix, localesSeulement)), r = debit;
+          // Voix neuronale ou Premium : elle porte déjà sa mélodie ; un fort écart de hauteur ou de débit la dénature
+          if (v && VoixNeurale.qualiteVoix(v) >= 3) { h = 1 + 0.5 * (h - 1); r = 1 + 0.7 * (r - 1); }
+          u.rate = r; u.pitch = h; u.volume = volume ?? rendu.volume;
           const garde = setTimeout(fin, 1500 + seg.texte.length * 120 / debit);
           u.onend = u.onerror = () => { clearTimeout(garde); fin(); };
           speechSynthesis.speak(u);
@@ -252,7 +283,11 @@ const Voix = {
             indice: Math.max(0, indexVoix - 1), base: { debit: rendu.debit, hauteur: rendu.hauteur, volume: rendu.volume } };
       const r = await VN.rendre(demande, 20000);
       if (j !== this.jeton) return true;
-      if (!r || r.statut !== "audio") { if (r?.motif) $("#r-voix-etat").textContent = `Voix du navigateur : ${r.motif}`; return false; }
+      if (!r || r.statut !== "audio") {
+        this._localesSeulement = !!r?.local_seulement;              // D03 : contenu sensible, voix locales seulement
+        if (r?.motif) $("#r-voix-etat").textContent = `Voix du navigateur : ${r.motif}`;
+        return false;
+      }
       a = r;
     }
     if (j !== this.jeton) return true;
@@ -739,7 +774,7 @@ const Repetition = {
             : `Voix humaine : ${m.fait}/${m.total} réplique(s) prête(s)${m.statut === "repli" && m.motif ? ` — ${m.motif}` : ""}`;
         });
       }
-    } else $("#r-voix-etat").textContent = VN.actif() ? "" : "Voix du navigateur (aucun moteur neuronal disponible).";
+    } else conseilVoix();
     if (this.options.micro) this.options.micro = await Micro.demarrer();
     if (this.options.camera) this.options.camera = await Camera.demarrer();
     this.actif = true; this.i = 0; this.enPause = false; this.finCue = performance.now();
