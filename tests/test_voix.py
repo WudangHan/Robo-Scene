@@ -426,3 +426,17 @@ def test_repli_navigateur_phrases_et_voix_naturelles():
     assert out["c"][0].startswith("Microsoft Antoine") and out["c"][1] == "Amélie (Premium)"
     assert out["c"][-1].startswith("Eddy") and "Samantha" not in out["c"]
     assert not any("Online" in n for n in out["l"])                        # D03 : voix locales seulement
+
+
+def test_cles_et_reglages_locaux(tmp_path, monkeypatch):
+    from bridge.serveur import charger_cles, fusionner_local
+    (tmp_path / "cles.env").write_text("# clés\nexport ELEVENLABS_API_KEY='sk_test'\nOPENAI_API_KEY=deja\nVIDE=\n", encoding="utf-8")
+    monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "existante")
+    assert charger_cles(tmp_path) == ["ELEVENLABS_API_KEY"]
+    import os
+    assert os.environ["ELEVENLABS_API_KEY"] == "sk_test" and os.environ["OPENAI_API_KEY"] == "existante"
+    (tmp_path / "config.local.toml").write_text('[voix.elevenlabs]\nvoix_partenaire = ["A", "B"]\n', encoding="utf-8")
+    cfg = fusionner_local({"voix": {"ordre": ["elevenlabs"], "elevenlabs": {"modele": "eleven_v3"}}}, tmp_path)
+    assert cfg["voix"]["elevenlabs"] == {"modele": "eleven_v3", "voix_partenaire": ["A", "B"]} and cfg["voix"]["ordre"]
+    assert charger_cles(tmp_path / "absent") == []

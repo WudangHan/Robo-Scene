@@ -1181,13 +1181,54 @@ def charger_config(chemin: Path) -> dict[str, Any]:
         return tomllib.load(f)
 
 
+# Réglages propres au poste, HORS du dépôt (jamais versionnés) : clés des services et surcharges de config.toml.
+DOSSIER_LOCAL = Path(os.environ.get("ROBO_SCENE_LOCAL", "~/.config/robo-scene")).expanduser()
+
+
+def charger_cles(dossier: Path = DOSSIER_LOCAL) -> list[str]:
+    """Lit dossier/cles.env (lignes NOM=valeur, droits 600) et complète l'environnement du pont sans écraser une
+    variable déjà définie. Le démarrage automatique (application sans Terminal) n'hérite pas du profil du shell :
+    c'est par ce fichier que les clés lui parviennent. Rend les NOMS chargés, jamais les valeurs."""
+    f = dossier / "cles.env"
+    if not f.exists():
+        return []
+    noms = []
+    for ligne in f.read_text(encoding="utf-8").splitlines():
+        ligne = ligne.strip()
+        if not ligne or ligne.startswith("#") or "=" not in ligne:
+            continue
+        nom, _, val = ligne.removeprefix("export ").partition("=")
+        nom, val = nom.strip(), val.strip().strip("'\"")
+        if nom and val and not os.environ.get(nom):
+            os.environ[nom] = val
+            noms.append(nom)
+    return noms
+
+
+def fusionner_local(cfg: dict[str, Any], dossier: Path = DOSSIER_LOCAL) -> dict[str, Any]:
+    """Surcharge config.toml par dossier/config.local.toml (ex. identifiants des voix ElevenLabs du compte)."""
+    f = dossier / "config.local.toml"
+    if not f.exists():
+        return cfg
+
+    def fusion(a: dict, b: dict) -> dict:
+        for k, v in b.items():
+            a[k] = fusion(a[k], v) if isinstance(v, dict) and isinstance(a.get(k), dict) else v
+        return a
+    with open(f, "rb") as o:
+        return fusion(cfg, tomllib.load(o))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Plateforme ROBO-SCÈNE — L'IA au service de la création théâtrale")
     ap.add_argument("--config", default=str(RACINE / "config.toml"))
     ap.add_argument("--sim", action="store_true", help="forcer la simulation de tous les robots")
     ap.add_argument("--port", type=int)
     a = ap.parse_args()
-    cfg = charger_config(Path(a.config))
+    cfg = fusionner_local(charger_config(Path(a.config)))
+    noms = charger_cles()
+    if noms:
+        print("Clés chargées depuis " + str(DOSSIER_LOCAL / "cles.env") + " : " + ", ".join(noms))
     if a.sim:
         cfg["robot"]["transport"] = "sim"
         cfg["_forcer_sim"] = True

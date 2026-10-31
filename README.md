@@ -202,6 +202,7 @@ La voix du navigateur hachait les répliques : chaque virgule ouvrait un nouvel 
 | **OpenAI, gpt-4o-mini-tts** | `OPENAI_API_KEY` | consigne de jeu en langage naturel (accent québécois, état, arc, insistances) |
 | **Piper** — local, hors ligne, voix de France | aucune (`pip install piper-tts` et un modèle `.onnx`) | une synthèse par phrase, tempo et variabilité réglés |
 
+- **Clés et réglages propres au poste**, hors du dépôt : `~/.config/robo-scene/cles.env` (lignes `NOM=valeur`, droits 600), lu au démarrage du pont, y compris par le démarrage automatique ; `~/.config/robo-scene/config.local.toml` surcharge `config.toml` (par exemple les identifiants des voix ElevenLabs du compte).
 - Le moteur actif s'affiche dans l'en-tête (« Voix humaine · azure ») ; décocher la case revient à la voix du navigateur, désormais dite **une phrase à la fois**.
 - **Pré-rendu** : au début d'une répétition, toutes les répliques du partenaire sont rendues d'avance et rangées dans `donnees/voix/cache/` ; une réplique déjà rendue se rejoue sans délai, sans coût et toujours identique (séances comparables).
 - **Aiguillage D03** : un contenu sensible ne part jamais vers un moteur distant (Piper seulement, sinon voix locale du navigateur). Le régime machinique n'est jamais rendu par une voix neuronale.
