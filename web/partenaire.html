@@ -49,6 +49,7 @@
   <button role="tab" data-onglet="conseiller">Conseiller</button>
   <button role="tab" data-onglet="copresence" class="regie">Coprésence (régie)</button>
   <button role="tab" data-onglet="acteurs">Acteurs et consentements</button>
+  <button role="tab" data-onglet="carnet">Carnet</button>
 </nav>
 
 <main>
@@ -294,6 +295,45 @@
       <div id="p-historique" class="petit"></div>
       <div class="ligne"><button id="p-retirer" class="danger">Retirer et effacer toutes les données de cet acteur</button></div>
     </div>
+  </div>
+</section>
+
+<!-- ═════════════ CARNET DE COCRÉATION ═════════════ -->
+<section class="onglet" id="o-carnet" hidden>
+  <div class="panneau">
+    <h2>Carnet de cocréation <small id="n-seance"></small></h2>
+    <p class="petit">Le carnet lit le journal des cinq opérations de la séance en cours — consigne, génération, sélection,
+      transformation, attribution — tel que le pont l'a écrit sur cet ordinateur. Il ne crée rien : le système propose,
+      les personnes choisissent, transforment et signent. Aucune donnée du carnet ne quitte l'ordinateur.</p>
+    <div class="ligne"><button id="n-actualiser">Actualiser</button><span id="n-etat" class="petit" role="status"></span></div>
+    <div id="n-indicateurs" class="cartes"></div>
+  </div>
+  <div class="cols2">
+    <div class="panneau">
+      <h2>Par personne <small>agentivité opératoire</small></h2>
+      <div id="n-personnes"></div>
+      <div id="n-definitions" class="petit"></div>
+    </div>
+    <div class="panneau">
+      <h2>Saisir après coup <small id="n-qui"></small></h2>
+      <form id="n-form-tete">
+        <label for="n-tete">Transformation faite « de tête » en répétition <span class="petit">(trace marquée « reconstituée »)</span></label>
+        <div class="ligne"><input id="n-tete" maxlength="500" placeholder="Ex. : la réplique 12 est dite sans le dernier mot"><button class="primaire">Consigner</button></div>
+      </form>
+      <form id="n-form-autre">
+        <label for="n-autre">Autre opération, hors des cinq <span class="petit">(revue après chaque atelier)</span></label>
+        <div class="ligne"><input id="n-categorie" maxlength="60" placeholder="Catégorie" aria-label="Catégorie de l'opération"><input id="n-autre" maxlength="1000" placeholder="Ex. : lecture à voix haute avant de choisir"><button class="primaire">Consigner</button></div>
+      </form>
+      <div id="n-revue" class="petit"></div>
+    </div>
+  </div>
+  <div class="panneau">
+    <h2>Événements <small id="n-total"></small></h2>
+    <div class="ligne">
+      <label for="n-filtre">Opération</label>
+      <select id="n-filtre"><option value="">Toutes</option><option value="consigne">Consigne</option><option value="generation">Génération</option><option value="selection">Sélection</option><option value="transformation">Transformation</option><option value="attribution">Attribution</option><option value="autre">Autre</option></select>
+    </div>
+    <div id="n-evenements" class="carnet-defile"></div>
   </div>
 </section>
 </main>

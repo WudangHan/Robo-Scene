@@ -397,3 +397,66 @@ def test_syllabes_e_caducs_et_terminaison_ent():
            "ils parlent": 2, "elles ne se parlent": 4,    # -ent verbal muet après « ils », « elles »
            "l'homme": 1, "qu'il vienne": 2, "Je ne reviendrai pas.": 6}
     assert {t: syllabes(t) for t in cas} == cas
+
+
+# ── Carnet de cocréation (onglet du partenaire : N-01, N-07, N-08, Q-01) ─────────
+def test_carnet_par_le_pont(cfg, isole):
+    async def scenario():
+        app = creer_app(cfg)
+        async with TestClient(TestServer(app)) as cl:
+            ws = await cl.ws_connect("/ws")
+            ctl = app[CTL]
+
+            async def op(o, **d):
+                await ws.send_json({"op": o, **d})
+                return await recevoir(ws, o)
+
+            vide = await op("p_carnet")
+            assert vide["seance"] == ctl.seance.id and vide["ensemble"]["propositions"] == 0
+            assert vide["completude"]["generations"] == 0 and vide["par_personne"] == {}
+            depart = vide["total"]
+
+            # un cycle complet écrit par l'atelier : le carnet le lit sans rien y ajouter
+            j, cyc = ctl.trace, "C01"
+            j.emettre("P1", "consigne", ("personne", "A01"), {"texte": "Une porte qui ne se ferme pas"}, cycle=cyc)
+            j.emettre("P1", "generation", ("systeme", "SI-01"),
+                      {"numero": 1, "systeme": "SI-01", "version_modele": "modele-essai", "type_texte": "A", "consigne": "Écris…",
+                       "contexte": "Acte I", "parametres_demandes": {}, "parametres_appliques": {},
+                       "jetons_entree": 1, "jetons_sortie": 2, "propositions": ["Prop un.", "Prop deux."]}, cycle=cyc)
+            j.emettre("P1", "selection", ("personne", "A01"), {"generation": 1, "proposition": 1, "decision": "retenue", "motif": "juste"}, cycle=cyc)
+            j.emettre("P1", "selection", ("personne", "A01"), {"generation": 1, "proposition": 2, "decision": "rejetee", "motif": "convenu"}, cycle=cyc)
+            lu = await op("p_carnet")
+            assert lu["total"] == depart + 4 and lu["ensemble"]["propositions"] == 2 and lu["ensemble"]["retenues"] == 1
+            assert lu["ensemble"]["taux_retention"] == 0.5 and set(lu["par_personne"]) == {"A01"}
+            assert {m["manque"] for m in lu["completude"]["manques"]} == {"transformation", "attribution"}
+            gen = next(e for e in lu["evenements"] if e["operation"] == "generation")
+            assert gen["apercu"] == "2 proposition(s) — modele-essai" and gen["type_agent"] == "systeme"
+
+            # N-07 : saisie de tête par la régie, marquée « reconstituée » ; N-08 : catégorie ouverte
+            r = await op("p_carnet_saisie", nature="de_tete", description="La réplique 3 est dite sans son dernier mot", cycle=cyc)
+            assert r["type"] == "p_carnet_saisie" and r["total"] == depart + 5
+            ev = ctl.trace.lire()[-1]
+            assert ev["module"] == "PARTENAIRE" and ev["operation"] == "transformation" and ev["reconstitue"] is True
+            assert ev["agent"] == {"type": "personne", "id": ctl.pseudo_operatrice}
+            r = await op("p_carnet_saisie", nature="autre", categorie="lecture", description="Lecture à voix haute avant de choisir")
+            assert r["revue"]["total"] == 1 and r["revue"]["par_categorie"] == {"lecture": 1} and r["revue"]["reconstituees"] == 1
+            assert (await op("p_carnet_saisie", nature="autre", categorie="", description="x"))["type"] == "p_erreur"
+            assert (await op("p_carnet_saisie", nature="de_tete", description="  "))["type"] == "p_erreur"
+            assert (await op("p_carnet_saisie", nature="inconnue", description="x"))["type"] == "p_erreur"
+
+            # un acteur : consentement « recherche » exigé ; la trace porte alors son pseudonyme (droit de retrait)
+            a = (await op("p_acteur_creer", pseudonyme="Testeuse", annee=1))["acteur"]
+            refus = await op("p_carnet_saisie", nature="de_tete", description="Un geste ajouté", acteur=a["id"])
+            assert refus["type"] == "p_erreur" and "consentement" in refus["msg"]
+            await op("p_consentir", acteur=a["id"], cle="recherche", accorde=True)
+            await op("p_carnet_saisie", nature="de_tete", description="Un geste ajouté", acteur=a["id"])
+            assert ctl.trace.lire()[-1]["agent"]["id"] == "Testeuse"
+
+            # mode pédagogique : lecture permise, aucune écriture au journal de recherche
+            n = len(ctl.trace.lire())
+            await op("p_mode", mode="pedagogie")
+            assert (await op("p_carnet"))["mode"] == "pedagogie"
+            assert (await op("p_carnet_saisie", nature="de_tete", description="x"))["type"] == "p_erreur"
+            assert len(ctl.trace.lire()) == n
+            await ws.close()
+    run(scenario())

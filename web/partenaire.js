@@ -922,3 +922,61 @@ async function jouerSituation(s) {
 $("#k-stop").onclick = () => envoyer("p_accompagner", { mode: "stop" });
 
 connecter();
+
+/* ══════════ Carnet de cocréation (journal des cinq opérations de la séance) ══════════ */
+const Carnet = {
+  d: null,
+  LIB: { consigne: "Consigne", generation: "Génération", selection: "Sélection", transformation: "Transformation", attribution: "Attribution", autre: "Autre" },
+  pct: (v) => (v === null || v === undefined ? "—" : Math.round(v * 100) + " %"),
+  nb: (v) => (v === null || v === undefined ? "—" : String(v).replace(".", ",")),
+  async charger() {
+    if (!ws || ws.readyState !== 1) { $("#n-etat").textContent = "Pont injoignable : le carnet se lit sur l'ordinateur où tourne le pont ROBO-SCÈNE."; return; }
+    $("#n-etat").textContent = "Lecture du journal…";
+    try { Carnet.rendre(await demander("p_carnet")); $("#n-etat").textContent = "À jour : " + new Date().toLocaleTimeString("fr-CA"); }
+    catch (e) { $("#n-etat").textContent = e.message; }
+  },
+  carte(titre, valeur, note) {
+    return `<div class="carte"><h4>${echapper(titre)}</h4><div class="carnet-chiffre">${echapper(valeur)}</div><div class="petit">${echapper(note)}</div></div>`;
+  },
+  rendre(d) {
+    Carnet.d = d;
+    const e = d.ensemble, c = d.completude;
+    $("#n-seance").textContent = "séance " + d.seance + (d.mode === "pedagogie" ? " · mode pédagogique (lecture seule)" : "");
+    $("#n-indicateurs").innerHTML = [
+      Carnet.carte("Propositions générées", Carnet.nb(e.propositions), `${e.retenues} retenue(s), ${e.rejetees} rejetée(s), ${e.redemandees} redemandée(s)`),
+      Carnet.carte("Taux de rétention", Carnet.pct(e.taux_retention), "retenues / propositions générées"),
+      Carnet.carte("Écart moyen", Carnet.nb(e.ecart_moyen), `${e.transformations} transformation(s), dont ${e.reconstituees} reconstituée(s)`),
+      Carnet.carte("Complétude des traces", c.generations ? Carnet.pct(c.taux) : "—", c.generations ? `${c.generations} génération(s), ${c.manques.length} trace(s) manquante(s)` : "aucune génération dans cette séance"),
+    ].join("") + c.manques.slice(0, 8).map((m) => `<div class="carnet-manque petit">Cycle ${echapper(m.cycle)} : ${echapper(m.manque)} manquante${m.proposition ? ` (génération ${m.generation}, proposition ${m.proposition})` : ""}</div>`).join("");
+    const pp = Object.entries(d.par_personne);
+    $("#n-personnes").innerHTML = pp.length ? `<table class="carnet"><thead><tr><th scope="col">Pseudonyme</th><th scope="col" class="nombre">Générées</th><th scope="col" class="nombre">Retenues</th><th scope="col" class="nombre">Rétention</th><th scope="col" class="nombre">Écart moyen</th></tr></thead><tbody>`
+      + pp.map(([p, v]) => `<tr><th scope="row">${echapper(p)}</th><td class="nombre">${v.propositions}</td><td class="nombre">${v.retenues}</td><td class="nombre">${Carnet.pct(v.taux_retention)}</td><td class="nombre">${Carnet.nb(v.ecart_moyen)}</td></tr>`).join("") + "</tbody></table>"
+      : `<p class="petit">Aucune proposition n'a encore été générée pendant cette séance.</p>`;
+    $("#n-definitions").innerHTML = [["taux_retention", "Taux de rétention"], ["ecart_moyen", "Écart moyen"]].map(([k, l]) => `<div><b>${l}</b> : ${echapper(d.definitions[k])}</div>`).join("");
+    const r = d.revue;
+    $("#n-revue").textContent = `${r.total} opération(s) « autre » à revoir après l'atelier ; ${r.reconstituees} trace(s) reconstituée(s).`;
+    $("#n-total").textContent = d.total > d.evenements.length ? `les ${d.evenements.length} derniers sur ${d.total}` : `${d.total} au total`;
+    Carnet.lister();
+  },
+  lister() {
+    if (!Carnet.d) return;
+    const f = $("#n-filtre").value, evs = Carnet.d.evenements.filter((x) => !f || x.operation === f).reverse();
+    $("#n-evenements").innerHTML = evs.length ? `<table class="carnet"><thead><tr><th scope="col">Heure</th><th scope="col">Opération</th><th scope="col">Par</th><th scope="col">Module</th><th scope="col">Cycle</th><th scope="col">Aperçu</th></tr></thead><tbody>`
+      + evs.map((x) => `<tr><td>${echapper((x.ts || "").slice(11, 19))}</td><td><span class="carnet-op">${echapper(Carnet.LIB[x.operation] || x.operation)}</span>${x.reconstitue ? ' <span class="petit">reconstituée</span>' : ""}${x.categorie ? ` <span class="petit">${echapper(x.categorie)}</span>` : ""}</td><td>${echapper(x.agent)} <span class="petit">${x.type_agent === "systeme" ? "système" : "personne"}</span></td><td>${echapper(x.module)}</td><td>${echapper(x.cycle || "—")}</td><td>${echapper(x.apercu)}</td></tr>`).join("") + "</tbody></table>"
+      : `<p class="petit">Aucun événement${f ? " de ce type" : ""} dans le journal de cette séance.</p>`;
+  },
+  async saisir(nature, donnees, champs) {
+    try {
+      const r = await demander("p_carnet_saisie", { nature, acteur: acteurCourant(), ...donnees });
+      champs.forEach((c) => ($(c).value = ""));
+      Carnet.rendre(r); toast("Consigné au journal de la séance.", "info");
+    } catch (e) { /* le message d'erreur du pont est déjà affiché */ }
+  },
+  qui() { const s = $("#acteur-courant"); $("#n-qui").textContent = s.value ? "au nom de " + s.options[s.selectedIndex].text : "au nom de la régie"; },
+};
+$("#n-actualiser").onclick = () => Carnet.charger();
+$("#n-filtre").onchange = () => Carnet.lister();
+$("#n-form-tete").onsubmit = (e) => { e.preventDefault(); Carnet.saisir("de_tete", { description: $("#n-tete").value }, ["#n-tete"]); };
+$("#n-form-autre").onsubmit = (e) => { e.preventDefault(); Carnet.saisir("autre", { categorie: $("#n-categorie").value, description: $("#n-autre").value }, ["#n-categorie", "#n-autre"]); };
+$("#acteur-courant").addEventListener("change", () => Carnet.qui());
+$('.onglets [data-onglet="carnet"]').addEventListener("click", () => { Carnet.qui(); Carnet.charger(); });

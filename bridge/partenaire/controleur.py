@@ -146,6 +146,60 @@ class Partenaire:
         await self.ctl.log(f"Incarnation robotique du partenaire {'activée' if self.incarnation else 'désactivée'}")
         return {"incarnation": self.incarnation}
 
+    # ── Carnet de cocréation (journal des cinq opérations : N-01, N-07, N-08, Q-01) ─────────
+    @staticmethod
+    def _apercu(e: dict[str, Any]) -> str:
+        d = e["donnees"]
+        if e["operation"] == "generation":
+            return f"{len(d.get('propositions') or [])} proposition(s) — {d.get('version_modele') or d.get('systeme') or ''}".strip(" —")
+        for cle in ("texte", "description", "version", "decision", "etiquette", "geste"):
+            if d.get(cle):
+                return str(d[cle])[:160]
+        return ""
+
+    def _carnet(self) -> dict[str, Any]:
+        """Lecture seule du journal unifié de la séance en cours : complétude, agentivité opératoire, événements."""
+        from ..analyse.operatoire import agentivite_operatoire
+        from ..trace import saisies
+        from ..trace.journal import completude
+        evs = self.ctl.trace.lire()
+        op = agentivite_operatoire(evs)
+        return {"seance": self.ctl.seance.id, "mode": self.mode, "total": len(evs), "completude": completude(evs),
+                "ensemble": op["ensemble"], "par_personne": op["par_personne"], "definitions": op["definitions"],
+                "revue": saisies.revue_autres(evs),
+                "evenements": [{"id": e["id"], "ts": e["ts"], "module": e["module"], "operation": e["operation"],
+                                "agent": e["agent"]["id"], "type_agent": e["agent"]["type"], "cycle": e.get("cycle"),
+                                "reconstitue": bool(e.get("reconstitue")), "categorie": e.get("categorie_autre"),
+                                "apercu": self._apercu(e)} for e in evs[-200:]]}
+
+    async def op_carnet(self, m):
+        return self._carnet()
+
+    async def op_carnet_saisie(self, m):
+        """Saisie après coup d'une transformation faite « de tête » (N-07) ou d'une opération « autre » (N-08).
+
+        Sans acteur désigné, la trace est attribuée à la régie ; pour un acteur, le consentement « recherche »
+        est exigé, et rien n'est versé au journal de recherche en mode pédagogique.
+        """
+        from ..trace import saisies
+        if self.mode == "pedagogie":
+            raise ValueError("Mode pédagogique : rien n'est versé au journal de recherche.")
+        acteur = m.get("acteur") or None
+        if acteur and not self._recherche(acteur):
+            raise ValueError("Le consentement « versement au corpus de recherche » de cet acteur est requis.")
+        pseudonyme = self.stockage.profil(acteur)["pseudonyme"] if acteur else self.ctl.pseudo_operatrice
+        if m.get("nature") == "de_tete":
+            ev = saisies.transformation_de_tete(self.ctl.trace, pseudonyme=pseudonyme, description=m.get("description", ""),
+                                                cycle=m.get("cycle") or None, module="PARTENAIRE")
+        elif m.get("nature") == "autre":
+            if not (m.get("description") or "").strip() or not (m.get("categorie") or "").strip():
+                raise ValueError("Catégorie et description requises.")
+            ev = saisies.autre(self.ctl.trace, pseudonyme=pseudonyme, categorie=m["categorie"],
+                               description=m["description"], module="PARTENAIRE")
+        else:
+            raise ValueError("Nature : de_tete ou autre")
+        return {"evenement": ev["id"], **self._carnet()}
+
     # ── Formation ───────────────────────────────────────────
     async def op_livret(self, m):
         return {"exercices": self.livret.sommaire(), "annees": self.livret.d.get("annees", {}),

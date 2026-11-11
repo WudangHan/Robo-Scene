@@ -183,6 +183,7 @@ Ouvrir <http://127.0.0.1:8765/partenaire> (lien « Partenaire » dans l'en-tête
 | **Conseiller** | Questions sur le jeu, la voix, le corps, la dramaturgie, la mise en scène, la scénographie, la robotique et l'IA, à partir de vos documents indexés (et de la pièce étudiée). Sans clé API : passages pertinents avec leur référence ; avec clé : synthèse dont chaque référence est contrôlée. |
 | **Coprésence (régie)** | Partition du chapitre 7 (attente partagée, marche accordée, adresse au public, silence tenu) et perturbations P1 à P3. Le plan est scellé par empreinte SHA-256 inscrite au journal de séance ; son descellement vérifie l'intégrité. L'onglet est destiné au poste de régie, non à l'écran de l'acteur. |
 | **Acteurs et consentements** | Pseudonymes, quatre consentements séparés et révocables (mesures vocales, transcription, caméra, versement au corpus de recherche), historique de formation, droit de retrait qui efface toutes les données de l'acteur. |
+| **Carnet** | Carnet de cocréation : lecture du journal des cinq opérations de la séance en cours (propositions générées, taux de rétention, écart moyen, complétude des traces, indicateurs par pseudonyme, liste des événements) ; saisie après coup d'une transformation faite « de tête » (N-07, trace « reconstituée ») ou d'une opération « autre » (N-08), au nom de la régie ou d'un acteur ayant consenti au versement à la recherche ; lecture seule en mode pédagogique. Les données restent sur l'ordinateur : en ligne, sans pont, l'onglet l'indique. |
 
 ### Voix, écoute et vie privée
 

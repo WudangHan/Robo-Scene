@@ -20,9 +20,9 @@ FONCTIONS: list[dict[str, Any]] = [
     {"id": "N-05", "etat": R, "code": "bridge/scene, modules/p2/pont_scenique/conduite.py", "test": "tests/test_plateforme.py",
      "reste": ""},
     {"id": "N-06", "etat": R, "code": "bridge/trace/provenance.py", "test": "tests/test_trace.py", "reste": ""},
-    {"id": "N-07", "etat": E, "code": "bridge/trace/saisies.py ; console « de tête »", "test": "tests/test_trace.py",
+    {"id": "N-07", "etat": E, "code": "bridge/trace/saisies.py ; console « de tête » ; onglet Carnet du partenaire", "test": "tests/test_trace.py",
      "reste": "Chronométrer la saisie (< 30 s) en répétition réelle"},
-    {"id": "N-08", "etat": E, "code": "bridge/trace/saisies.py (revue_autres, consigner_revue)", "test": "tests/test_trace.py",
+    {"id": "N-08", "etat": E, "code": "bridge/trace/saisies.py (revue_autres, consigner_revue) ; onglet Carnet du partenaire", "test": "tests/test_trace.py",
      "reste": "Revue après le premier atelier (P1.4)"},
     # 3.2 Atelier
     {"id": "A-01", "etat": E, "code": "bridge/atelier, bridge/modeles", "test": "tests/test_plateforme.py",
