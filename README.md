@@ -338,7 +338,7 @@ vers son adresse privée, `reseau_local = true`) ; tout hôte public reste refus
 
 ## Documentation et version en ligne
 
-Version publiée : **2.3.3** (16 octobre 2026), en ligne sur <https://robo-scene.netlify.app> ; les deux documents de référence se téléchargent aussi depuis la page **Aide** (<https://robo-scene.netlify.app/aide>, dossier `web/aide/`).
+Version publiée : **2.4.0** (12 novembre 2026), en ligne sur <https://robo-scene.netlify.app> ; les deux documents de référence se téléchargent aussi depuis la page **Aide** (<https://robo-scene.netlify.app/aide>, dossier `web/aide/`).
 
 - `docs/Guide_plateforme_integree_ROBO-SCENE_v2.0.1.docx` — guide de la plateforme intégrée (58 fonctions, révision 2.0.1 du 16 octobre 2026)
 - `docs/Guide_drone_de_scene_ROBO-SCENE_v1.2.docx` — drone de scène (O-13) : drone virtuel, souris, flèches et voix, conduite, caméra 4K, zones, passage au drone réel

@@ -2,6 +2,15 @@
 # Les versions courantes de SI-01 et SI-08 sont mises à jour automatiquement à chaque adoption (D13) ;
 # l'historique est conservé dans donnees/adoptions_modeles.json.
 
+versions_plateforme:
+  - version: "2.3.3"
+    date: 2026-10-16
+    objet: "Changement de fournisseur SI-02 (LM Studio) ; contact main-visage du robot virtuel"
+  - version: "2.4.0"
+    date: 2026-11-12
+    objet: "Partenaire : onglet Carnet de cocréation (journal des cinq opérations) ; pont réinstallé (port 8765)"
+    approbation: "Approuvée par S. Gagné le 2026-11-12"
+
 systemes:
   SI-01:
     nom: "Claude par l'API d'Anthropic (familles Opus et Sonnet)"
