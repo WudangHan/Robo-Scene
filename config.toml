@@ -147,7 +147,7 @@ url_local = "http://127.0.0.1:1234"
 # 10.x.x.x, 172.16-31.x.x, *.local) sont alors permises ; tout autre hôte reste refusé (D03, VP-14). Le contenu
 # sensible voyage alors en clair sur le Wi-Fi de la salle : réseau WPA2/WPA3 fermé exigé.
 reseau_local = false
-plafond_jetons_seance = 200000
+plafond_jetons_seance = 0         # 0 = aucun plafond de jetons par séance (12 nov. 2026) ; remettre 200000 pour le rétablir
 [modeles.roles]                    # familles par rôle, dans l'ordre de préférence
 ecriture = ["claude-opus", "gpt-sol", "gemini-argon", "grok"]
 analyse  = ["claude-opus", "gpt-sol", "gemini-argon", "grok"]
@@ -168,6 +168,12 @@ dossier_profils = "robots"         # un fichier .toml par robot (AiNex, Reachy M
 
 [atelier]
 # Mode « atelier » (personnes participantes) verrouillé tant que : avis éthique, EFVP à jour, SI-02 désigné.
+# Aucune limite de mots n'est imposée aux propositions (11 nov. 2026) ; max_tokens n'est qu'un plafond technique
+# de sortie, assez haut pour une scène complète. Depuis le 12 nov. 2026 : aucun plafond de jetons par séance
+# (0 = aucun), jusqu'à 10 propositions par consigne, délai d'attente de 10 minutes par génération.
+max_tokens = 16000
+plafond_jetons = 0
+nb_max = 10
 
 [scene]
 a_blanc = true                     # true : lumière et son simulés (aucun paquet sACN ni OSC vers QLab)

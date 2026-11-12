@@ -10,6 +10,10 @@ versions_plateforme:
     date: 2026-11-12
     objet: "Partenaire : onglet Carnet de cocréation (journal des cinq opérations) ; pont réinstallé (port 8765)"
     approbation: "Approuvée par S. Gagné le 2026-11-12"
+  - version: "2.4.1"
+    date: 2026-11-12
+    objet: "Atelier P1 sans barrières à la création : aucune limite de mots ; max_tokens 16 000 ; jusqu'à 10 propositions par consigne ; aucun plafond de jetons par séance (0, réactivable) ; délai de génération de 10 minutes. Aiguillage D03, liste de blocage et verrou de mise en service maintenus"
+    approbation: "Approuvée par S. Gagné le 2026-11-12"
 
 systemes:
   SI-01:

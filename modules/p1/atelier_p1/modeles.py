@@ -24,8 +24,8 @@ TYPES = {
 SYSTEME = (
     "Tu assistes des artistes de théâtre dans un atelier d'écriture de recherche. Tu proposes ; ce sont les "
     "artistes qui choisissent, réécrivent et signent. Écris en français, sauf si la consigne demande une autre "
-    "langue. Propose des pistes nettement différentes les unes des autres, brèves (au plus 120 mots chacune), "
-    "jouables sur un plateau. Évite les stéréotypes de genre, culturels ou liés au handicap ; ne donne pas aux "
+    "langue. Propose des pistes nettement différentes les unes des autres, jouables sur un plateau, de la "
+    "longueur qu'appelle la consigne : aucune limite de mots ne t'est imposée. Évite les stéréotypes de genre, culturels ou liés au handicap ; ne donne pas aux "
     "personnages des traits convenus selon leur genre ou leur origine. Les extraits fournis servent d'exemples "
     "de ton ou de contrainte : ne les recopie pas et n'en reprends aucun vers ou aucune phrase. Réponds "
     "uniquement par un objet JSON de la forme {\"propositions\": [\"…\", \"…\"]}."
@@ -92,7 +92,7 @@ class ModeleDistant:
     URL = "https://api.anthropic.com/v1/messages"
 
     def __init__(self, modele: str = "claude-opus-5-5", cle: str | None = None, max_jetons: int = 1500,
-                 delai: float = 60.0):
+                 delai: float = 600.0):
         self.modele, self.max_jetons, self.delai = modele, max_jetons, delai
         self.cle = cle or os.environ.get("ANTHROPIC_API_KEY", "")
 
@@ -200,7 +200,7 @@ def present_localement(entrees: list[dict], nom: str) -> bool | None:
     return False
 
 
-def chat_local(url: str, api: str, modele: str, systeme: str, contenu: str, *, delai: float = 180.0,
+def chat_local(url: str, api: str, modele: str, systeme: str, contenu: str, *, delai: float = 600.0,
                temperature: float | None = None, top_p: float | None = None, max_tokens: int | None = None,
                schema: dict | None = None, transport=None) -> dict:
     """Un échange avec le serveur local ; renvoie {texte, modele, jetons_entree, jetons_sortie, ecarts}."""
@@ -245,7 +245,7 @@ class ModeleLocal:
     """
     code = "SI-02"
 
-    def __init__(self, modele: str | None = None, url: str | None = None, delai: float = 180.0,
+    def __init__(self, modele: str | None = None, url: str | None = None, delai: float = 600.0,
                  api: str | None = None):
         self.api = (api or api_par_defaut()).lower()
         if self.api not in API_LOCALES:

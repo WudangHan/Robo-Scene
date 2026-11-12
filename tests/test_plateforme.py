@@ -173,3 +173,15 @@ async def test_biometrie_op_mouvement(cfg):
         p.cfg["conserver_video"] = True
         with pytest.raises(ViolationBiometrique):
             await p.op_mouvement({"images": imgs})
+
+
+def test_atelier_sans_limite_de_mots():
+    """Décision du 11 nov. 2026 : aucune limite de mots imposée aux propositions de l'atelier P1."""
+    from bridge import _modules  # noqa: F401
+    from atelier_p1.modeles import SYSTEME
+    from bridge.atelier import ModeleUnifie
+    from bridge.serveur import RACINE, charger_config
+    assert "120 mots" not in SYSTEME and "brèves" not in SYSTEME and "aucune limite de mots" in SYSTEME
+    assert "stéréotypes" in SYSTEME and "ne les recopie pas" in SYSTEME          # garde-fous conservés
+    assert ModeleUnifie.__init__.__defaults__[-1] == 16000
+    assert charger_config(RACINE / "config.toml")["atelier"]["max_tokens"] == 16000

@@ -66,7 +66,7 @@ class ClientAnthropic:
     fournisseur = "anthropic"
     URL = "https://api.anthropic.com/v1/messages"
 
-    def __init__(self, cle: str, delai: float = 90.0, transport=None):
+    def __init__(self, cle: str, delai: float = 600.0, transport=None):
         self.cle, self.delai, self.transport = cle, delai, transport or _post
 
     def generer(self, modele: str, systeme: str, contenu: str, *, temperature: float | None = None,
@@ -97,7 +97,7 @@ class ClientOpenAI:
     fournisseur = "openai"
     URL = "https://api.openai.com/v1/responses"
 
-    def __init__(self, cle: str, delai: float = 120.0, transport=None):
+    def __init__(self, cle: str, delai: float = 600.0, transport=None):
         self.cle, self.delai, self.transport = cle, delai, transport or _post
 
     def generer(self, modele: str, systeme: str, contenu: str, *, temperature: float | None = None,
@@ -152,7 +152,7 @@ class ClientXAI:
     fournisseur = "xai"
     URL = "https://api.x.ai/v1/chat/completions"
 
-    def __init__(self, cle: str, delai: float = 120.0, transport=None):
+    def __init__(self, cle: str, delai: float = 600.0, transport=None):
         self.cle, self.delai, self.transport = cle, delai, transport or _post
 
     def generer(self, modele: str, systeme: str, contenu: str, *, temperature: float | None = None,
@@ -193,7 +193,7 @@ class ClientGoogle:
     fournisseur = "google"
     URL = "https://generativelanguage.googleapis.com/v1beta/models/{modele}:generateContent"
 
-    def __init__(self, cle: str, delai: float = 120.0, transport=None):
+    def __init__(self, cle: str, delai: float = 600.0, transport=None):
         self.cle, self.delai, self.transport = cle, delai, transport or _post
 
     def generer(self, modele: str, systeme: str, contenu: str, *, temperature: float | None = None,
@@ -233,7 +233,7 @@ class ClientLocal:
     Refuse tout serveur ou modèle non local ; le choix du serveur (« api ») ne change rien à la règle D03.
     """
 
-    def __init__(self, modele: str, url: str | None = None, delai: float = 180.0, transport=None,
+    def __init__(self, modele: str, url: str | None = None, delai: float = 600.0, transport=None,
                  secours: str | None = None, lister=None, api: str = "lmstudio", reseau_local: bool = False):
         from .. import _modules  # noqa: F401
         from atelier_p1.modeles import API_LOCALES, NOMS_SERVEURS, verifier_local

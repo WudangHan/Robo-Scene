@@ -32,7 +32,7 @@ from ..trace.ecart import taux_conservation
 class ModeleUnifie:
     """Adaptateur : le « modèle distant » de P1 devient le service unique des modèles (D13)."""
 
-    def __init__(self, service, famille: str, temperature: float | None = 0.7, max_tokens: int = 1500):
+    def __init__(self, service, famille: str, temperature: float | None = 0.7, max_tokens: int = 16000):
         from ..modeles.catalogue import FAMILLES
         self.service, self.famille = service, famille
         self.temperature, self.max_tokens = temperature, max_tokens
@@ -156,7 +156,8 @@ class GestionAteliers:
         sid = identifiant_seance(racine / "traces" / __import__("datetime").datetime.now().strftime("%Y%m%d"),
                                  "P1", type_)
         journal = JournalCocreation(racine, sid, versionner=bool(self.ctl.cfg["protocole"].get("versionner_corpus", True)))
-        distant = ModeleUnifie(self.ctl.service, famille, float(c.get("temperature", 0.7)))
+        distant = ModeleUnifie(self.ctl.service, famille, float(c.get("temperature", 0.7)),
+                               int(c.get("max_tokens", 16000)))
         sl = self.ctl.service.local
         choisi = sl.choisir() if hasattr(sl, "choisir") else None     # principal, sinon secours (toujours local)
         local = ModeleLocal(choisi or sl.modele, sl.url, api=getattr(sl, "api", "lmstudio"))
@@ -167,7 +168,8 @@ class GestionAteliers:
             seance=sid, pseudonymes=pseudonymes, corpus=charger_corpus(self.racine_p1 / "corpus"),
             distant=distant, local=local, simule=ModeleSimule(), dossier_journal=dossier_journal,
             liste_blocage=charger_liste_blocage(self.ctl.cfg.get("modeles", {}).get("liste_blocage") or None),
-            mode=mode, mise_en_service=mise_en_service, plafond_jetons=int(c.get("plafond_jetons", 200_000)),
+            mode=mode, mise_en_service=mise_en_service, plafond_jetons=int(c.get("plafond_jetons", 0)),
+            nb_max=int(c.get("nb_max", 10)),
             forcer_simule=simule, journal=journal, distant_unifie=distant)
         self.seance_unifiee = sid
         return self.etat()

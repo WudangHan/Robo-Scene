@@ -73,8 +73,8 @@ th:first-child,td:first-child{text-align:left}
     <select id="type"></select>
     <label for="texte">Consigne</label>
     <textarea id="texte" placeholder="Ex. : Réplique d'ouverture — une régisseuse découvre que le décor a disparu."></textarea>
-    <label for="nb">Nombre de propositions (1 à 5)</label>
-    <input type="number" id="nb" min="1" max="5" value="3">
+    <label for="nb">Nombre de propositions (1 à 10)</label>
+    <input type="number" id="nb" min="1" max="10" value="3">
     <fieldset id="corpusSet"><legend>Extraits du corpus sous licence (facultatif)</legend><div id="corpus" class="muted">Aucun extrait chargé.</div></fieldset>
     <label class="check"><input type="checkbox" id="confid"> Consigne confidentielle (traitée par le modèle local seulement)</label>
     <div class="row"><button class="primary" id="envoyer">Demander des propositions</button></div>
@@ -118,7 +118,7 @@ th:first-child,td:first-child{text-align:left}
     $("#seance").textContent="Séance "+e.seance;
     const b=$("#modeBadge"); b.textContent=e.mode==="essai"?(e.simule?"ESSAI — générateur simulé":"ESSAI — aucune personne participante"):"ATELIER — mise en service validée"; b.className="badge"+(e.mode==="essai"?" essai":"");
     $("#horsLigne").checked=e.hors_ligne;
-    $("#jetons").textContent="Jetons : distant "+e.jetons["SI-01"]+" / "+e.plafond_jetons+" · local "+e.jetons["SI-02"];
+    $("#jetons").textContent="Jetons : distant "+e.jetons["SI-01"]+" / "+(e.plafond_jetons||"sans plafond")+" · local "+e.jetons["SI-02"];
     const ps=$("#pseudo"), cur=ps.value; ps.innerHTML=e.pseudonymes.map(p=>"<option>"+esc(p)+"</option>").join(""); if(cur) ps.value=cur;
     const ty=$("#type"), ct=ty.value; ty.innerHTML=Object.entries(e.types).map(([k,v])=>'<option value="'+k+'">'+esc(k)+" — "+esc(v)+"</option>").join(""); ty.value=ct||"libre";
     const coch=new Set([...document.querySelectorAll("#corpus input:checked")].map(i=>i.value));

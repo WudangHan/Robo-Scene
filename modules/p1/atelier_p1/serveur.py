@@ -126,7 +126,7 @@ def main(argv=None):
     ap.add_argument("--api-locale", choices=["lmstudio", "ollama"], default=None,
                     help="serveur local de SI-02 (défaut : lmstudio, ou ATELIER_API_LOCALE)")
     ap.add_argument("--simule", action="store_true", help="générateur simulé, sans réseau (mode essai seulement)")
-    ap.add_argument("--plafond-jetons", type=int, default=200_000)
+    ap.add_argument("--plafond-jetons", type=int, default=0)      # 0 = aucun plafond
     ap.add_argument("--port", type=int, default=8090)
     ap.add_argument("--sans-navigateur", action="store_true")
     a = ap.parse_args(argv)

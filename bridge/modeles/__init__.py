@@ -202,7 +202,7 @@ class ServiceModeles:
             client = self._client(fam.fournisseur)
             if client is None:
                 continue
-            if self.jetons[fam.fournisseur] >= self.plafond:
+            if self.plafond and self.jetons[fam.fournisseur] >= self.plafond:
                 dernier = ErreurModele(f"Plafond de jetons de la séance atteint pour {fam.fournisseur} (ENF-04)")
                 continue
             modele = self.catalogue.resolus.get(cle) if self.catalogue.resolus else (

@@ -142,7 +142,7 @@ def test_regles_de_saisie(tmp_path, corpus):
     with pytest.raises(ErreurAtelier):
         a.consigner("A01", "   ")
     c = a.consigner("A01", "x", nb=12)
-    assert len(c.generations[0].propositions) == 5                         # EF-02 : au plus cinq
+    assert len(c.generations[0].propositions) == 10                        # EF-02 élargie : au plus dix
     with pytest.raises(ErreurAtelier):
         a.transformer(c.id, 1, 1, "y")                                     # non retenue
 

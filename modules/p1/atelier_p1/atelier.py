@@ -93,8 +93,8 @@ class Cycle:
 class Atelier:
     def __init__(self, *, seance: str, pseudonymes: list[str], corpus: dict, distant, local, simule=None,
                  dossier_journal: str | Path = "journaux", liste_blocage: list[str] | None = None,
-                 mode: str = "essai", mise_en_service: str | Path | None = None, plafond_jetons: int = 200_000,
-                 nb_max: int = 5, forcer_simule: bool = False):
+                 mode: str = "essai", mise_en_service: str | Path | None = None, plafond_jetons: int = 0,
+                 nb_max: int = 10, forcer_simule: bool = False):
         if mode not in ("essai", "atelier"):
             raise ErreurAtelier("Mode inconnu.")
         if mode == "atelier":
@@ -137,7 +137,7 @@ class Atelier:
             return self.simule
         if decision.cible == "local":
             return self.local
-        if self.jetons["SI-01"] >= self.plafond:
+        if self.plafond and self.jetons["SI-01"] >= self.plafond:     # 0 = aucun plafond
             raise ErreurAtelier("Plafond de jetons de la séance atteint pour le modèle distant (ENF-04).")
         return self.distant
 
@@ -149,7 +149,7 @@ class Atelier:
             raise ErreurAtelier("Consigne vide.")
         if type_ not in TYPES:
             raise ErreurAtelier("Type de consigne inconnu.")
-        nb = max(1, min(int(nb), self.nb_max))                            # EF-02 : de une à cinq
+        nb = max(1, min(int(nb), self.nb_max))                            # EF-02 élargie (12 nov. 2026) : de une à nb_max (10 par défaut)
         inconnus = [c for c in extraits if c not in self.corpus]
         if inconnus:
             raise ErreurAtelier(f"Extraits inconnus : {inconnus}")
